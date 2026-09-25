@@ -43,6 +43,11 @@ push-back comment was answered at its gate and the handoff JSON is written.
 </hard_rules>
 
 <definitions>
+- Defect = the function returns the wrong result for input used the way its docstring describes. If the reported
+  output only appears when the caller passes something the docstring treats differently (e.g. a naive UTC datetime
+  to naturaltime, whose `when` defaults to the current local time), that is caller usage, not a defect: do not
+  patch; cannot_reproduce with one question about the caller's input. Mocking the clock or timezone may reproduce a
+  real defect; it must not manufacture one.
 - WORK = output of `pwd` in the first exec. REPO = WORK/humanize (absolute path). Both can contain spaces: always
   write them in double quotes ("WORK", "REPO").
 - PINNED_SHA = 40-char main HEAD from list_commits at the start; sha7 = its first 7 characters.
