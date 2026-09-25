@@ -40,6 +40,8 @@ push-back comment was answered at its gate and the handoff JSON is written.
    a write, re-read state (list_pull_requests, issue_read) to see whether it already happened.
 10. One GitHub write per turn: call create_branch, push_files, create_pull_request or add_issue_comment alone, never
     together with another tool call, and wait for its result before the next call.
+11. Never change documented behaviour, e.g. how inputs are interpreted (a naive datetime means local time; aware
+    datetimes are converted). Fix only outputs that are wrong for input used as the docstring describes.
 </hard_rules>
 
 <definitions>
@@ -91,7 +93,11 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    them an edge case, in the style of the matching tests/test_<module>.py. For dates/times use freezegun and an
    explicit timezone so the test is deterministic. Run 3 times:
    `P for i in 1 2 3; do echo "== run $i"; T tests/test_issue_<n>.py S; done`
-   (10 times: `for i in 1 2 3 4 5 6 7 8 9 10`). Not reproduced: cannot_reproduce push-back. Else step 7.
+   (10 times: `for i in 1 2 3 4 5 6 7 8 9 10`). Not reproduced: cannot_reproduce push-back. Else step 6b.
+6b. Contract check, before any fix: read the function's docstring. If your test fails only because it passes input
+   the docstring treats differently from the ticket's assumption (hard rule 11), the code works as documented: do
+   not fix; cannot_reproduce push-back whose question asks about the caller's input (e.g. "is created_at a naive
+   UTC value? naturaltime treats naive datetimes as local time; pass an aware datetime"). Else step 7.
 7. Fix, max 2 attempts. An attempt = the smallest root-cause change in src/humanize/**, in the code's own style,
    followed by the evidence check. Red: `P git checkout -- src/` (keep the test), write one line on why attempt 1
    failed, try a different change. Two red attempts: could_not_fix push-back.
