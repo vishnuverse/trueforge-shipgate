@@ -18,7 +18,7 @@ expect:
     matches:
       - '(?i)python\s*3\.\d+'
       - '(?i)\b(os|ubuntu|debian|linux|macos|darwin|image)\b'
-      - '(?i)\bsteps?\b'
+      - '(?i)\bsteps?\b|\bran\b|\btried\b|test_issue_\d+\.py'
       - '\?'
-  repro: {before: '^3/3 pass'}
+  repro: {before: '^(3/3 pass|0/3 fail)$'}
   pushbacks: [ticket]

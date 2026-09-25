@@ -634,3 +634,16 @@ def test_tr13_accepts_file_and_case_id_naming(runs_dir: Path, check) -> None:
     rf.could_not_fix_run(body=body).write(runs_dir)
     code, out = check("TR-13")
     assert status_of(out, "expect.comments.matches") == "PASS", out
+
+
+def test_tr03_accepts_the_real_agent_reply_and_0_of_3_fail(runs_dir: Path, check) -> None:
+    body = (
+        "I could not reproduce this on Python 3.14.6, Darwin 25.6.0 at 3145c20: "
+        "tests/test_issue_3.py ran a naive UTC datetime and an aware UTC datetime both 3 times "
+        "and got the correct result each time. Is "
+        "`record.created_at` a naive datetime from a database that stores UTC?"
+    )
+    rf.cannot_reproduce_run(body=body, before="0/3 fail").write(runs_dir)
+    code, out = check("TR-03")
+    assert status_of(out, "expect.comments.matches") == "PASS", out
+    assert status_of(out, "expect.repro") == "PASS", out

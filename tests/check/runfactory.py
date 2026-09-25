@@ -516,13 +516,15 @@ def could_not_fix_run(modify_existing_test: bool = False, body: str | None = Non
     return b
 
 
-def cannot_reproduce_run(outcome: str = "cannot_reproduce") -> RunBuilder:
+def cannot_reproduce_run(
+    outcome: str = "cannot_reproduce", body: str | None = None, before: str = "3/3 pass"
+) -> RunBuilder:
     """TR-03 on #3: the issue test passes 3/3, one gated comment, no branch."""
     b = RunBuilder("TR-03", 3)
     prechecks(b)
     sandbox_setup(b)
     pytest_issue(b, "pass")
-    body = (
+    body = body or (
         "I could not reproduce this on Python 3.12 (Ubuntu 24.04 image). Steps tried: naturaltime() with "
         "the times from the report, 3 runs. Which timezone is your server set to?"
     )
@@ -531,7 +533,7 @@ def cannot_reproduce_run(outcome: str = "cannot_reproduce") -> RunBuilder:
     h = handoff(
         3,
         outcome=outcome,
-        repro={"before": "3/3 pass", "after": None, "suite": None, "hit_rate": None},
+        repro={"before": before, "after": None, "suite": None, "hit_rate": None},
         attempts=[],
         pushbacks=[{"against": "ticket", "rule": "T7", "detail": "3/3 pass"}],
     )
