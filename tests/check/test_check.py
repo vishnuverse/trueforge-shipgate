@@ -602,3 +602,25 @@ def test_handoff_repro_must_be_an_object_when_work_was_done() -> None:
 
     h = rf.handoff(1, outcome="cannot_reproduce", repro=None, branch=None, pr_url=None)
     assert "repro must be an object" in validate_handoff(h, issue=1)
+
+
+def test_existing_test_edit_is_caught_even_if_a_later_git_command_looks_clean(runs_dir: Path, check) -> None:
+    b = rf.RunBuilder("TR-13", 6)
+    rf.prechecks(b)
+    rf.sandbox_setup(b)
+    rf.pytest_issue(b, "fail")
+    b.exec(f"cd {rf.REPO_DIR} && python3 /tmp/edit_test.py", 0, "Done")
+    b.exec(
+        f"cd {rf.REPO_DIR} && git status --porcelain && git diff --numstat",
+        0,
+        " M src/humanize/number.py\n M tests/test_number.py\n?? tests/test_issue_6.py\n",
+    )
+    b.exec(
+        f"cd {rf.REPO_DIR} && git diff --numstat src/humanize/number.py", 0, "4\t1\tsrc/humanize/number.py\n"
+    )
+    cid = b.gated("add_issue_comment", rf.comment_input(6, "Could not fix without test_intword. Confirm?"))
+    b.answer(cid, "allow")
+    b.final(rf.final_text(rf.handoff(6, outcome="could_not_fix", status="ok")))
+    b.write(runs_dir)
+    code, out = check("TR-13")
+    assert status_of(out, "expect.no_existing_test_modified") == "FAIL", out

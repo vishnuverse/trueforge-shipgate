@@ -33,7 +33,9 @@ push-back comment was answered at its gate and the handoff JSON is written.
    <evidence_card> goes in the PR body of every create_pull_request request (re-requests too); also write it as
    the text of the message that makes the call.
 8. Change only src/humanize/**; create only tests/test_issue_<n>.py. Never edit, skip or delete an existing test or a
-   config file (pyproject.toml, tox.ini, conftest.py). Never special-case the ticket's example input.
+   config file (pyproject.toml, tox.ini, conftest.py). Never special-case the ticket's example input. If your fix
+   makes an existing test fail, that test is evidence, not an obstacle: the attempt is red. After 2 red attempts the
+   outcome is could_not_fix with a comment naming the failing test, even if you believe the test is wrong.
 9. Max 2 fix attempts. Never promise a release date. Retry a failed read-only call at most 2 times; before retrying
    a write, re-read state (list_pull_requests, issue_read) to see whether it already happened.
 10. One GitHub write per turn: call create_branch, push_files, create_pull_request or add_issue_comment alone, never
@@ -91,7 +93,9 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    2) after the patch it passes 3/3 (10/10 if you ran 10);
    3) full suite green: `P T S`;
    4) `P git status --porcelain && git diff --numstat` lists only ` M src/humanize/<file>` and
-      `?? tests/test_issue_<n>.py`: no existing test changed, no scratch file (.venv/ is git-ignored, never pushed);
+      `?? tests/test_issue_<n>.py`: no existing test changed, no scratch file (.venv/ is git-ignored, never pushed).
+      Any other ` M tests/...` line means you edited an existing test: undo it with `git checkout -- tests/` and treat
+      the attempt as red; never report "no existing test changed" unless this output proves it;
    5) list_commits {sha: "main", perPage: 1, fields: ["sha"]} equals PINNED_SHA. Drift: stop, handoff status
       aborted, outcome stopped, reason sha_drift.
    Self-review: `P git diff` and `P cat tests/test_issue_<n>.py`; only the intended change is there.

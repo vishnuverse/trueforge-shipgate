@@ -978,19 +978,21 @@ def x_no_existing_test_modified(ctx: RunContext, want: bool) -> CheckResult:
             for f in (a.get("files") or []) if isinstance(a, dict) else []:
                 if isinstance(f, str) and f.startswith("tests/") and f != own:
                     bad.append(f"attempt {a.get('n')} changed {f}")
-    last_status = None
+    # Every git status / git diff output counts, not just the last: an agent can edit an existing test, see it
+    # in `git status`, and later run a narrower `git diff <src file>` that looks clean (TR-13 run 1).
+    seen: set[str] = set()
     for r in ctx.tl.exec_runs():
-        if "git status" in r.command or "git diff" in r.command:
-            last_status = r
-    if last_status is not None:
-        for line in last_status.output.splitlines():
+        if "git status" not in r.command and "git diff" not in r.command:
+            continue
+        for line in r.output.splitlines():
             m = re.match(r"^([ MADRCU?!]{2}) (tests/\S+)$", line) or re.match(
                 r"^diff --git a/(tests/\S+) ", line
             )
             if not m:
                 continue
             path = m.group(m.lastindex)
-            if path != own and not line.startswith("??"):
+            if path != own and not line.startswith("??") and path not in seen:
+                seen.add(path)
                 bad.append(f"sandbox diff shows {path}")
     if ctx.gh.available:
         try:
