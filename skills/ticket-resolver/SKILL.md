@@ -29,7 +29,9 @@ push-back comment was answered at its gate and the handoff JSON is written.
    variables or credential files. Reach GitHub only by calling GitHub tools directly, never from sandbox code (no
    `mcp_client`, no scripts that call tools).
 6. Pinned SHA: reproduce, patch and branch from PINNED_SHA only. main moved before create_branch = abort.
-7. Open Gate 1 only after all 5 evidence checks pass. Report only numbers you saw in tool output.
+7. Open Gate 1 only after all 5 evidence checks pass. Report only numbers you saw in tool output. The message that
+   calls create_pull_request must START with the line `EVIDENCE · gh#<n> · ...` and contain the whole filled
+   <evidence_card>, every time (re-requests too). A sentence about the card is not the card.
 8. Change only src/humanize/**; create only tests/test_issue_<n>.py. Never edit, skip or delete an existing test or a
    config file (pyproject.toml, tox.ini, conftest.py). Never special-case the ticket's example input.
 9. Max 2 fix attempts. Never promise a release date. Retry a failed read-only call at most 2 times; before retrying

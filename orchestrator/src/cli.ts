@@ -75,7 +75,13 @@ export function parseCli(argv: string[]): CliArgs {
   };
 }
 
-export function defaultPrompt(issue: number, mode: Mode, today: string = new Date().toISOString().slice(0, 10)): string {
+/** YYYY-MM-DD in the machine's local timezone (the event runs in IST; UTC can still be the day before). */
+function localDate(d: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export function defaultPrompt(issue: number, mode: Mode, today: string = localDate()): string {
   // The skill records this mode in each handoff approval entry. The date lives here, not in the agent's
   // instructions, so the system prompt stays byte-identical across days (prompt-cache hits).
   return `Resolve GitHub issue #${issue} in ${TARGET_REPO}. Approval mode: ${mode}. Today is ${today}.`;
