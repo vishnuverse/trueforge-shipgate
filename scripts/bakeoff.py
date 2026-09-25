@@ -109,15 +109,22 @@ def analyse(model, sid, tid, started, prices):
     turn = req("GET", f"/sessions/{sid}/turns/{tid}")["data"]
     state = turn["state"]
     events = [x["event"] for x in all_events(sid)]
-    calls, results = {}, {}
+    # Pair each call with the next response carrying its id, in event order: some OpenRouter hosts reuse ids
+    # (call_0, call_1, ...) across turns, so a dict keyed by id would drop calls.
+    pending, pairs = [], []
     for e in events:
         if e["type"] == "model.message":
-            for c in e.get("tool_calls") or []:
-                calls[c["id"]] = c["function"]
+            pending += [(c["id"], c["function"]) for c in e.get("tool_calls") or []]
         if e["type"] == "tool.response":
-            results[e["tool_call_id"]] = e.get("content", "")
+            for i, (cid, fn) in enumerate(pending):
+                if cid == e["tool_call_id"]:
+                    pairs.append((fn, e.get("content", "")))
+                    del pending[i]
+                    break
+    pairs += [(fn, "{}") for _cid, fn in pending]
+    calls = [fn for fn, _ in pairs]
     execs = []
-    for cid, fn in calls.items():
+    for fn, content in pairs:
         if fn["name"] != "exec":
             continue
         try:
@@ -125,7 +132,7 @@ def analyse(model, sid, tid, started, prices):
         except Exception:
             cmd = ""
         try:
-            resp = json.loads(results.get(cid, "{}")).get("response", {})
+            resp = json.loads(content or "{}").get("response", {})
         except Exception:
             resp = {}
         execs.append((cmd, resp.get("exitCode"), str(resp.get("result", ""))[-4000:]))

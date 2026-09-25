@@ -49,5 +49,7 @@ callable from sandbox"), so the approval gate can't be bypassed that way.
 - One run per model: a small sample. Re-run `python3 scripts/bakeoff.py` after changing the skill.
 - The script's "reproduced" column first used exit codes; models pipe pytest through `tail`, so it now reads pytest's
   summary lines (as `check.py` does).
-- Gemini-specific advice in `reference/gemini-3-prompting.md` (temperature, thinking level) doesn't apply to DeepSeek;
-  the agent spec sets no temperature and no reasoning effort.
+- Gemini-specific advice in `reference/gemini-3-prompting.md` doesn't apply to DeepSeek; the agent uses the DeepSeek
+  settings from `reference/deepseek-v4-and-glm-5.3-prompting.md`.
+- Round 1 counted sandbox commands by tool-call id; 0731's repeated ids made it report 2 instead of 22. The script now
+  pairs each call with the next response in event order.
