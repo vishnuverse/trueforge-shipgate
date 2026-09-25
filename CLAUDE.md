@@ -55,7 +55,7 @@ Planned, not built yet: `mcp/k8s/` + `runbooks/` + `demo-app/` (Runbook Executor
 node -v                      # need >= 22.14
 python3 -V; uv --version     # 3.12 via uv
 cp .env.example .env         # fill keys; never commit .env
-npx --yes @truefoundry/trueforge@0.2.1      # UI + API on http://localhost:8790 (keep running)
+SERVER_EXECUTION_TIMEOUT_SECONDS=1200 npx --yes @truefoundry/trueforge@0.2.1   # UI + API on :8790; turn limit 20 min
 uv sync                                       # python deps for scripts/
 npm --prefix orchestrator ci
 ```

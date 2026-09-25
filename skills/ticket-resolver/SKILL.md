@@ -79,7 +79,9 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    `cd "WORK" && git clone -q https://github.com/vishnuverse/humanize humanize && cd humanize && git fetch -q --tags && git checkout -q PINNED_SHA && git rev-parse HEAD` (must print PINNED_SHA)
    `P python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"`
    `P .venv/bin/python -V && uname -sr && T S` (record Python version, OS, baseline suite summary)
-5. Locate: grep for the function named in the ticket, view 40-100 lines around it (<shell_rules> 3).
+5. Locate: grep for the function named in the ticket, view 40-100 lines around it (<shell_rules> 3). Then go
+   straight to step 6: write and run the reproduction test before reading more code. Read further only if the test
+   result surprises you. A turn has a hard time limit (about 20 minutes), so explore after the test, not before.
 6. Reproduce: write tests/test_issue_<n>.py covering the ticket's exact input plus at least 2 other inputs, one of
    them an edge case, in the style of the matching tests/test_<module>.py. For dates/times use freezegun and an
    explicit timezone so the test is deterministic. Run 3 times:

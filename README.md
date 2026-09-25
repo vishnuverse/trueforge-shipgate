@@ -75,7 +75,8 @@ key, and a GitHub **fine-grained** token for your fork of `humanize` (Contents, 
 git clone https://github.com/vishnuverse/trueforge-shipgate && cd trueforge-shipgate
 cp .env.example .env                              # fill TRUEFORGE_URL, GITHUB_PAT (never commit .env)
 uv sync && npm --prefix orchestrator ci
-npx --yes @truefoundry/trueforge@0.2.1            # TrueForge UI + API on http://localhost:8790; leave it running
+SERVER_EXECUTION_TIMEOUT_SECONDS=1200 npx --yes @truefoundry/trueforge@0.2.1   # UI + API on :8790; leave it running
+# (TrueForge 0.2.1 cancels any turn after 10 min by default; a ticket's first turn can take longer)
 ```
 
 In the TrueForge UI, **Settings**:

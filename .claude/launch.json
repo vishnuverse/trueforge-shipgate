@@ -3,8 +3,8 @@
   "configurations": [
     {
       "name": "trueforge",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["--yes", "@truefoundry/trueforge@0.2.1"],
+      "runtimeExecutable": "env",
+      "runtimeArgs": ["SERVER_EXECUTION_TIMEOUT_SECONDS=1200", "npx", "--yes", "@truefoundry/trueforge@0.2.1"],
       "port": 8790
     }
   ]
