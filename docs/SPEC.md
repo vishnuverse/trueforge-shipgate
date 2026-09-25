@@ -229,7 +229,8 @@ Each agent's final message ends with exactly one fenced JSON block. Ticket Resol
 `check.py` validates this block on every run; a missing or malformed block fails the scenario. `status`: `ok`
 (finished; its last gated call was allowed, including `could_not_fix` and push-backs) · `aborted` (STOP, revision limit,
 `sha_drift`) · `failed` (tool or environment error) · `noop` (nothing to do); aborted and failed runs use outcome
-`stopped`. Approval entries carry `prefix` on denies only, and `mode` from the kickoff message ("Approval mode: …").
+`stopped`. `repro` may be `null` for pre-check outcomes (`duplicate`, `out_of_scope`, `needs_info`, `security_redirect`),
+which do no sandbox work. Approval entries carry `prefix` on denies only, and `mode` from the kickoff message ("Approval mode: …").
 Runbook Executor uses `"stage": "deploy"` with `runbook`, `steps`, `reverted`; Release Captain uses
 `"stage": "release"` with `version`, `release_url`, `prs`. Orchestrator parses only this block.
 

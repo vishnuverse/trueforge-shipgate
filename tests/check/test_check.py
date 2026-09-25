@@ -588,3 +588,17 @@ def test_tr13_comment_must_name_the_conflicting_test(runs_dir: Path, check) -> N
     code, out = check("TR-13")
     assert code == 1
     assert status_of(out, "expect.comments.matches") == "FAIL", out
+
+
+def test_handoff_repro_may_be_null_for_precheck_outcomes() -> None:
+    from shipgate_check.handoff import validate_handoff
+
+    h = rf.handoff(1, outcome="duplicate", repro=None, attempts=[], branch=None, pr_url=None)
+    assert not [e for e in validate_handoff(h, issue=1) if "repro" in e]
+
+
+def test_handoff_repro_must_be_an_object_when_work_was_done() -> None:
+    from shipgate_check.handoff import validate_handoff
+
+    h = rf.handoff(1, outcome="cannot_reproduce", repro=None, branch=None, pr_url=None)
+    assert "repro must be an object" in validate_handoff(h, issue=1)

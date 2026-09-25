@@ -104,7 +104,8 @@ def validate_handoff(h: Any, issue: int | None = None) -> list[str]:
         if not h.get("pr_url"):
             errs.append("outcome fixed but pr_url is empty")
     repro = h.get("repro")
-    if "repro" in h:
+    # Pre-check outcomes stop before any sandbox work, so there is nothing to reproduce: null is fine.
+    if "repro" in h and not (repro is None and outcome in PRECHECK_OUTCOMES):
         if not isinstance(repro, dict):
             errs.append("repro must be an object")
         else:
