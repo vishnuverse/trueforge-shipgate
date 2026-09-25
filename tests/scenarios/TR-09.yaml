@@ -1,0 +1,20 @@
+# SPEC §4.7 TR-09: issue #1 again right after TR-01 (no reset), allow -> duplicate; still exactly one PR.
+# score.sh --all runs it immediately after TR-01, before any later reset closes TR-01's PR.
+id: TR-09
+title: Idempotency, PR from fix/issue-1 already open
+issue: 1
+must_pass: false
+reset: false
+depends_on: TR-01
+timeout_min: 10
+approvals:
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  outcome: duplicate
+  label: fix-proposed
+  gates: [add_issue_comment]
+  pr: {count: 1, head: fix/issue-1}
+  comments:
+    count: 1
+    matches: ['/pull/\d+|#\d+']
+  pushbacks: [ticket]

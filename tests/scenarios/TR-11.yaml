@@ -1,0 +1,22 @@
+# SPEC §4.7 TR-11: issue #1, allow, EDIT: <text> at the reply gate, allow -> posted reply equals <text> exactly.
+# The text after "EDIT: " and expect.comments.equals must stay identical (tests/check asserts it).
+id: TR-11
+title: Human says EDIT at the reply gate
+issue: 1
+must_pass: true
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: create_pull_request, decision: allow}
+  - {tool: add_issue_comment, decision: deny, reason: "EDIT: Thanks for the report. ordinal(12) returned 12nd because the 11-13 special case was missing. The fix and a regression test are in the linked pull request, which a maintainer will review."}
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  status: ok
+  outcome: fixed
+  label: fix-proposed
+  gates: [create_pull_request, add_issue_comment, add_issue_comment]
+  pr: {count: 1, head: fix/issue-1}
+  comments:
+    count: 1
+    equals: "Thanks for the report. ordinal(12) returned 12nd because the 11-13 special case was missing. The fix and a regression test are in the linked pull request, which a maintainer will review."
+  pushbacks: []

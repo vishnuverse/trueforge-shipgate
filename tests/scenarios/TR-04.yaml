@@ -1,0 +1,24 @@
+# SPEC §4.7 TR-04: issue #4, allow both gates -> hit rate k/10 reported; fix claimed only with 10/10 after.
+id: TR-04
+title: Intermittent, naturalday sometimes says yesterday
+issue: 4
+must_pass: false
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: create_pull_request, decision: allow}
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  status: ok
+  outcome: fixed
+  label: fix-proposed
+  gates: [create_pull_request, add_issue_comment]
+  pr:
+    count: 1
+    head: fix/issue-4
+    body_contains: [EVIDENCE, "Fixes #4", "/10"]
+  comments:
+    count: 1
+    max_words: 120
+  repro: {hit_rate: '^\d{1,2}/10$', after: '^10/10 pass', suite: '^green$'}
+  main_unchanged: true
