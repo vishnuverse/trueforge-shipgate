@@ -9,4 +9,5 @@
 | [MEMORY.md](MEMORY.md) | Decisions and verified facts, one line each, never deleted | You make a decision or learn a fact |
 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | The original day plan (phases, owners, demo script) | Planning the demo |
 | [research-and-plan.md](research-and-plan.md) | Pre-event research: rules, judging, competitors, all three agent designs and test catalogues | Background, or building P1 / optional agents |
+| [superpowers/plans/](superpowers/plans/) | Step-by-step execution plans (current: finish P0 scenarios) | You pick up the next task |
 | [reference/](reference/) | Notes that shaped the skill: **DeepSeek V4 + GLM-5.3 prompting (current model)**, Gemini 3 prompting, SWE-agent patterns, issue-ai-agent + TypeSafe, a `gh`-based fix-issue draft | Improving the skill or prompt |
