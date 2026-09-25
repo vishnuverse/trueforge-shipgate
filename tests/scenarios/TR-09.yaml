@@ -6,7 +6,7 @@ issue: 1
 must_pass: false
 reset: false
 depends_on: TR-01
-timeout_min: 10
+timeout_min: 15
 approvals:
   - {tool: add_issue_comment, decision: allow}
 expect:

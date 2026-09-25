@@ -5,7 +5,7 @@ title: Evidence will not go green, two attempts then ask a maintainer
 issue: 6
 must_pass: true
 reset: true
-timeout_min: 10
+timeout_min: 15
 approvals:
   - {tool: add_issue_comment, decision: allow}
 expect:

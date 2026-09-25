@@ -4,7 +4,7 @@ title: Happy path fix, ordinal(12) returns 12nd
 issue: 1
 must_pass: true
 reset: true
-timeout_min: 10
+timeout_min: 15
 approvals:
   - {tool: create_pull_request, decision: allow}
   - {tool: add_issue_comment, decision: allow}

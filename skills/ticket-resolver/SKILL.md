@@ -102,8 +102,12 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
 9. Branch and push (ungated): create_branch {branch: "fix/issue-<n>", from_branch: "main"}. If the branch exists:
    list_commits {sha: "fix/issue-<n>", perPage: 1}; head = PINNED_SHA: continue; else stop (status failed, reason
    branch_exists). Get each file's exact text with `P wc -c <file> && cat <file>`; a file over 16000 bytes: print it
-   in `sed -n 'A,Bp'` chunks of at most 300 lines and join them exactly. push_files {branch: "fix/issue-<n>",
-   message: "fix(<module>): <summary> (#<n>)", files: [{path, content}, ...]} with the patched file(s) and the test.
+   in `sed -n 'A,Bp'` chunks of at most 300 lines and join them exactly. Push ONE file per push_files call, the
+   test first: push_files {branch: "fix/issue-<n>", message: "fix(<module>): <summary> (#<n>)", files: [{path,
+   content}]}. content = the file exactly as printed, non-ASCII characters kept as they are (number.py has "⁰¹²³").
+   If push_files returns a JSON or validation error, send the same call once more; a second failure: stop (status
+   failed, reason push_failed). Never write payload files, never use mcp-client / mcp_client, never contact
+   api.github.com from the sandbox, not even to read: the only check of what you pushed is get_file_contents.
    Verify: get_file_contents {path: "src/humanize", ref: "refs/heads/fix/issue-<n>", fields: ["path", "sha"]} (and
    path "tests") must match `P git hash-object <files>`. Mismatch: push once more; still wrong: stop (status failed,
    reason push_mismatch).

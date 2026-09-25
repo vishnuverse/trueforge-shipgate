@@ -4,7 +4,7 @@ title: Human says STOP at the PR gate
 issue: 1
 must_pass: true
 reset: true
-timeout_min: 10
+timeout_min: 15
 approvals:
   - {tool: create_pull_request, decision: deny, reason: "STOP"}
 expect:

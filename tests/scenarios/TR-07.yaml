@@ -4,7 +4,7 @@ title: Scope limit, bug is in Django not humanize
 issue: 7
 must_pass: false
 reset: true
-timeout_min: 10
+timeout_min: 15
 approvals:
   - {tool: add_issue_comment, decision: allow}
 expect:

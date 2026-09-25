@@ -5,7 +5,7 @@ title: Human says EDIT at the reply gate
 issue: 1
 must_pass: true
 reset: true
-timeout_min: 10
+timeout_min: 15
 approvals:
   - {tool: create_pull_request, decision: allow}
   - {tool: add_issue_comment, decision: deny, reason: "EDIT: Thanks for the report. ordinal(12) returned 12nd because the 11-13 special case was missing. The fix and a regression test are in the linked pull request, which a maintainer will review."}
