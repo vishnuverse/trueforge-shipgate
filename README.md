@@ -4,7 +4,7 @@
 
 **Status:** build plan. Code is written on hackathon day (26 Sep 2026). AI assistance (Claude) was used to draft this plan.
 
-Sep 25, 2026 · @Antik
+Sep 25, 2026 · @Vishnu
 
 ## Summary
 
