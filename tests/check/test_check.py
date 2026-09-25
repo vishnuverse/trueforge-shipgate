@@ -506,3 +506,17 @@ def test_github_client_only_gets_our_repo() -> None:
     assert gh.main_head()["sha"] == rf.SHA
     assert all(m == "GET" for m, _ in seen)
     assert all(p.startswith("/repos/vishnuverse/humanize/") for _, p in seen)
+
+
+def test_handoff_fence_matches_orchestrator_rules() -> None:
+    from shipgate_check.handoff import HandoffParseError, extract_handoff
+
+    one_line = 'done ```json {"stage": "resolve", "status": "ok", "outcome": "fixed"}```'
+    assert extract_handoff(one_line)["outcome"] == "fixed"
+    two = (
+        '```json\n{"stage": "resolve", "status": "aborted", "outcome": "stopped"}\n```\n\n'
+        '```json\n{"stage": "resolve", "status": "ok", "outcome": "fixed"}  \n```'
+    )
+    assert extract_handoff(two)["status"] == "ok"
+    with pytest.raises(HandoffParseError):
+        extract_handoff('```jsonc\n{"stage": "resolve"}\n```')

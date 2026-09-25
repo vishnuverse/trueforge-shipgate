@@ -18,7 +18,8 @@ from .constants import (
     STATUSES,
 )
 
-_JSON_FENCE = re.compile(r"```json[ \t]*\r?\n(.*?)\r?\n[ \t]*```", re.DOTALL)
+# Same rule as orchestrator/src/protocol.ts: a one-line "```json {...}```" block is accepted too.
+_JSON_FENCE = re.compile(r"```json(?![A-Za-z0-9_])[ \t]*\r?\n?(.*?)```", re.DOTALL | re.IGNORECASE)
 _SHA = re.compile(r"^[0-9a-f]{7,40}$")
 _PR_URL = re.compile(rf"^https://github\.com/{re.escape(FULL_REPO)}/pull/\d+$")
 

@@ -75,8 +75,9 @@ export function parseCli(argv: string[]): CliArgs {
   };
 }
 
-export function defaultPrompt(issue: number): string {
-  return `Resolve GitHub issue #${issue} in ${TARGET_REPO}.`;
+export function defaultPrompt(issue: number, mode: Mode): string {
+  // The skill records this mode in each handoff approval entry.
+  return `Resolve GitHub issue #${issue} in ${TARGET_REPO}. Approval mode: ${mode}.`;
 }
 
 async function main(argv: string[]): Promise<number> {
@@ -131,7 +132,7 @@ async function main(argv: string[]): Promise<number> {
     scenarioId: scenario?.id ?? null,
     agent,
     agentLabel,
-    prompt: args.prompt ?? defaultPrompt(issue),
+    prompt: args.prompt ?? defaultPrompt(issue, args.mode),
     timeoutMin,
     repoRoot: root,
     trueforgeUrl,
