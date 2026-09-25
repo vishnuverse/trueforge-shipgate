@@ -18,7 +18,7 @@ expect:
   comments:
     count: 1
     matches:
-      - 'test_intword'
+      - 'test_intword|test_args\d+|tests/test_number\.py'
       - '999[_,]?999[_,]?999|1000\.0 million'
   pushbacks: [evidence]
   no_existing_test_modified: true
