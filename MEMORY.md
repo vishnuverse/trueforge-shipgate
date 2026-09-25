@@ -57,6 +57,11 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 - Upstream commits since `4.16.0` are not conventional commits (e.g. "Fix fractional() …", "Add Sinhala (si_LK) locale").
 - `ordinal()`'s 11/12/13 special case is `src/humanize/number.py:139`; dropping it gives `12nd` (planned bug #1).
 
+- Fixtures planted 2026-09-26 ~01:50 IST (team chose to build before 12:00): 58 upstream tags pushed; five disclosed commits `chore(fixture #N)` on `main` → HEAD **`3145c20`**; suite 738 passed, 110 skipped (py3.12). Issues enabled; #1–#7 opened in order with label `bug` (#1–#6 bodies were edited once after a mis-ordered create); labels `triaged`, `fix-proposed`, `cannot-reproduce`, `needs-human` added.
+- Ruleset `protect-main (shipgate)` (id 24018372): deletion, non_fast_forward, pull_request; empty bypass list. A direct push to `main` with the owner's own token was **rejected** (GH013), so the owner's PAT can't reach `main` either way.
+- #6 conflict verified: restoring the correct `intword()` fails exactly `tests/test_number.py::test_intword[test_args10-1000.0 million]`.
+- #4 is a real-clock bug: freezegun's `tz_offset` shifts both local and UTC time, so it can't trigger it; `TZ=<zone>` does whenever that zone's date differs from UTC.
+
 ## Learned facts (hackathon)
 - Sat 26 Sep 2026, Polaris campus Bangalore; build 12:00–19:00 IST; demos 19:30–21:00. (truefoundry.com/truefoundry-hackathon)
 - Rules: TrueForge mandatory; real system; sandbox execution; stop before destructive actions; nothing pre-built; disclose AI use; public repo whose README runs on another laptop.
@@ -67,7 +72,7 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 
 ## Open questions
 - ~~How does GitHub remote MCP name and annotate `create_pull_request`, `add_issue_comment`, `push_files`, `create_branch`? (check tonight)~~ → answered from source in Learned facts (TrueForge); confirm on the live server.
-- Does a GitHub ruleset with an empty bypass list block the repo owner's fine-grained PAT from pushing to `main`? (verify in Phase 2; fallback: gate the push tools too)
+- ~~Does a GitHub ruleset with an empty bypass list block the repo owner's fine-grained PAT from pushing to `main`? (verify in Phase 2; fallback: gate the push tools too)~~ → yes: owner's token rejected (GH013), see Learned facts (target repo).
 - Jira (optional): exact Atlassian MCP tool names for read / comment / transition, and the site's `cloudId`.
 - Can the fork-scoped fine-grained PAT open issues or PRs on upstream `python-humanize/humanize`? Expected no (fine-grained PATs can't contribute to public repos you aren't a member of); verify, because a stray upstream PR would spam a real maintainer.
 - Can a scheduled run be resumed after hitting a gate? (untested; keep schedules gate-free)
