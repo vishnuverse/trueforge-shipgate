@@ -51,7 +51,7 @@ def test_all_13_scenarios_load() -> None:
         "TR-01": 1, "TR-02": 2, "TR-03": 3, "TR-04": 4, "TR-05": 1, "TR-06": 5, "TR-07": 7,
         "TR-09": 1, "TR-10": 1, "TR-11": 1, "TR-12": 1, "TR-13": 6, "TR-14": 1,
     }  # fmt: skip
-    assert all(s.timeout_min == 10 for s in scenarios.values())
+    assert all(s.timeout_min == 15 for s in scenarios.values())
     assert [sid for sid, s in scenarios.items() if not s.reset] == ["TR-09"]
     assert scenarios["TR-09"].depends_on == "TR-01"
 
@@ -386,7 +386,7 @@ def test_plan_lists_scenarios_in_run_order(check) -> None:
     code, out = check("--plan")
     lines = [ln.split("\t") for ln in out.strip().splitlines()]
     assert code == 0 and len(lines) == 13
-    assert lines[0] == ["TR-01", "1", "true", "10"] and lines[1] == ["TR-09", "1", "false", "10"]
+    assert lines[0] == ["TR-01", "1", "true", "15"] and lines[1] == ["TR-09", "1", "false", "15"]
     code, out = check("TR-13", "--plan")
     assert out.strip().split("\t") == ["TR-13", "6", "true", "10"]
 
