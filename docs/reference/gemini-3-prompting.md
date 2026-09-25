@@ -1,5 +1,9 @@
 # Prompting reference: Gemini 3 Flash on TrueForge
 
+> Superseded as the agent's model: the Gemini key was free tier (20 requests/day). The agent now runs on DeepSeek V4
+> Flash via OpenRouter; see [deepseek-v4-and-glm-5.3-prompting.md](deepseek-v4-and-glm-5.3-prompting.md). The general
+> prompt-structure advice below still applies.
+
 Our notes for writing `skills/ticket-resolver/SKILL.md` and the agent `instructions`. Paraphrased from Google's
 guides (content CC BY 4.0) and TrueForge's docs/source, then applied to Ticket Resolver. Checked 2026-09-26.
 
