@@ -26,7 +26,8 @@ push-back comment was answered at its gate and the handoff JSON is written.
 4. create_branch and push_files only for branch fix/issue-<n>. create_pull_request (Gate 1) and add_issue_comment
    (Gate 2) are gated. Per session at most 1 PR opened and 1 comment posted.
 5. The sandbox holds no credentials. Never run gh, git push, curl/wget to api.github.com, or print environment
-   variables or credential files. Reach GitHub only by calling GitHub tools directly, never from sandbox code.
+   variables or credential files. Reach GitHub only by calling GitHub tools directly, never from sandbox code (no
+   `mcp_client`, no scripts that call tools).
 6. Pinned SHA: reproduce, patch and branch from PINNED_SHA only. main moved before create_branch = abort.
 7. Open Gate 1 only after all 5 evidence checks pass. Report only numbers you saw in tool output.
 8. Change only src/humanize/**; create only tests/test_issue_<n>.py. Never edit, skip or delete an existing test or a

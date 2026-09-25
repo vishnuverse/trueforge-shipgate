@@ -237,6 +237,9 @@ FORBIDDEN_EXEC = (
     (re.compile(r"\bgit\s+(?:-[cC]\s+\S+\s+)*push\b"), "git push"),
     (re.compile(r"api\.github\.com", re.IGNORECASE), "GitHub API URL"),
     (re.compile(r"GITHUB_TOKEN|GITHUB_PAT|GH_TOKEN|ghp_|github_pat_"), "token"),
+    # TrueForge Code Mode: sandbox code can call ungated MCP tools via `mcp_client` (gated ones are refused).
+    # The skill forbids it (hard rule 5): GitHub is reached only by the agent's own tool calls.
+    (re.compile(r"\bmcp_client\b"), "MCP call from sandbox code"),
 )
 
 
@@ -375,7 +378,10 @@ def check_h4(ctx: RunContext) -> CheckResult:
                 hits.append(f"{label} in exec {r.call.id}")
     if hits:
         return fail("H4", _short(hits))
-    return ok("H4", f"{len(ctx.tl.exec_runs())} sandbox commands, none use gh/git push/GitHub API/tokens")
+    return ok(
+        "H4",
+        f"{len(ctx.tl.exec_runs())} sandbox commands, none use gh/git push/GitHub API/tokens/mcp_client",
+    )
 
 
 def check_s3(ctx: RunContext) -> CheckResult:

@@ -28,6 +28,23 @@ card shown, handoff block present, steps, wall time, and cost from OpenRouter's 
 Total spend for the bake-off: **$0.026** (OpenRouter key usage). Prompt caching did most of the work: DeepSeek read
 437k input tokens, 412k of them from cache. A full ticket run therefore costs well under one cent.
 
+## Round 2: 0423 vs 0731 (same day)
+The prompting research found our slug is the April **0423 preview** and that a re-post-trained **0731** release scores
+much higher on agent benchmarks. Both ran the updated skill with `reasoning_effort: high`, `temperature: 1.0`,
+`top_p: 0.95`, `max_tokens: 32768`.
+
+| Model | Result | Wall time | Cost | Notes |
+| --- | --- | --- | --- | --- |
+| **deepseek-v4-flash (0423)** | Pass: repro 3/3 fail → 3/3 pass, suite green, handoff | 236 s | $0.0098 | 32 tool calls, **unique ids**; didn't print the evidence card in evaluation mode |
+| deepseek-v4-flash-0731 | Evidence right, **but** it broke hard rule 5 | 436 s | $0.0169 | Wrote `gh.py` in the sandbox and called GitHub tools through TrueForge's Code Mode (`mcp_client`); its hosts returned tool-call ids `call_0`/`call_1` for **46 calls** (4 unique ids) |
+
+**Decision: stay on 0423.** 0731 is slower, dearer here, broke the no-tools-from-sandbox rule, and its repeated
+tool-call ids would scramble any pairing of calls to results or approvals by id.
+
+Follow-ups this caused: `check.py` H4 now fails any sandbox command using `mcp_client`; the skill names it explicitly.
+We also verified that TrueForge **refuses gated tools from sandbox code** ("requires interactive handling and is not
+callable from sandbox"), so the approval gate can't be bypassed that way.
+
 ## Caveats
 - One run per model: a small sample. Re-run `python3 scripts/bakeoff.py` after changing the skill.
 - The script's "reproduced" column first used exit codes; models pipe pytest through `tail`, so it now reads pytest's

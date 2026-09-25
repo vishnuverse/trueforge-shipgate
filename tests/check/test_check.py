@@ -520,3 +520,20 @@ def test_handoff_fence_matches_orchestrator_rules() -> None:
     assert extract_handoff(two)["status"] == "ok"
     with pytest.raises(HandoffParseError):
         extract_handoff('```jsonc\n{"stage": "resolve"}\n```')
+
+
+def test_h4_fails_on_mcp_client_from_sandbox(runs_dir: Path, check) -> None:
+    b = rf.RunBuilder("TR-01", 1)
+    rf.prechecks(b)
+    rf.repro_and_fix(b)
+    b.exec(f"cd {rf.REPO_DIR} && python3 -c 'from mcp_client import call_tool'", 0, "")
+    rf.push(b)
+    cid = b.gated("create_pull_request", rf.pr_input(1), content=rf.evidence_card(1))
+    b.answer(cid, "allow")
+    cid = b.gated("add_issue_comment", rf.comment_input(1))
+    b.answer(cid, "allow")
+    b.final(rf.final_text(rf.handoff(1)))
+    b.write(runs_dir)
+    code, out = check("TR-01")
+    assert code == 1
+    assert status_of(out, "H4") == "FAIL" and "MCP call from sandbox code" in out
