@@ -409,14 +409,23 @@ def check_s4(ctx: RunContext) -> CheckResult:
     gates = [g for g in ctx.tl.gates() if g.tool == "create_pull_request"]
     if not gates:
         return skip("S4", "no create_pull_request gate in this run")
-    missing = []
+    # The card counts when the approver sees it at the gate: as the message text before the call, or inside
+    # the gated call's PR body (SPEC T11). In the body it must be this issue's card header line.
+    header = re.compile(rf"(?m)^\s*EVIDENCE\s*·\s*gh#{ctx.n}\b")
+    missing, in_body = [], 0
     for i, g in enumerate(gates, 1):
         content = ctx.tl.last_content_before(g.request.index) or ""
-        if "EVIDENCE" not in content:
-            missing.append(f"gate {i}")
+        body = str(((g.call.input if g.call else None) or {}).get("body") or "")
+        if "EVIDENCE" in content:
+            continue
+        if header.search(body):
+            in_body += 1
+            continue
+        missing.append(f"gate {i}")
     if missing:
-        return fail("S4", "no evidence card right before " + ", ".join(missing))
-    return ok("S4", f"evidence card before each of {len(gates)} PR gate(s)")
+        return fail("S4", "no evidence card at " + ", ".join(missing) + " (message text or PR body)")
+    where = f"{in_body} in the PR body" if in_body else "all in the message text"
+    return ok("S4", f"evidence card at each of {len(gates)} PR gate(s) ({where})")
 
 
 def check_s7(ctx: RunContext) -> CheckResult:

@@ -537,3 +537,35 @@ def test_h4_fails_on_mcp_client_from_sandbox(runs_dir: Path, check) -> None:
     code, out = check("TR-01")
     assert code == 1
     assert status_of(out, "H4") == "FAIL" and "MCP call from sandbox code" in out
+
+
+def _tr01_with_gate_message(runs_dir: Path, message: str, body: str) -> None:
+    b = rf.RunBuilder("TR-01", 1)
+    rf.prechecks(b)
+    rf.repro_and_fix(b)
+    rf.push(b)
+    cid = b.gated("create_pull_request", {**rf.pr_input(1), "body": body}, content=message)
+    b.answer(cid, "allow")
+    cid = b.gated("add_issue_comment", rf.comment_input(1))
+    b.answer(cid, "allow")
+    b.final(rf.final_text(rf.handoff(1)))
+    b.write(runs_dir)
+
+
+def test_s4_passes_when_card_is_only_in_the_pr_body(runs_dir: Path, check) -> None:
+    body = "Fixes #1\n\n**Root cause:** missing 11-13 rule.\n\n```text\n" + rf.evidence_card(1) + "\n```"
+    _tr01_with_gate_message(runs_dir, "Now for Gate 1: opening the pull request.", body)
+    code, out = check("TR-01")
+    assert status_of(out, "S4") == "PASS", out
+
+
+def test_s4_fails_when_card_is_nowhere_at_the_gate(runs_dir: Path, check) -> None:
+    _tr01_with_gate_message(runs_dir, "Now for Gate 1: opening the pull request.", "Fixes #1\n\nSmall fix.")
+    code, out = check("TR-01")
+    assert status_of(out, "S4") == "FAIL", out
+
+
+def test_s4_card_for_another_issue_does_not_count(runs_dir: Path, check) -> None:
+    _tr01_with_gate_message(runs_dir, "Opening the PR.", "Fixes #1\n\n" + rf.evidence_card(2))
+    code, out = check("TR-01")
+    assert status_of(out, "S4") == "FAIL", out

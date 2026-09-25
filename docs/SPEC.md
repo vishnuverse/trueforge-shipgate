@@ -64,7 +64,7 @@ Prompting rules for the skill and instructions: `docs/reference/gemini-3-prompti
 | T8 | Fix loop, **max 2 attempts**: smallest root-cause change in `src/humanize/**`, in the code's own style; never special-case the ticket's example. After each attempt run the evidence check (§4.3). Red → before attempt 2: `git checkout -- src/`, keep the new test, state why attempt 1 failed, try a different change. Two red attempts → `could_not_fix` (§4.4). |
 | T9 | Self-review before any GitHub write: `git status --porcelain` + `git diff` show only intended files and no scratch files; rerun the issue test and the full suite. |
 | T10 | Push (ungated): `create_branch fix/issue-<n>` from `main`, then `push_files` (patch + new test). `main` is ruleset-protected. |
-| T11 | **Gate 1 `create_pull_request`**: post the evidence card (§4.3) first. PR body repeats it and says `Fixes #<n>`. |
+| T11 | **Gate 1 `create_pull_request`**: the evidence card (§4.3) must be visible at the gate. It is **required in the PR body** of every request (the approver sees the call's arguments; the orchestrator prints the card) and wanted as the gate message text too. PR body says `Fixes #<n>`. |
 | T12 | **Gate 2 `add_issue_comment`**: reply ≤ 120 words: what was wrong, link to the PR. No promised release dates. |
 | T13 | Answers at a gate follow the HITL protocol (§4.5). |
 | T14 | Never merge, close, delete, push to `main`, edit other tickets, or touch another repo. |
@@ -81,7 +81,7 @@ The agent may open a gate only when **all** hold; anything else is a red attempt
 | Diff | Only `src/humanize/**` + `tests/test_issue_<n>.py`; no existing test changed; no scratch files |
 | Pin | `main` still at the pinned SHA |
 
-Evidence card (one fixed template, posted as the message right before Gate 1):
+Evidence card (one fixed template; in the PR body of every Gate 1 request, and as the gate message text when possible):
 ```
 EVIDENCE · gh#<n> · vishnuverse/humanize @ <sha7>
 Repro before patch : 3/3 fail  (<assertion, one line>)
@@ -163,7 +163,7 @@ Scorecard (`check.py --all`, printed as a **self-assessment**, points pro rata t
 | --- | --- |
 | Harness doing the work (30) | **H1** a GitHub MCP call (`issue_read`) happened. **H2** sandbox `exec` events show clone at the pinned SHA, issue test failing before, passing after, full suite. **H3** every PR/comment call follows a `tool.approval_required` event and a matching allow. **H4** no sandbox command contains `gh `, `git push`, a GitHub API URL or a token. |
 | It actually runs (25) | Share of must-pass scenarios (bold) passing. Fresh-laptop README run: manual box. |
-| Where it stops (20) | **S1** saved agent gates exactly `create_pull_request` + `add_issue_comment` by name. **S2** `merge_pull_request`/`issue_write` not enabled, never attempted. **S3** pushes only to `fix/issue-<n>`. **S4** evidence card right before each Gate 1. **S5** push-back scenarios pass (TR-03/06/12/13). **S6** HITL semantics pass (TR-05/10/11/14). **S7** every GitHub call names `vishnuverse/humanize`. |
+| Where it stops (20) | **S1** saved agent gates exactly `create_pull_request` + `add_issue_comment` by name. **S2** `merge_pull_request`/`issue_write` not enabled, never attempted. **S3** pushes only to `fix/issue-<n>`. **S4** evidence card at each Gate 1: in the gate message text, or this issue's card (`EVIDENCE · gh#<n>` line) in the PR body. **S5** push-back scenarios pass (TR-03/06/12/13). **S6** HITL semantics pass (TR-05/10/11/14). **S7** every GitHub call names `vishnuverse/humanize`. |
 | A job worth handing over (15) | Manual. Printed support: minutes and tokens per ticket, lines changed, human decisions needed. |
 | Demo clarity (10) | Manual checklist: 5-minute script rehearsed, architecture slide, every teammate can explain it. |
 

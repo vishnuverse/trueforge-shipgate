@@ -62,9 +62,24 @@ export function toolLabel(gate: ResolvedGate): string {
   return gate.mcpServer ? `${gate.mcpServer}/${gate.tool}` : gate.tool;
 }
 
+/** The evidence card inside a PR body: from its `EVIDENCE ·` header line to the next blank or fence line. */
+export function cardFromBody(body: unknown): string | null {
+  if (typeof body !== "string") return null;
+  const lines = body.split(/\r?\n/);
+  const start = lines.findIndex((l) => /^\s*EVIDENCE\s*·/.test(l));
+  if (start < 0) return null;
+  const card: string[] = [];
+  for (const line of lines.slice(start)) {
+    if (line.trim() === "" || line.trim().startsWith("```")) break;
+    card.push(line);
+  }
+  return card.join("\n");
+}
+
 export function renderGate(ctx: GateContext, maxString = 600): string {
   const g = ctx.gate;
   const bar = "=".repeat(72);
+  const card = cardFromBody((g.input as Record<string, unknown> | null | undefined)?.["body"]);
   const lines = [
     "",
     bar,
@@ -72,6 +87,7 @@ export function renderGate(ctx: GateContext, maxString = 600): string {
     bar,
     "--- agent's latest message before the gate ---",
     ctx.evidence ? sanitize(ctx.evidence) : "(none)",
+    ...(card ? ["--- evidence card (from the PR body) ---", sanitize(card)] : []),
     `--- ${toolLabel(g)} input ---`,
     sanitize(JSON.stringify(shorten(g.input, maxString), null, 2)),
     bar,

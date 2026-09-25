@@ -168,3 +168,21 @@ test("ui: gives up when the run is aborted (timeout)", async () => {
   setTimeout(() => ac.abort(new Error("deadline")), 20);
   await assert.rejects(p, /deadline/);
 });
+
+test("gate shows the evidence card from the PR body in full, even past the input truncation", () => {
+  const cardText = [
+    "EVIDENCE · gh#1 · vishnuverse/humanize @ 3145c20",
+    "Repro before patch : 3/3 fail  (assert '12nd' == '12th')",
+    "Next action        : create_pull_request fix/issue-1 → main  (reply follows, gated separately)",
+  ].join("\n");
+  const body = "Fixes #1\n\n" + "summary ".repeat(120) + "\n\n```text\n" + cardText + "\n```\n\ntail";
+  const base = ctx();
+  const shown = renderGate(ctx({ evidence: "Now for Gate 1.", gate: { ...base.gate, input: { title: "t", body } } }));
+  assert.match(shown, /--- evidence card \(from the PR body\) ---/);
+  assert.ok(shown.includes(cardText), shown);
+});
+
+test("gate without a card in the body adds no card section", () => {
+  const shown = renderGate(ctx({ evidence: "hi" }));
+  assert.doesNotMatch(shown, /evidence card \(from the PR body\)/);
+});
