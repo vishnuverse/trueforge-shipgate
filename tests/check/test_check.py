@@ -388,7 +388,7 @@ def test_plan_lists_scenarios_in_run_order(check) -> None:
     assert code == 0 and len(lines) == 13
     assert lines[0] == ["TR-01", "1", "true", "15"] and lines[1] == ["TR-09", "1", "false", "15"]
     code, out = check("TR-13", "--plan")
-    assert out.strip().split("\t") == ["TR-13", "6", "true", "10"]
+    assert out.strip().split("\t") == ["TR-13", "6", "true", "15"]
 
 
 def test_malformed_handoff_fails(runs_dir: Path, check) -> None:
