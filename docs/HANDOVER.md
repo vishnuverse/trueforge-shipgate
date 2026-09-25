@@ -4,6 +4,21 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 03:10 — Vishnu + Claude — TR-01 end to end: 29/30
+
+**Done**
+- GitHub token fixed (Contents / Issues / PRs read-write). Model stays deepseek-v4-flash **0423** with reasoning high,
+  temp 1.0, top_p 0.95, max_tokens 32768 (0731 reused tool-call ids and called GitHub from sandbox code).
+- Verified: TrueForge refuses gated tools from sandbox code (Code Mode); H4 now also flags `mcp_client`.
+- TR-01: 29/30, real PR vishnuverse/humanize#8. S4 failed (card only in PR body) → hard rule in SKILL.md.
+- pip in the local sandbox: `PIP_USE_DEPRECATED=legacy-certs` in the command prefix; `--trusted-host` forbidden.
+
+**Next**
+1. Re-run TR-01 to confirm 30/30 (reset closes PR #8), then TR-03, 05, 06, 10, 11, 12, 13.
+2. Jev Triage after P0 is green. Filmed `--approve ui` run. Daytona when the key arrives.
+
+---
+
 ## 2026-09-26 02:45 — Vishnu + Claude — model chosen, docs reorganised, submission README
 
 **Done**
