@@ -25,11 +25,16 @@ API = os.environ.get("TRUEFORGE_URL", "http://localhost:8790").rstrip("/") + "/a
 TIMEOUT_S = 15 * 60
 
 OR_IDS = {
+    "deepseek-v4-flash-0731": "deepseek/deepseek-v4-flash-0731",
     "deepseek-v4-flash": "deepseek/deepseek-v4-flash",
     "glm-5-3-flash": "z-ai/glm-5.3-flash",
     "gpt-5-nano": "openai/gpt-5-nano",
     "gpt-oss-20b": "openai/gpt-oss-20b",
 }
+
+# Vendor-recommended agentic settings, same for every model
+# (docs/reference/deepseek-v4-and-glm-5.3-prompting.md).
+PARAMS = {"reasoning_effort": "high", "temperature": 1.0, "top_p": 0.95, "max_tokens": 32768}
 
 EVAL = """
 <evaluation_mode>
@@ -68,7 +73,7 @@ def spec(model):
     with open(f"{REPO}/skills/ticket-resolver/SKILL.md") as fh:
         skill = fh.read()
     return {
-        "model": {"name": f"openrouter/{model}"},
+        "model": {"name": f"openrouter/{model}", "params": PARAMS},
         "instructions": agent["instructions"]
         + '\n\n<skill name="ticket-resolver">\n'
         + skill
@@ -171,7 +176,11 @@ def run(model, prices, results):
         sid = req("POST", "/sessions", {"agent": {"spec": spec(model)}, "metadata": {"bakeoff": model}})[
             "data"
         ]["id"]
-        kickoff = "Resolve GitHub issue #1 in vishnuverse/humanize. Evaluation mode (see <evaluation_mode>)."
+        today = time.strftime("%Y-%m-%d")
+        kickoff = (
+            f"Resolve GitHub issue #1 in vishnuverse/humanize. Today is {today}. "
+            "Evaluation mode (see <evaluation_mode>)."
+        )
         tid = req(
             "POST",
             f"/sessions/{sid}/turns",

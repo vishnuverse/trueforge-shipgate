@@ -75,9 +75,10 @@ export function parseCli(argv: string[]): CliArgs {
   };
 }
 
-export function defaultPrompt(issue: number, mode: Mode): string {
-  // The skill records this mode in each handoff approval entry.
-  return `Resolve GitHub issue #${issue} in ${TARGET_REPO}. Approval mode: ${mode}.`;
+export function defaultPrompt(issue: number, mode: Mode, today: string = new Date().toISOString().slice(0, 10)): string {
+  // The skill records this mode in each handoff approval entry. The date lives here, not in the agent's
+  // instructions, so the system prompt stays byte-identical across days (prompt-cache hits).
+  return `Resolve GitHub issue #${issue} in ${TARGET_REPO}. Approval mode: ${mode}. Today is ${today}.`;
 }
 
 async function main(argv: string[]): Promise<number> {

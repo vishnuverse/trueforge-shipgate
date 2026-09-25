@@ -54,7 +54,10 @@ test("cli: refusals", () => {
 });
 
 test("first message and UI link", () => {
-  assert.equal(defaultPrompt(7, "script"), "Resolve GitHub issue #7 in vishnuverse/humanize. Approval mode: script.");
+  assert.equal(
+    defaultPrompt(7, "script", "2026-09-26"),
+    "Resolve GitHub issue #7 in vishnuverse/humanize. Approval mode: script. Today is 2026-09-26.",
+  );
   assert.equal(uiSessionUrl("http://localhost:8790/", "01abc"), "http://localhost:8790/sessions/01abc");
   assert.equal(utcStamp(new Date("2026-09-26T07:04:05.678Z")), "20260926T070405Z");
 });
