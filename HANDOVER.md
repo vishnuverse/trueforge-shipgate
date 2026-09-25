@@ -4,6 +4,28 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 02:20 — Vishnu + Claude — P0 built in parallel and merged; model switch pending
+
+**Done** (team chose to build before 12:00)
+- Fork `vishnuverse/humanize`: tags, fixtures #1–#7 (5 disclosed plant commits, HEAD `3145c20`), labels, no-bypass ruleset.
+- Merged on `main`: `skills/ticket-resolver/SKILL.md` + `agents/ticket-resolver.json` + `scripts/setup_agents.ts`;
+  `orchestrator/` (66 tests, typecheck clean); `scripts/check.py` + `shipgate_check/` + 13 scenarios + `reset.sh` /
+  `score.sh` (32 tests, ruff clean). Contracts: `docs/contracts.md`.
+- Gemini key is free tier (20 requests/day): exhausted. OpenRouter provider added in TrueForge with 4 candidates;
+  `OPENROUTER_API_KEY` in `.env` (hard limit $5). Repo stays private → skill delivered inline.
+
+**Blocked on Vishnu**
+- Paste the OpenRouter key into TrueForge: Settings → Models → `openrouter` → Edit.
+
+**Next**
+1. Model bake-off on issue #1 (no GitHub writes): `scratchpad/bakeoff.py` → pick model → update agent JSON, SPEC §4.1.
+2. `npx --yes tsx scripts/setup_agents.ts --inline-skill`, then `scripts/score.sh TR-01`; fix integration gaps
+   (handoff `status` for non-fixed outcomes, TR-14 stop rule, "approval mode" phrase in kickoff).
+3. Must-pass: TR-01, 03, 05, 06, 10, 11, 12, 13 → `check.py --all` scorecard. Then TR-02, 04, 07, 09, 14.
+4. Live `--approve ui` run on #1 (REVISE once) for the demo; README run steps + AI disclosure; Daytona when the key arrives.
+
+---
+
 ## 2026-09-26 01:40 — Vishnu + Claude — Ticket Resolver harness designed (spec only, no code)
 
 **Done**
