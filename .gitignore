@@ -216,3 +216,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# shipgate
+runs/
+approvals.log
+node_modules/

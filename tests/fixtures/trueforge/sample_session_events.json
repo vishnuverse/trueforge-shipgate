@@ -1,0 +1,388 @@
+[
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "type": "turn.created",
+   "id": "01m3d0gh1d9pp2y08qtqzs7ct5",
+   "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+   "previous_turn_id": null,
+   "input": [
+    {
+     "type": "user.message",
+     "content": "Step 1: in the sandbox run exactly this and show the raw output:\ngit ls-remote https://github.com/vishnuverse/humanize HEAD; echo git-exit=$?; curl -sS -o /dev/null -w \"pypi=%{http_code}\\n\" https://pypi.org/simple/pip/; head -c 60 /Users/dev/Documents/GitHub/trueforge-shipgate/README.md; echo; echo read-exit=$?\nStep 2: call the github get_me tool."
+    }
+   ],
+   "state": {
+    "status": "running"
+   },
+   "created_at": "2026-09-25T19:26:09.961Z",
+   "thread_id": null
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_calls": [
+    {
+     "id": "call_274112",
+     "type": "function",
+     "function": {
+      "name": "exec",
+      "arguments": "{\"intent\":\"Execute Step 1 setup smoke test bash command\",\"command\":\"git ls-remote https://github.com/vishnuverse/humanize HEAD; echo git-exit=$?; curl -sS -o /dev/null -w \\\"pypi=%{http_code}\\\\n\\\" https://pypi.org/simple/pip/; head -c 60 /Users/dev/Documents/GitHub/trueforge-shipgate/README.md; echo; echo read-exit=$?\"}"
+     },
+     "provider_specific_fields": {
+      "thought_signature": "EscJCsQJAWkUfRNYtK079Bdyp3xJVyNKhwhZDMZIY6G/LvCuaKeCKnlbKNFB3FzquZN4wCoTnoppgqDpU7O4HXoMggncnpNkF9Kb9TxIv2A8dtWtCuC5Fj+HJJbosP4FIUGsM8C30qp7P0iXqTyp80IPH6VxHUlg166yiiypSQsSj7V0ULRAQ+rLSOSMBlbG5097fPU/4tqTWjKrXIkcjZaJy/B7b8Y2NwUVwm+KBHMyCVe6MM5qogjk7W56QaMdEkvFxAQ+jYsEYEAGdvOYPvPenyBdII1RhBs2U/WVZN0/Muq3wQ+NMS740XkVRiF2QjbE458bCBCVrbmZ8qERlgaVussFjSP1l/f7diQv0Q6cROjpXpj/TEd9/2Wa35ElBvOE9ddFycNVdcW/mogcNJZ+QQ6v0LyeiBm+sKVXW6DgapZCWeMlxmA1IR+v5yQsd+j67D55q3l88Odf0r9xLlMjFPjMUfHh0a3fJgQnY5wYshigYcDeVA/5sY+pYzgK1CWc9hojjx1ugrZo7U7LmJoUMnPavOWH8QzhmBa7LNEEntdV5LlU0u3gakubu1R4YTIb9wFfQr6m18wAbV7xOJxTGOOZHT5raOq0AFXVmbeRj9mepKj9nPIKlo1qQxCkSwjK6ni3lQdMmd2kJeX1ujR0+Aonkv5H6p0Si9LVp41yC9r0iYWv03plLIDQE6pePUf9qqQgJd47NtTyN+C9u0BVD94fcFu/6gxUFN3GszHWb0F4FDI7JssNG8kmt2uyOapNGZeJppeVVP3L6013Q82+TUrMTvSPbnucgAGFjXxqm+5Rcerg3wlgrTouCNUU84WEUja6tqYPFDjqpHAYt3oEWFj781rph6CEroqbk82qK8r+DqiS7DEbLMnyltg5aIWEyR9hqmBm9e1nPiTjJGE0H++trry3CRkNq0jrowUSrKRxIrjEtCITGO63wAPICz0VgOygg1lKWAz3LXXICXDc0jUI9LIM/hBqwHDaMMuUOtttY8i99G+2kJ7p2Ke8bWOChSxyZbKCdBBThskHmKBrnRcSUXIGUig0ddbOUhf4R9vkMZ9WUTOrxte7NVOR5oel1yA0dI/UkThkTPbEbYPvHZqcGvulbN11b4qftmf4H3EKRAhvs7yR9MLeZLIQ+vFRQtZtDqn4s0IRqkUdopqTJBKPN9GD2Vrzir4H7S7hnuxq95gK9JlM7PjaJfVvOdNPWpwlvHB5xTUlnZDOB51ixD0ubhGAV6x+kh/AbH3Cgf2tCGbruPNTh4RW24OFiUc3LYkhWaXsu6p6pO03ApVWnapMR8ig8cDNtIgNYPl6jB9rSk0MEZ8NQz52CnyK/DAFZBP+X2qd2PmmlO8SIMfksiO9k9/t1ITJLo1RuVD+j3P44pF+eB4d2gXMjeLBUCElxI+8obUC16MObUmwP2sQTHUAEitrpesYp4Mu8WX2ejoqwb62GmPWiIPS3S2eO6g0eZrgzEBSzBs4Dg03dxQ1RHEekUcd04QHbLbs422YZWaynl/gDVIA50+Bc2eZDAb3LP7/PYtDByNXGlOFjUx1j41A3rDCIUfnJNdha3iZjFC5HD8baiaeBQ1NGzoYM0yN+0c/h55qSqrWIo5ojSVjRWub+iXLP1Y="
+     },
+     "tool_info": {
+      "type": "truefoundry-system",
+      "name": "exec"
+     }
+    }
+   ],
+   "type": "model.message",
+   "id": "01m3d0gh1f4wd61v39sge0bx8e",
+   "created_at": "2026-09-25T19:26:14.250Z",
+   "thread_id": "main",
+   "finish_reason": "tool_calls",
+   "usage": {
+    "input_tokens": 3740,
+    "output_tokens": 407,
+    "cache_read_tokens": 0,
+    "input_tokens_breakdown": {
+     "harness": 3718,
+     "skills": 0,
+     "instructions": 31,
+     "tool_definitions": 0,
+     "messages": 0
+    }
+   }
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "type": "sandbox.created",
+   "id": "01m3d0gtw9j82c1enf6nwmwanx",
+   "created_at": "2026-09-25T19:26:20.041Z",
+   "sandbox_id": "v1:local:/Users/dev/Library/Application Support/trueforge/sandboxes/01m3d0ggzdwnntsrvy0fs2738t/01m3d0gn7c3011bsr0f65vjzwv",
+   "thread_id": null
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_call_id": "call_274112",
+   "content": "{\"success\":true,\"response\":{\"exitCode\":0,\"result\":\"392aef707c0e74341ab4a51420984e9ea6b566c5\\tHEAD\\ngit-exit=0\\npypi=200\\n\\nread-exit=0\\nfatal: failed to store: -60008\\nhead: /Users/dev/Documents/GitHub/trueforge-shipgate/README.md: Operation not permitted\\n\"}}",
+   "type": "tool.response",
+   "id": "01m3d0gtwbx0akdd30thzyty45",
+   "created_at": "2026-09-25T19:26:20.041Z",
+   "thread_id": "main"
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_calls": [
+    {
+     "id": "call_201758",
+     "type": "function",
+     "function": {
+      "name": "list_tools",
+      "arguments": "{\"mcp_server\":\"github\"}"
+     },
+     "provider_specific_fields": {
+      "thought_signature": "ErQDCrEDAWkUfRM18SO7X60TM1+3yA6aHuo8Mk5aSz8sHWsHElzZZG+pAT5dy1/FINUihC5Sl75tcCfRYziKJUp6jMxIHsYiF50n6wKNZmWjUSc5aO/EhJ2HoJG9kcBhgWv8xKfCiCERAl+/7T0nk7KGvcOxujl1zKhnKVX1KGFI6BjqhHxkXEFbZHh8z6oeXTzc9TA3+L78aNetDdiYO8KJdqgnGkvwCEAxnayr1cPw5YhsDGZ2EjV3klbdLd89AQGorNlYi3iHkKOOOxo5V5lxxJ6EjyAIVwsertV4N6yfT6CtQOYmAvSCvcfuKPWViO98orVih1ywQWqmmBcvNL/+nnP+xEKS3r6N10akIy+ZBOIldAaHbff5uvt3gep/9ykyY0skbb3xa1jhy/10F9SO/dY1mdPTgZ65qWUlDfxapbPrq5k5DwVSDJAuQ2uS5ErIBqmcrjELOHqq86FIwzixuXDYaQo7QFlQ5wbOvZY0Rz1Tdy4kTcy1fDmRHenF2LRwC6U628AFlQ6dNZxcwrLBOi1k6FSnkwj5dCk7HGi6ZCXyLnWyOVtIiGfzPmtG55LeBk8mSQ=="
+     },
+     "tool_info": {
+      "type": "truefoundry-system",
+      "name": "list_tools"
+     }
+    }
+   ],
+   "type": "model.message",
+   "id": "01m3d0gtwdqn31kj9hgxrjcweh",
+   "created_at": "2026-09-25T19:26:22.116Z",
+   "thread_id": "main",
+   "finish_reason": "tool_calls",
+   "usage": {
+    "input_tokens": 4288,
+    "output_tokens": 92,
+    "cache_read_tokens": 0,
+    "input_tokens_breakdown": {
+     "harness": 3718,
+     "skills": 0,
+     "instructions": 31,
+     "tool_definitions": 0,
+     "messages": 539
+    }
+   }
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "type": "mcp.initialize",
+   "id": "01m3d0gzgavw3hp3xy1p69rjw8",
+   "created_at": "2026-09-25T19:26:24.778Z",
+   "thread_id": "main",
+   "mcp_servers": [
+    {
+     "name": "github",
+     "id": "github",
+     "session_id": "7eb2184e-98fa-486a-b82c-ff499121b30e",
+     "transport_type": "streamable-http"
+    }
+   ]
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_call_id": "call_201758",
+   "content": "github:\n  get_me",
+   "type": "tool.response",
+   "id": "01m3d0gzgd32jn3j44ce38ym4k",
+   "created_at": "2026-09-25T19:26:24.778Z",
+   "thread_id": "main"
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_calls": [
+    {
+     "id": "call_101408",
+     "type": "function",
+     "function": {
+      "name": "get_tool_info",
+      "arguments": "{\"tool_name\":\"get_me\",\"mcp_server\":\"github\"}"
+     },
+     "provider_specific_fields": {
+      "thought_signature": "EtQBCtEBAWkUfROmiPk+OqoQhVOcjSXSjJcBqXwXHbodp4y3utnQjrHc7YaaPqoKFeCXg5x/pK57AbWOSrbOu3+V62kzDg4jd6J5W75kz8SPoYTQfST3C3raOBgjRymeTUDSk2ZQm5soTSmk+m1E5dk4E/ATgFeZp09wHc7kQFOxlAeMKQvmto7rght494c29YtSiC72nbsEyZ972Rrizm8c+qTtg7CLBEl8daFfv4h3RyjxBPAC2HuupHJ55loUNuc/olR8blD+QMASKI0K5uJfTxoolJg="
+     },
+     "tool_info": {
+      "type": "truefoundry-system",
+      "name": "get_tool_info"
+     }
+    }
+   ],
+   "type": "model.message",
+   "id": "01m3d0gzgf1pxtwe34523r0kwe",
+   "created_at": "2026-09-25T19:26:28.179Z",
+   "thread_id": "main",
+   "finish_reason": "tool_calls",
+   "usage": {
+    "input_tokens": 4408,
+    "output_tokens": 58,
+    "cache_read_tokens": 0,
+    "input_tokens_breakdown": {
+     "harness": 3718,
+     "skills": 0,
+     "instructions": 31,
+     "tool_definitions": 0,
+     "messages": 659
+    }
+   }
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_call_id": "call_101408",
+   "content": "{\"description\":\"Get details of the authenticated GitHub user. Use this when a request is about the user's own profile for GitHub. Or when information is missing to build other tool calls.\",\"inputSchema\":{\"type\":\"object\",\"properties\":{}},\"outputSchema\":null}",
+   "type": "tool.response",
+   "id": "01m3d0h2tr74hr1zxmf52etsqg",
+   "created_at": "2026-09-25T19:26:28.184Z",
+   "thread_id": "main"
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "tool_calls": [
+    {
+     "id": "call_233096",
+     "type": "function",
+     "function": {
+      "name": "call_tool",
+      "arguments": "{\"input\":{},\"mcp_server\":\"github\",\"tool_name\":\"get_me\"}"
+     },
+     "provider_specific_fields": {
+      "thought_signature": "EtUICtIIAWkUfRNytFnMBYmXNF1vfaGoJV9VQbXkn+u6FiPrZdynjkucNNgomkgEjZ/s3/3EFjq1IX5ZPSYssIoIfoPr2VsAIWpt8Z43EwmLxwDWM5djpCg+6sd+9KH+sODyfmUsCKDEB9f6MePuccsuduOuTY+ExMTUWgpfmfKqEGz4hNpTBj+R0W+53JveBTcPLnASWkncnXygN3ZaPmW4zamvNT951+jl06x1uEGun+U195p5A4ONV1B5FS0YNJC3k/PyQffY+pTfc0qbEe4xXlHOAK3T6CPdZe5efTnUqQO8lFu4pQqBaV1NPJb/0EFIThrFauIMPBtSwQVyfTii5N95IzEX2Zn2a8a/sOIR0APwvx3D5m0pu9A4f60FOO5xqOOeJvk1m13l3dZl0KCrsxfMTWPvVHWApGAU/lzkEuUDJq0ywxEFB15dSaqeGkWcpjS7bQv6iAApuRYq7I0yVkNwcNvPe7kxTtedj0DJMPWR2FBVT5FulXFa+FhjWzavWcAsaEqRgiYjmIyJiqyOOAxr2Mu2ftnKiu9yq2Cg2OhJYiMh48VTDQtshvU4S/AxQOVYQXtyJ8xQmkJp9XQZj+nrvwQteFkwLJVbtjKOOHR4r0x7BibxO9DIuIyo/bPULT7TSrCsaJDCz4WV9hjE72Wq803tiiGRBAnAPSvZrpiimN3Ruew+OJotBvHBiHmzAPfwhQwiw6YPVP8I/wrs5ZAsJJNCGxGgdq28f8l3GmuoqnfBUx+8YmvhIrIMGpCFlxPH570uDycJeePEnjU770KTWR7Zf2c4ztwmaL5ga7dHLF712FqHzURsuYVNJHQURALcwA5DY/S11YxUfoJXoLm1TM+0/RGZB13pSmaWfYw7mj1+Qn2HqKV4tHqUBzMsLm5nGJTQWXfcPokDhE14sq4YgC1aGJFbbIj8mdviNtIPPNBjIaBGA/bMCXzn7eQUp4l9rMkcYtRIHnPYKqfTJ8Xlh8mYAehVDQiylbcrqoJzN6IgoVfCguxsULD8FHdte5Cx/56ij5gJz64s3+qKv7kj/Rcl7TvQiY2Btl6w/6v04/jWLEI8nKYfzST0hn4EKXHq1zgzzoHeaZ5BJtdhYarHdBG2pMui3VjBL3VtYy1OFK/M6K3zWjuqT12PeQ+JEcaEy85l9JHILI5rjtZNWOn4PD7mL08TEEVGsWCybnZ03ScMMKkID+gC53L+ecPG0U0HIM93RQNBKjWw3cUE7qTBbdjpQPoljsuHc0vcuzL9ynN0Cb54F5Yxp5KkXosDueydU810evr4fSsWsA/clti+4LVy18dXL7v7p/W6bb/4NI8WzgCbXkuMjGisFfS1L8gPDE1zaX57foucpIVzCOixTp7HaqPXvAxU2ZAITznS0jqyL3xsEWx+dOXV5m5+OaI92Qv5bH5HRJr2MA9dZt+HD7fOnwc8FWgNRzs/madpKmui9Io7gybTzpQ8+vxxytVNyhk="
+     },
+     "tool_info": {
+      "type": "truefoundry-system",
+      "name": "call_tool"
+     }
+    }
+   ],
+   "type": "model.message",
+   "id": "01m3d0h2tt8ffbqsjz5fmtt1nt",
+   "created_at": "2026-09-25T19:26:32.449Z",
+   "thread_id": "main",
+   "finish_reason": "tool_calls",
+   "usage": {
+    "input_tokens": 4547,
+    "output_tokens": 260,
+    "cache_read_tokens": 0,
+    "input_tokens_breakdown": {
+     "harness": 3718,
+     "skills": 0,
+     "instructions": 31,
+     "tool_definitions": 0,
+     "messages": 798
+    }
+   }
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "type": "tool.approval_required",
+   "id": "01m3d0h7098v7zrnke2efh7asb",
+   "created_at": "2026-09-25T19:26:32.457Z",
+   "thread_id": "main",
+   "tool_calls": [
+    {
+     "id": "call_233096",
+     "source_event_id": "01m3d0h2tt8ffbqsjz5fmtt1nt"
+    }
+   ]
+  }
+ },
+ {
+  "turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+  "event": {
+   "type": "turn.done",
+   "id": "01m3d0h70a2x7w331n2crk1wvh",
+   "created_at": "2026-09-25T19:26:32.458Z",
+   "state": {
+    "status": "done",
+    "output": null,
+    "required_actions": [
+     {
+      "type": "tool.approval_required",
+      "id": "01m3d0h7098v7zrnke2efh7asb",
+      "created_at": "2026-09-25T19:26:32.457Z",
+      "thread_id": "main",
+      "tool_calls": [
+       {
+        "id": "call_233096",
+        "source_event_id": "01m3d0h2tt8ffbqsjz5fmtt1nt"
+       }
+      ]
+     }
+    ],
+    "completed_at": "2026-09-25T19:26:32.458Z",
+    "metrics": {
+     "total_input_tokens": 16983,
+     "total_output_tokens": 817,
+     "total_tokens": 17800,
+     "total_cache_read_tokens": 0,
+     "total_reasoning_tokens": 613
+    }
+   },
+   "thread_id": null
+  }
+ },
+ {
+  "turn_id": "01m3d0hmta8jwpr3vwnxm39p90",
+  "event": {
+   "type": "turn.created",
+   "id": "01m3d0hmtqayeg09cc2w13m8b7",
+   "turn_id": "01m3d0hmta8jwpr3vwnxm39p90",
+   "previous_turn_id": "01m3d0gh10f0se1kcdjbg1czq8",
+   "input": [
+    {
+     "type": "user.tool_approval",
+     "thread_id": "main",
+     "tool_call_id": "call_233096",
+     "approval": {
+      "status": "deny",
+      "reason": "setup smoke test: gate verified, not needed"
+     }
+    }
+   ],
+   "state": {
+    "status": "running"
+   },
+   "created_at": "2026-09-25T19:26:46.611Z",
+   "thread_id": null
+  }
+ },
+ {
+  "turn_id": "01m3d0hmta8jwpr3vwnxm39p90",
+  "event": {
+   "tool_call_id": "call_233096",
+   "content": "{\"error\":[{\"type\":\"text\",\"text\":\"{\\\"error\\\":\\\"User denied tool call: setup smoke test: gate verified, not needed\\\"}\"}]}",
+   "type": "tool.response",
+   "id": "01m3d0hp32m3sj3ccr0xw6vxpg",
+   "created_at": "2026-09-25T19:26:47.906Z",
+   "thread_id": "main"
+  }
+ },
+ {
+  "turn_id": "01m3d0hmta8jwpr3vwnxm39p90",
+  "event": {
+   "content": "### Step 1: Sandbox Command Raw Output\n\n```text\n392aef707c0e74341ab4a51420984e9ea6b566c5\tHEAD\ngit-exit=0\npypi=200\n\nread-exit=0\nfatal: failed to store: -60008\nhead: /Users/dev/Documents/GitHub/trueforge-shipgate/README.md: Operation not permitted\n```\n\n---\n\n### Step 2: GitHub `get_me` Tool Result\n\n```json\n{\"error\":[{\"type\":\"text\",\"text\":\"{\\\"error\\\":\\\"User denied tool call: setup smoke test: gate verified, not needed\\\"}\"}]}\n```",
+   "type": "model.message",
+   "id": "01m3d0hp345h1yeajmt5k83hmr",
+   "created_at": "2026-09-25T19:26:52.556Z",
+   "thread_id": "main",
+   "finish_reason": "stop",
+   "usage": {
+    "input_tokens": 4857,
+    "output_tokens": 357,
+    "cache_read_tokens": 0,
+    "input_tokens_breakdown": {
+     "harness": 3718,
+     "skills": 0,
+     "instructions": 31,
+     "tool_definitions": 0,
+     "messages": 1108
+    }
+   }
+  }
+ },
+ {
+  "turn_id": "01m3d0hmta8jwpr3vwnxm39p90",
+  "event": {
+   "type": "turn.done",
+   "id": "01m3d0htmgxap6m50zzc2ejnxf",
+   "created_at": "2026-09-25T19:26:52.560Z",
+   "state": {
+    "status": "done",
+    "output": {
+     "content": "### Step 1: Sandbox Command Raw Output\n\n```text\n392aef707c0e74341ab4a51420984e9ea6b566c5\tHEAD\ngit-exit=0\npypi=200\n\nread-exit=0\nfatal: failed to store: -60008\nhead: /Users/dev/Documents/GitHub/trueforge-shipgate/README.md: Operation not permitted\n```\n\n---\n\n### Step 2: GitHub `get_me` Tool Result\n\n```json\n{\"error\":[{\"type\":\"text\",\"text\":\"{\\\"error\\\":\\\"User denied tool call: setup smoke test: gate verified, not needed\\\"}\"}]}\n```",
+     "type": "model.message",
+     "id": "01m3d0hp345h1yeajmt5k83hmr",
+     "created_at": "2026-09-25T19:26:52.556Z",
+     "thread_id": "main",
+     "finish_reason": "stop",
+     "usage": {
+      "input_tokens": 4857,
+      "output_tokens": 357,
+      "cache_read_tokens": 0,
+      "input_tokens_breakdown": {
+       "harness": 3718,
+       "skills": 0,
+       "instructions": 31,
+       "tool_definitions": 0,
+       "messages": 1108
+      }
+     }
+    },
+    "required_actions": [],
+    "completed_at": "2026-09-25T19:26:52.560Z",
+    "metrics": {
+     "total_input_tokens": 4857,
+     "total_output_tokens": 357,
+     "total_tokens": 5214,
+     "total_cache_read_tokens": 0,
+     "total_reasoning_tokens": 191
+    }
+   },
+   "thread_id": null
+  }
+ }
+]
