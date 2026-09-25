@@ -108,7 +108,7 @@ export class TrueForgeClient implements TrueForgeApi {
     readonly baseUrl: string,
     private readonly fetchFn: typeof fetch = fetch,
   ) {
-    this.sdk = new TrueForge({ baseUrl, auth: false });
+    this.sdk = new TrueForge({ baseUrl, auth: false, fetch: fetchFn });
   }
 
   async createSession(agent: AgentRef, metadata: Record<string, string>): Promise<string> {

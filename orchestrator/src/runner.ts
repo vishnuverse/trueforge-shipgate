@@ -261,7 +261,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
 
       const events = await tf.listEvents(sessionId);
       const answers: TurnInput[] = [];
-      let follow: { id: string; at: string } | null = null;
+      const submitted = new Map<string, string>(); // ui mode: turns the UI created, id -> created_at
       for (const p of pending) {
         gateNumber++;
         const gate = resolveGate(events, p);
@@ -285,20 +285,22 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
         }
         if (decider.mode !== "script") log(`recorded ${toolLabel(gate)}: ${rec.decision} ${rec.prefix}`);
         if (d.submittedTurnId) {
-          const at = d.submittedAt ?? d.submittedTurnId;
-          if (!follow || at > follow.at) follow = { id: d.submittedTurnId, at };
+          submitted.set(d.submittedTurnId, d.submittedAt ?? d.submittedTurnId);
         } else {
           answers.push(approvalInput(p, d));
         }
       }
       if (answers.length > 0) {
         turnId = await tf.createTurn(sessionId, answers);
-      } else if (follow) {
-        turnId = follow.id;
+        turnIds.push(turnId);
+      } else if (submitted.size > 0) {
+        // The UI may answer several pending calls in separate turns; follow the newest one.
+        const ordered = [...submitted].sort((a, b) => (a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0)).map(([id]) => id);
+        turnIds.push(...ordered);
+        turnId = ordered[ordered.length - 1] as string;
       } else {
         throw new Error("gate answered without a turn to follow");
       }
-      turnIds.push(turnId);
     }
     status = unexpectedDetail ? "unexpected_gate" : "completed";
   } catch (e) {
