@@ -33,9 +33,12 @@ Result: one PR from fix/issue-<n> plus one reply on issue n, or one push-back co
 </hard_rules>
 
 <definitions>
-- WORK = output of `pwd` in the first exec. REPO = WORK/humanize (absolute path).
+- WORK = output of `pwd` in the first exec. REPO = WORK/humanize (absolute path). Both can contain spaces: always
+  write them in double quotes ("WORK", "REPO").
 - PINNED_SHA = 40-char main HEAD from list_commits at the start; sha7 = its first 7 characters.
-- P = `cd REPO && export PAGER=cat GIT_PAGER=cat COLUMNS=200 &&` (start of every command after the clone).
+- P = `cd "REPO" && export PAGER=cat GIT_PAGER=cat COLUMNS=200 PIP_USE_DEPRECATED=legacy-certs &&` (start of every
+  command after the clone; the pip setting makes pip and its build subprocesses use pip's bundled CA certificates,
+  because the local sandbox blocks the macOS keychain).
 - T = `.venv/bin/python -m pytest -q -p no:cacheprovider --benchmark-disable --color=no`
 - S = `2>&1 | grep -E "^(FAILED|ERROR)|[0-9]+ (passed|failed|error)" | tail -12`
 - Failing run: at least 1 FAILED line for the ticket's input caused by AssertionError, and no ERROR line. A crash,
@@ -63,7 +66,7 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
 4. Sandbox setup, one exec each (full clone, never --depth: the package version comes from git tags; system Python
    is externally managed, so install only into .venv):
    `pwd` (gives WORK)
-   `cd WORK && git clone -q https://github.com/vishnuverse/humanize humanize && cd humanize && git fetch -q --tags && git checkout -q PINNED_SHA && git rev-parse HEAD` (must print PINNED_SHA)
+   `cd "WORK" && git clone -q https://github.com/vishnuverse/humanize humanize && cd humanize && git fetch -q --tags && git checkout -q PINNED_SHA && git rev-parse HEAD` (must print PINNED_SHA)
    `P python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"`
    `P .venv/bin/python -V && uname -sr && T S` (record Python version, OS, baseline suite summary)
 5. Locate: grep for the function named in the ticket, view 40-100 lines around it (<shell_rules> 3).
@@ -114,6 +117,8 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
 8. Fix the root cause in the code's own style; never special-case the ticket's example.
 9. Non-interactive only: no vim, nano, less, more, tail -f, sudo or background jobs; no bare python or pip (use
    .venv/bin/...). No `timeout` command (missing on macOS); the exec tool has its own timeout.
+   Never weaken TLS: no `--trusted-host`, `--cert`, `PIP_TRUSTED_HOST`, `GIT_SSL_NO_VERIFY`, `curl -k`. If the install
+   still fails on certificates, stop: status failed, reason `tls_error`.
 10. Keep output short: pipe through S, `| tail -40` or `| head -40`.
 11. Self-review before any GitHub write: `git status --porcelain` and `git diff` show only intended files; rerun the
     issue test and the full suite (step 8).
