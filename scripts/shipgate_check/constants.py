@@ -1,4 +1,4 @@
-"""Fixed facts the scorer grades against (SPEC.md §4, docs/contracts.md)."""
+"""Fixed facts the scorer grades against (docs/SPEC.md §4, docs/contracts.md)."""
 
 from __future__ import annotations
 

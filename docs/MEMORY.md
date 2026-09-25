@@ -1,4 +1,4 @@
-# MEMORY.md — decisions and learned facts
+# docs/MEMORY.md — decisions and learned facts
 
 Long-lived project memory. Append one line per decision/fact: date · decision/fact · reason/source.
 Never delete; mark superseded lines with ~~strikethrough~~ and add the replacement below.
@@ -24,6 +24,8 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 - 2026-09-26 · Target repo = fork `vishnuverse/humanize` (of `python-humanize/humanize`, MIT); `vishnuverse/tinyshop` unused · a real, widely used library scores better on "a job worth handing over" than a toy, and its suite runs in seconds; bugs are planted on the day and disclosed. prettytable was the alternative considered.
 - 2026-09-26 · Pin TrueForge server `@truefoundry/trueforge@0.2.1` and SDK `@truefoundry/trueforge-sdk@0.2.0` exactly (not `@latest`); run the server via `npx`, never clone/build it · a release mid-event could change behaviour between rehearsal and a judge's laptop; one `npx` line keeps the README runnable.
 - 2026-09-26 · After P0: a Triage agent (issue-ai-agent style: category, priority, duplicates, contextual reply, follow-ups). Gemini drives it; our own read-only MCP wraps TypeSafe Jev (`TYPESAFE_API_KEY`) for calibrated category / priority / duplicate decisions; replies gated; labels auto only at confidence > 0.9 · Jev can't generate text or run an agent loop, but gives calibrated decisions; `bug` label feeds Ticket Resolver. Notes: `docs/reference/issue-ai-agent-and-typesafe.md`.
+- 2026-09-26 · Ticket Resolver model = `deepseek/deepseek-v4-flash` via OpenRouter (fallback `z-ai/glm-5.3-flash`) · bake-off on issue #1: both passed (DeepSeek 168 s / $0.0058, GLM 253 s / $0.0046), gpt-5-nano and gpt-oss-20b failed; total $0.026. `docs/model-bakeoff.md`.
+- 2026-09-26 · Docs reorganised: `SPEC`, `HANDOVER`, `MEMORY`, `IMPLEMENTATION_PLAN` moved to `docs/`; old README → `docs/research-and-plan.md`; new submission README at the root; index `docs/README.md` · README is what judges read; keep CLAUDE.md/AGENTS.md at the root for tools.
 - 2026-09-26 · Keep `vishnuverse/trueforge-shipgate` **private**; deliver the skill inline (`setup_agents.ts --inline-skill`) instead of as a git skill · team choice; git skills are fetched anonymously. The submission rules require a public repo, so it must be made public before submitting.
 - 2026-09-26 · Build on TrueForge's built-in local sandbox; add Daytona for scenario runs + the demo once the key arrives · no Daytona account yet; 0.2.1 has no Docker/K8s sandbox; the local sandbox runs on the host next to `.env`, which weakens "sandbox holds no credentials".
 

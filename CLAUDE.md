@@ -3,8 +3,9 @@
 Hackathon project for TrueFoundry "Agents That Act" (Sat 26 Sep 2026, build window 12:00–19:00 IST).
 Agents run on **TrueForge** (open-source agent harness). Primary agent: **Ticket Resolver**. Next: **Runbook Executor**. Optional: **Release Captain**.
 
-Read first: `SPEC.md` (what we build) → `IMPLEMENTATION_PLAN.md` (phases, who does what) → `HANDOVER.md` (where we are) → `AGENTS.md` (repo map).
-Decisions and learned facts live in `MEMORY.md`. Path-specific rules load from `.claude/rules/`.
+Read first: `README.md` (what it is, how to run) → `docs/SPEC.md` (design) → `docs/HANDOVER.md` (where we are) →
+`AGENTS.md` (repo map) → `docs/contracts.md` (interfaces between skill, orchestrator and scorer).
+Decisions and learned facts live in `docs/MEMORY.md`. Doc index: `docs/README.md`. Path-specific rules load from `.claude/rules/`.
 
 ## Non-negotiable hackathon rules
 
@@ -16,7 +17,7 @@ Decisions and learned facts live in `MEMORY.md`. Path-specific rules load from `
 > 4. **Public repo, README works on another laptop,** AI assistants named.
 > 5. **Only our own accounts, data and keys.** No keys in the repo, screenshots or demo video.
 >
-> **Scoring (100):** harness doing the work **30** (qualifying; a prompt with a wrapper scores ~0) · it actually runs **25** · where it stops **20** · a job worth handing over **15** · demo clarity **10**. Details in `README.md` → Judging.
+> **Scoring (100):** harness doing the work **30** (qualifying; a prompt with a wrapper scores ~0) · it actually runs **25** · where it stops **20** · a job worth handing over **15** · demo clarity **10**. Details in `docs/research-and-plan.md` → Judging.
 
 - TrueForge must do the work: agent loop, MCP tool calls, sandbox runs and approval holds. No custom agent loop.
 - Reach a **real system** (GitHub; Jira optional; local kind cluster; TestPyPI only for Release Captain). **No mocks** of the target system.
@@ -40,63 +41,59 @@ Decisions and learned facts live in `MEMORY.md`. Path-specific rules load from `
 
 ## Layout (short — full map in AGENTS.md)
 ```
-skills/            git-backed TrueForge skills (SKILL.md per agent)
-agents/            agent specs (JSON) registered via API
-mcp/k8s/           FastMCP wrapper over kubectl for kind (P1)
-mcp/registry/      FastMCP server: TestPyPI publish, token server-side (optional)
-orchestrator/      TypeScript, @truefoundry/trueforge-sdk: sessions + approvals
-demo-app/          tiny web app over humanize that Runbook Executor deploys to kind (P1)
-runbooks/          human-written runbooks (markdown)
-scripts/           setup, reset, check (test oracle)
-tests/             pytest for MCP servers + scenario specs (TR-*, RE-*, RC-*)
+skills/ticket-resolver/  SKILL.md: the agent's procedure (delivered inline; repo is private)
+agents/                  agent specs (JSON), registered by scripts/setup_agents.ts
+orchestrator/            TypeScript on @truefoundry/trueforge-sdk: sessions, approvals (ui/terminal/script), run dirs, labels
+scripts/                 setup_agents.ts, check.py + shipgate_check/ (oracle, scorecard), reset.sh, score.sh, bakeoff.py
+tests/                   scenarios/TR-*.yaml, check/ (scorer unit tests), fixtures/ (TrueForge events, humanize issues)
+docs/                    SPEC, contracts, HANDOVER, MEMORY, plan, reference notes (index: docs/README.md)
 ```
+Planned, not built yet: `mcp/k8s/` + `runbooks/` + `demo-app/` (Runbook Executor, P1), Triage MCP on TypeSafe, `mcp/registry/`.
 
 ## Setup (once)
 ```bash
 node -v                      # need >= 22.14
-python3 -V                   # 3.12
+python3 -V; uv --version     # 3.12 via uv
 cp .env.example .env         # fill keys; never commit .env
-npx @truefoundry/trueforge@0.2.1            # UI + API on http://localhost:8790
-uv sync                                       # python deps for mcp/ and scripts/
-npm --prefix orchestrator install
+npx --yes @truefoundry/trueforge@0.2.1      # UI + API on http://localhost:8790 (keep running)
+uv sync                                       # python deps for scripts/
+npm --prefix orchestrator ci
 ```
-Configure in TrueForge UI (Settings): model provider, GitHub MCP
-(`https://api.githubcopilot.com/mcp/`, header `Authorization: Bearer $GITHUB_PAT`), custom MCPs below.
-Sandbox: nothing to configure for the built-in local sandbox; for the demo add Daytona under Sandbox providers
-(key needs Snapshot-create).
+Configure in TrueForge UI (Settings), keys pasted by a human:
+- Models → Add Custom Provider `openrouter`: base URL `https://openrouter.ai/api/v1`, model `deepseek-v4-flash` =
+  `deepseek/deepseek-v4-flash` (fallback `glm-5-3-flash` = `z-ai/glm-5.3-flash`).
+- Connectors → `github` (`https://api.githubcopilot.com/mcp/`, header `Authorization: Bearer <GITHUB_PAT>`).
+- Sandbox: nothing for the built-in local sandbox; for the demo add Daytona under Sandbox providers (Snapshot-create).
 
 ## Run
 ```bash
-kind create cluster --name shipgate           # P1 only
-uv run mcp/k8s/server.py                      # :8801  k8s MCP (P1; needs kind cluster)
-uv run mcp/registry/server.py                 # :8802  registry MCP (optional, Release Captain only)
-npx tsx scripts/setup_agents.ts               # upsert agents from agents/*.json
-npm --prefix orchestrator run start           # polls labels, runs agents, prompts approvals in terminal
+npx --yes tsx scripts/setup_agents.ts --inline-skill                     # upsert agents/*.json with SKILL.md inlined
+npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui (approve in the TrueForge UI)
 ```
 
 ## Test
 ```bash
-uv run pytest tests/mcp -q                    # unit tests for our MCP servers
-bash scripts/reset.sh                         # reset vishnuverse/humanize issues/PRs/branches + cluster
-uv run python scripts/check.py TR-01          # assert final GitHub/cluster state for one scenario
-uv run python scripts/check.py --all          # every scenario in tests/scenarios/*.yaml
+uv run pytest tests/check -q                  # scorer unit tests
+npm --prefix orchestrator test                # orchestrator unit tests (+ run typecheck)
+scripts/reset.sh                              # dry run: what would be reset on vishnuverse/humanize (--yes to apply)
+scripts/score.sh TR-01                        # reset → run in script mode → check.py TR-01
+uv run python scripts/check.py --all          # every scenario with a run + self-assessed scorecard
 ```
-Always run `reset.sh` before a scenario. A scenario passes only if `check.py` prints PASS and `approvals.log`
-matches the scenario's expected approvals list exactly.
+A scenario passes only if `check.py` prints no FAIL; it checks events, `approvals.jsonl` and the real GitHub state.
 
 ## Conventions
-- Python 3.12, FastMCP, `ruff` format; TypeScript strict, `tsx` to run.
+- Python 3.12, `ruff` format (line length 110); TypeScript strict, `tsx` to run.
 - TrueForge versions are pinned exactly: server `@truefoundry/trueforge@0.2.1`, SDK `@truefoundry/trueforge-sdk@0.2.0`
   (`npm i --save-exact`, no `^`). Bump only on purpose, and change every doc that names the version.
 - Conventional commits (`feat:`, `fix:`, `docs:`, `chore:`) — Release Captain relies on them.
-- Every agent ends its final message with one fenced ```json handoff block (schema in SPEC.md §7).
+- Every agent ends its final message with one fenced ```json handoff block (schema in docs/SPEC.md §7).
 - Secrets only via `.env`; `.env.example` lists names, never values.
 - Keep skills short and procedural; put domain rules in `.claude/rules/` for us, in `skills/*/SKILL.md` for the agent.
 
 ## When working in this repo
-- Before coding: check `HANDOVER.md`; after a work block: update it (done / blocked / next).
-- New architectural decision → one line in `MEMORY.md` with date and reason.
+- Before coding: check `docs/HANDOVER.md`; after a work block: update it (done / blocked / next).
+- New architectural decision → one line in `docs/MEMORY.md` with date and reason.
 - Adding a tool that mutates anything → add it to the agent's `require_approval_for_tools` list AND a scenario test.
   Only exception: `create_branch` / `push_files` to `fix/*`, safe because the `main` ruleset has no bypass.
-- Do not add features outside SPEC.md scope during the event. Narrow and working beats broad and broken.
+- Do not add features outside docs/SPEC.md scope during the event. Narrow and working beats broad and broken.
 - Demo time matters: never leave Daytona sandboxes running; pause schedules unless demoing.

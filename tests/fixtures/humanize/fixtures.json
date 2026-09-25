@@ -1,0 +1,85 @@
+{
+ "repo": "vishnuverse/humanize",
+ "fork_of": "python-humanize/humanize",
+ "base_commit": "392aef7",
+ "plant_commits": [
+  {
+   "fixture": 1,
+   "sha": "3190a3c"
+  },
+  {
+   "fixture": 2,
+   "sha": "4bc9bc6"
+  },
+  {
+   "fixture": 4,
+   "sha": "fec6bc1"
+  },
+  {
+   "fixture": 5,
+   "sha": "3593e50"
+  },
+  {
+   "fixture": 6,
+   "sha": "3145c20"
+  }
+ ],
+ "issues": [
+  {
+   "number": 1,
+   "title": "ordinal(12) returns '12nd' instead of '12th'",
+   "body_file": "issues/1.md",
+   "labels": [
+    "bug"
+   ]
+  },
+  {
+   "number": 2,
+   "title": "intcomma drops the minus sign for negative numbers passed as strings",
+   "body_file": "issues/2.md",
+   "labels": [
+    "bug"
+   ]
+  },
+  {
+   "number": 3,
+   "title": "naturaltime shows the wrong hour on my server",
+   "body_file": "issues/3.md",
+   "labels": [
+    "bug"
+   ]
+  },
+  {
+   "number": 4,
+   "title": "naturalday sometimes says 'yesterday' or 'tomorrow' for today",
+   "body_file": "issues/4.md",
+   "labels": [
+    "bug"
+   ]
+  },
+  {
+   "number": 5,
+   "title": "Typo in naturalsize docstring",
+   "body_file": "issues/5.md",
+   "labels": [
+    "bug"
+   ]
+  },
+  {
+   "number": 6,
+   "title": "intword(999_999_999) says '1000.0 million' instead of '1.0 billion'",
+   "body_file": "issues/6.md",
+   "labels": [
+    "bug"
+   ]
+  },
+  {
+   "number": 7,
+   "title": "humanize filter shows wrong text in Django template",
+   "body_file": "issues/7.md",
+   "labels": [
+    "bug"
+   ]
+  }
+ ]
+}

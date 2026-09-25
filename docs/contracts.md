@@ -1,6 +1,6 @@
 # Contracts between skill, orchestrator and scorer
 
-The interfaces the parallel workstreams build against. `SPEC.md` §4 is the behaviour; this file is the wiring.
+The interfaces the parallel workstreams build against. `docs/SPEC.md` §4 is the behaviour; this file is the wiring.
 Change a contract here first, then in code.
 
 ## 1. Paths (relative to the repo root = `git rev-parse --show-toplevel`)
@@ -112,6 +112,6 @@ Target repo is the constant `vishnuverse/humanize`; code refuses any other.
 ## 7. Handoff and labels
 
 The handoff block is the **last** fenced ```` ```json ```` block in the final `model.message` of the last turn
-(schema: `SPEC.md` §7). Labels (SPEC T15): at start add `triaged` and remove `bug`; at the end, from `outcome`:
+(schema: `docs/SPEC.md` §7). Labels (SPEC T15): at start add `triaged` and remove `bug`; at the end, from `outcome`:
 `fixed`, `duplicate` → `fix-proposed`; `cannot_reproduce` → `cannot-reproduce`; `stopped` → keep `triaged`;
 anything else → `needs-human`. The orchestrator only changes these five labels.

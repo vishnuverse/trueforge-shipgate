@@ -1,4 +1,4 @@
-# IMPLEMENTATION_PLAN.md — 2 contributors
+# docs/IMPLEMENTATION_PLAN.md — 2 contributors
 
 Scope for a 2-person team: **Ticket Resolver first** (SPEC §4), then **Runbook Executor** (SPEC §5).
 **Release Captain is optional** (SPEC §6) and has no slot in this timeline.
@@ -9,7 +9,7 @@ Build window: Sat 26 Sep 2026, 12:00–19:00 IST. Submit by 18:45 (15 min buffer
 | --- | --- | --- |
 | Owns | TrueForge config, `agents/`, `skills/`, approvals UX, orchestrator, demo driving | `vishnuverse/humanize` fork + fixtures, `demo-app/`, `mcp/k8s/`, kind cluster, `scripts/`, `tests/`, `runbooks/`, README, build story |
 | Folders (no overlap) | `agents/`, `skills/`, `orchestrator/` | `demo-app/`, `mcp/`, `runbooks/`, `scripts/`, `tests/`, `README.md` |
-| Shared (announce before editing) | `SPEC.md`, `HANDOVER.md`, `MEMORY.md`, `.env.example` | same |
+| Shared (announce before editing) | `docs/SPEC.md`, `docs/HANDOVER.md`, `docs/MEMORY.md`, `.env.example` | same |
 
 Git: both on `main`, small commits, conventional-commit messages, `git pull --rebase` before every push. Folder
 ownership means conflicts should be near zero.
@@ -33,8 +33,8 @@ TestPyPI is only needed if Release Captain gets built.
 ## Phase 1 — Foundations · 12:00–12:45
 | A | B |
 | --- | --- |
-| Configure TrueForge: model, Daytona sandbox, GitHub remote MCP (header auth) | Prepare the fork (README → Target repo): push the upstream tags (the fork has **none**), enable Issues, commit the planted regression(s) and disclose them |
-| Open Select MCP Tools: record exact tool names + annotations → `MEMORY.md` | Open issues #1–#7 (SPEC.md §4.6); labels `bug`, `triaged`, `fix-proposed`, `cannot-reproduce`, `needs-human` |
+| Configure TrueForge: model, Daytona sandbox, GitHub remote MCP (header auth) | Prepare the fork (`docs/research-and-plan.md` → Target repo): push the upstream tags (the fork has **none**), enable Issues, commit the planted regression(s) and disclose them |
+| Open Select MCP Tools: record exact tool names + annotations → `docs/MEMORY.md` | Open issues #1–#7 (docs/SPEC.md §4.6); labels `bug`, `triaged`, `fix-proposed`, `cannot-reproduce`, `needs-human` |
 | Create draft agent `ticket-resolver` in UI; chat test: "read issue #1 and list the repo files" | Ruleset on `main`: PR required, block direct + force push, **no bypass list**. Time `pytest -q` once in Daytona |
 
 **Sync 12:45 (5 min):** A shows the agent reading issue #1 from `vishnuverse/humanize`. B confirms tags, issues, labels and ruleset.
@@ -65,7 +65,7 @@ TestPyPI is only needed if Release Captain gets built.
 | T9 push to `fix/issue-<n>`; T13 deny-with-reason → revise once → re-request | TR-05 (deny PR) — expected approvals list matches exactly |
 
 **Milestone 15:30:** **TR-01 passes for real** — PR from `fix/issue-1` with a failing→passing test, then a reply on
-issue #1, each after one approval. Commit + push everything; update `HANDOVER.md`.
+issue #1, each after one approval. Commit + push everything; update `docs/HANDOVER.md`.
 **This is the minimum demoable product. Everything after this is improvement.**
 
 ---
@@ -127,7 +127,7 @@ Release Captain stays optional: only if everything above is green before 17:00. 
 - [ ] **No keys in the repo, screenshots or demo video** (`.env` gitignored; never film `.env` or TrueForge Settings)
 - [ ] **Only our own accounts, data and keys connected**
 - [ ] README runs on a fresh laptop; AI assistance disclosed
-- [ ] `HANDOVER.md` final entry; public repo pushed before 18:45
+- [ ] `docs/HANDOVER.md` final entry; public repo pushed before 18:45
 
 ## Fallbacks
 | Problem | Fallback |
@@ -135,7 +135,7 @@ Release Captain stays optional: only if everything above is green before 17:00. 
 | Daytona slow/failing | Smaller snapshot; if dead by 13:30, ask organisers — sandbox is mandatory, don't fake it |
 | Sandbox build shows version `0.1.dev1` | The clone was shallow or had no tags: full clone + `git fetch --tags`, and check the fork has the upstream tags |
 | GitHub MCP lacks `push_files` or needs a different branch tool | Use `create_or_update_file` per file on `fix/issue-<n>`; still ungated because `main` is protected |
-| Ruleset can't block the owner's token | Gate `push_files` + `create_branch` by name as well (one more approval) and record it in `MEMORY.md` |
+| Ruleset can't block the owner's token | Gate `push_files` + `create_branch` by name as well (one more approval) and record it in `docs/MEMORY.md` |
 | Model rate limits | Switch provider in TrueForge (custom OpenAI-compatible) — config only |
 | kind or `k8s` MCP not ready at 16:45 | Skip Runbook Executor; polish Ticket Resolver instead |
 | Running late at 16:45 | Skip Phase 5 entirely; go straight to demo prep |

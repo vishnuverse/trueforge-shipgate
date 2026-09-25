@@ -1,4 +1,4 @@
-# SPEC.md — shipgate
+# docs/SPEC.md — shipgate
 
 ## 1. Problem
 Engineers lose hours on mechanical work: reproducing vague bug reports and following runbooks step by step at 2 a.m.
@@ -43,7 +43,7 @@ Prompting rules for the skill and instructions: `docs/reference/gemini-3-prompti
 ### 4.1 Agent configuration (`agents/ticket-resolver.json`)
 | Setting | Value |
 | --- | --- |
-| Model | `google-gemini/gemini-3-6-flash`, `reasoning_effort: high`, **no `temperature`** (Gemini 3 default 1.0; lower values can loop) |
+| Model | `openrouter/deepseek-v4-flash` (OpenRouter custom provider; fallback `openrouter/glm-5-3-flash`), no `temperature`, no `reasoning_effort`. Chosen by bake-off (`docs/model-bakeoff.md`); Gemini free tier was 20 requests/day |
 | Sandbox | `config.sandbox.enabled: true` (TrueForge default is off) |
 | Iteration limit | 60 |
 | Skill | `ticket-resolver` (`skills/ticket-resolver/SKILL.md`), delivered **inline**: `setup_agents.ts --inline-skill` appends it to `instructions`. The repo stays private, and TrueForge fetches git skills anonymously (and can't preload them). |
@@ -252,5 +252,5 @@ Labels: `bug → triaged → fix-proposed | cannot-reproduce | needs-human`. If 
 - Optional: RC-01.
 
 ## 10. Scenario IDs
-Ticket Resolver scenarios are defined in §4.7 (TR-01…TR-14). Other test tables live in README.md (RE-01…RE-18, RC-01…RC-18, E2E-01…E2E-09). Machine-readable versions
+Ticket Resolver scenarios are defined in §4.7 (TR-01…TR-14). Other test tables live in `docs/research-and-plan.md` (RE-01…RE-18, RC-01…RC-18, E2E-01…E2E-09). Machine-readable versions
 go in `tests/scenarios/<ID>.yaml` (setup, chaos, expected approvals, expected end state).
