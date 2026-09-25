@@ -1,0 +1,26 @@
+# SPEC §4.7 TR-10: issue #1, REVISE the title, then allow, allow -> second Gate 1 request with the new title;
+# PR title starts 'fix(ordinal):'.
+id: TR-10
+title: Human says REVISE at the PR gate
+issue: 1
+must_pass: true
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: create_pull_request, decision: deny, reason: "REVISE: start the PR title with 'fix(ordinal):'"}
+  - {tool: create_pull_request, decision: allow}
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  status: ok
+  outcome: fixed
+  label: fix-proposed
+  gates: [create_pull_request, create_pull_request, add_issue_comment]
+  pr:
+    count: 1
+    head: fix/issue-1
+    title_prefix: "fix(ordinal):"
+    files: [src/humanize/number.py, tests/test_issue_1.py]
+    body_contains: [EVIDENCE, "Fixes #1"]
+  comments: {count: 1}
+  rerequest_same_args: false
+  pushbacks: []

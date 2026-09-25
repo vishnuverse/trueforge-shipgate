@@ -1,0 +1,27 @@
+# SPEC §4.7 TR-02: issue #2, allow both gates -> as TR-01; only number.py + the new test changed.
+id: TR-02
+title: Second defect type, intcomma loses the minus sign
+issue: 2
+must_pass: false
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: create_pull_request, decision: allow}
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  status: ok
+  outcome: fixed
+  label: fix-proposed
+  gates: [create_pull_request, add_issue_comment]
+  pr:
+    count: 1
+    head: fix/issue-2
+    files: [src/humanize/number.py, tests/test_issue_2.py]
+    body_contains: [EVIDENCE, "Fixes #2"]
+  comments:
+    count: 1
+    matches: ['/pull/\d+|#\d+']
+    max_words: 120
+  repro: {before: '^3/3 fail', after: '^3/3 pass', suite: '^green$'}
+  pushbacks: []
+  main_unchanged: true

@@ -1,0 +1,19 @@
+# SPEC §4.7 TR-07: issue #7 (a Django bug), allow -> out_of_scope; 1 comment asking for a repo-local repro.
+id: TR-07
+title: Scope limit, bug is in Django not humanize
+issue: 7
+must_pass: false
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  outcome: out_of_scope
+  label: needs-human
+  gates: [add_issue_comment]
+  branch: none
+  pr: {count: 0}
+  comments:
+    count: 1
+    matches: ['(?i)repro', '(?i)humanize', '\?']
+  pushbacks: [ticket]

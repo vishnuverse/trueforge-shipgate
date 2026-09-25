@@ -1,0 +1,27 @@
+# SPEC §4.7 TR-01: issue #1, allow both gates -> PR from fix/issue-1 with the evidence; 1 reply; label fix-proposed.
+id: TR-01
+title: Happy path fix, ordinal(12) returns 12nd
+issue: 1
+must_pass: true
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: create_pull_request, decision: allow}
+  - {tool: add_issue_comment, decision: allow}
+expect:
+  status: ok
+  outcome: fixed
+  label: fix-proposed
+  gates: [create_pull_request, add_issue_comment]
+  pr:
+    count: 1
+    head: fix/issue-1
+    files: [src/humanize/number.py, tests/test_issue_1.py]
+    body_contains: [EVIDENCE, "Fixes #1"]
+  comments:
+    count: 1
+    matches: ['/pull/\d+|#\d+']
+    max_words: 120
+  repro: {before: '^3/3 fail', after: '^3/3 pass', suite: '^green$'}
+  pushbacks: []
+  main_unchanged: true

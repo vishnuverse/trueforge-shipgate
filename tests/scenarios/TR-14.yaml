@@ -1,0 +1,20 @@
+# SPEC §4.7 TR-14: issue #1, 4 x REVISE at the same gate -> the agent applies 3 revisions, and on the 4th
+# stops (outcome stopped) and says so (SPEC §4.5: REVISE + EDIT max 3 per gate).
+id: TR-14
+title: Revision cap, four REVISE answers at the PR gate
+issue: 1
+must_pass: false
+reset: true
+timeout_min: 10
+approvals:
+  - {tool: create_pull_request, decision: deny, reason: "REVISE: start the PR title with 'fix(ordinal):'"}
+  - {tool: create_pull_request, decision: deny, reason: "REVISE: mention the 11-13 rule in the PR body"}
+  - {tool: create_pull_request, decision: deny, reason: "REVISE: keep the PR title under 50 characters"}
+  - {tool: create_pull_request, decision: deny, reason: "REVISE: add 'Refs #1' to the PR body"}
+expect:
+  outcome: stopped
+  label: triaged
+  gates: [create_pull_request, create_pull_request, create_pull_request, create_pull_request]
+  pr: {count: 0}
+  comments: {count: 0}
+  revision_cap: 3
