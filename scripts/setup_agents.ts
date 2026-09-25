@@ -9,10 +9,13 @@
  *   --inline-skill  dev mode, before the skill is pushed: append SKILL.md (and any other *.md in the skill dir) to
  *                   manifest.instructions and drop manifest.skills; no skill is registered.
  *   --no-skill      register the agents without skills; no skill is registered.
+ *   --skip-skill-check  register a git skill even if raw.githubusercontent.com cannot serve its SKILL.md.
  *
  * TRUEFORGE_URL (env or .env) defaults to http://localhost:8790. No npm dependencies (Node >= 22 fetch).
- * Notes (TrueForge 0.2.1): git skills cannot be preloaded (the server answers 422), and the sandbox downloads a git
- * skill from GitHub at session start, so the repo must be public and the ref pushed.
+ * Notes (TrueForge 0.2.1, verified): git skills cannot be preloaded (the server answers 422). The server stores a git
+ * skill without checking it; the sandbox downloads it at its first exec, and if the repo is private, the ref is not
+ * pushed or the path is missing, the downloader exits 1 and sandbox init fails, so every exec in that session fails.
+ * That is why git mode refuses an unreachable skill unless --skip-skill-check is given.
  */
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -29,6 +32,7 @@ type Json = Record<string, unknown>;
 interface Options {
   mode: SkillMode;
   skillRef: string | undefined;
+  skipSkillCheck: boolean;
 }
 
 interface SkillRef {
@@ -51,7 +55,8 @@ interface LocalSkill {
   extras: { file: string; content: string }[]; // other *.md files in the skill dir
 }
 
-const USAGE = "usage: npx --yes tsx scripts/setup_agents.ts [--skill-ref <sha|branch>] [--no-skill] [--inline-skill]";
+const USAGE =
+  "usage: npx --yes tsx scripts/setup_agents.ts [--skill-ref <sha|branch>] [--no-skill] [--inline-skill] [--skip-skill-check]";
 
 function fail(message: string): never {
   console.error(`✗ ${message}`);
@@ -62,6 +67,7 @@ function parseArgs(argv: string[]): Options {
   let skillRef: string | undefined;
   let inline = false;
   let none = false;
+  let skipSkillCheck = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i] ?? "";
     if (arg === "--skill-ref") {
@@ -74,6 +80,8 @@ function parseArgs(argv: string[]): Options {
       inline = true;
     } else if (arg === "--no-skill") {
       none = true;
+    } else if (arg === "--skip-skill-check") {
+      skipSkillCheck = true;
     } else if (arg === "--help" || arg === "-h") {
       console.log(USAGE);
       process.exit(0);
@@ -82,8 +90,10 @@ function parseArgs(argv: string[]): Options {
     }
   }
   if (inline && none) fail("--inline-skill and --no-skill are mutually exclusive");
-  if (skillRef !== undefined && (inline || none)) fail("--skill-ref only applies to git mode");
-  return { mode: inline ? "inline" : none ? "none" : "git", skillRef };
+  if ((skillRef !== undefined || skipSkillCheck) && (inline || none)) {
+    fail("--skill-ref and --skip-skill-check only apply to git mode");
+  }
+  return { mode: inline ? "inline" : none ? "none" : "git", skillRef, skipSkillCheck };
 }
 
 function git(args: string[], cwd: string): string {
@@ -223,8 +233,11 @@ class TrueForge {
   }
 }
 
-/** Best-effort checks that the sandbox will be able to download the git skill; warnings only. */
-async function checkSkillReachable(root: string, skill: LocalSkill, ref: string): Promise<void> {
+/**
+ * Checks that the sandbox will be able to download the git skill (it fetches anonymously from GitHub).
+ * Returns true = SKILL.md is public at that ref, false = definitely not (HTTP 404 etc.), undefined = could not check.
+ */
+async function checkSkillReachable(root: string, skill: LocalSkill, ref: string): Promise<boolean | undefined> {
   try {
     const dirty = git(["status", "--porcelain", "--", skill.dir], root);
     if (dirty !== "") console.warn(`  ! ${skill.dir} has uncommitted changes; ref ${ref} does not contain them`);
@@ -245,15 +258,16 @@ async function checkSkillReachable(root: string, skill: LocalSkill, ref: string)
     const res = await fetch(url, { method: "GET", signal: AbortSignal.timeout(8_000) });
     if (res.ok) {
       console.log(`  ✓ public on GitHub: ${skill.dir}/SKILL.md @ ${ref}`);
-    } else {
-      console.warn(
-        `  ! ${url} → HTTP ${res.status}: the sandbox cannot download this skill yet ` +
-          "(ref not pushed, path missing on that ref, or repo private). Sessions will run without it; " +
-          "use --inline-skill until it is pushed.",
-      );
+      return true;
     }
+    console.warn(
+      `  ! ${url} → HTTP ${res.status}: the sandbox cannot download this skill ` +
+        "(repo private, ref not pushed, or path missing on that ref); sandbox init would fail in every session.",
+    );
+    return false;
   } catch (err) {
     console.warn(`  ! could not check ${url}: ${(err as Error).message}`);
+    return undefined;
   }
 }
 
@@ -336,7 +350,13 @@ async function main(): Promise<void> {
     if (!GIT_REF_RE.test(ref)) fail(`invalid git ref: ${ref}`);
     for (const skill of skills.values()) {
       console.log(`skill ${skill.name}: git ${SKILL_REPO_URL} path ${skill.dir} ref ${ref}`);
-      await checkSkillReachable(root, skill, ref);
+      const reachable = await checkSkillReachable(root, skill, ref);
+      if (reachable === false && !opts.skipSkillCheck) {
+        fail(
+          `refusing to register skill ${skill.name} @ ${ref}: nothing was changed on the server.\n` +
+            "  Push the ref (repo must be public), or use --inline-skill; --skip-skill-check overrides this check.",
+        );
+      }
       try {
         await tf.call("PUT", "/settings/skills", {
           manifest: {
