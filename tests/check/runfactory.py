@@ -473,7 +473,7 @@ def cap_run(reasons: list[str]) -> RunBuilder:
     return b
 
 
-def could_not_fix_run(modify_existing_test: bool = False) -> RunBuilder:
+def could_not_fix_run(modify_existing_test: bool = False, body: str | None = None) -> RunBuilder:
     """TR-13 on #6: fails before, two attempts break test_intword[999999999], no branch, one comment."""
     b = RunBuilder("TR-13", 6)
     prechecks(b)
@@ -488,7 +488,7 @@ def could_not_fix_run(modify_existing_test: bool = False) -> RunBuilder:
         b.exec(f"cd {REPO_DIR} && git checkout -- src/", 0, "")
     status = "?? tests/test_issue_6.py\n" + (" M tests/test_number.py\n" if modify_existing_test else "")
     b.exec(f"cd {REPO_DIR} && git status --porcelain", 0, status)
-    body = (
+    body = body or (
         "I could not fix this without breaking test_intword[999999999], which expects '1000.0 million'. "
         "Two attempts are summarised below. Could a maintainer confirm the intended output?"
     )
