@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "trueforge",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--yes", "@truefoundry/trueforge@0.2.1"],
+      "port": 8790
+    }
+  ]
+}
