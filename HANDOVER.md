@@ -4,6 +4,21 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 01:40 — Vishnu + Claude — Ticket Resolver harness designed (spec only, no code)
+
+**Done**
+- `SPEC.md` §4 rewritten: agent config (Gemini 3.6 Flash, `reasoning_effort: high`, **no temperature**, sandbox on,
+  preload skill), flow T1–T15, evidence check + card, 2-attempt retry loop, push-back table, HITL protocol
+  (`REVISE:` / `EDIT:` / `STOP`, max 3 per gate; modes ui / terminal / script), fixtures #1–#7, scorer + scorecard.
+- Must-pass: TR-01, 03, 05, 06, 10, 11, 12, 13. README fixtures and scenario table updated to match.
+- Reference notes in `docs/reference/`: Gemini 3 prompting, SWE-agent patterns, issue-ai-agent + TypeSafe.
+- Decision: Triage agent (TypeSafe Jev behind our MCP) comes after P0. Vishnu adds `TYPESAFE_API_KEY` to `.env`.
+
+**Next (12:00, not before)** — write the implementation plan from `SPEC.md` §4, then build: fixtures on the fork →
+`skills/ticket-resolver/SKILL.md` + agent spec → orchestrator (script mode first) → `check.py` → must-pass scenarios.
+
+---
+
 ## 2026-09-26 00:55 — Vishnu + Claude — local setup: TrueForge running, local sandbox, kind
 
 **Done**

@@ -34,7 +34,7 @@ TestPyPI is only needed if Release Captain gets built.
 | A | B |
 | --- | --- |
 | Configure TrueForge: model, Daytona sandbox, GitHub remote MCP (header auth) | Prepare the fork (README → Target repo): push the upstream tags (the fork has **none**), enable Issues, commit the planted regression(s) and disclose them |
-| Open Select MCP Tools: record exact tool names + annotations → `MEMORY.md` | Open issues #1–#5 (README fixtures); labels `bug`, `triaged`, `fix-proposed`, `cannot-reproduce` |
+| Open Select MCP Tools: record exact tool names + annotations → `MEMORY.md` | Open issues #1–#7 (SPEC.md §4.6); labels `bug`, `triaged`, `fix-proposed`, `cannot-reproduce`, `needs-human` |
 | Create draft agent `ticket-resolver` in UI; chat test: "read issue #1 and list the repo files" | Ruleset on `main`: PR required, block direct + force push, **no bypass list**. Time `pytest -q` once in Daytona |
 
 **Sync 12:45 (5 min):** A shows the agent reading issue #1 from `vishnuverse/humanize`. B confirms tags, issues, labels and ruleset.

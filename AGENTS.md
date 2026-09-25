@@ -38,13 +38,13 @@ Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain
 | `.claude/rules/` | Path-scoped rules for Claude Code | Markdown | — | Duplicate CLAUDE.md |
 
 External repo: **`vishnuverse/humanize`** (public fork of `python-humanize/humanize`) — the code being fixed. Planted
-bug issues #1–#5 (README → Target repo). `main` is protected by a ruleset with no bypass: PR required, no direct or
+fixture issues #1–#7 (SPEC.md §4.6). `main` is protected by a ruleset with no bypass: PR required, no direct or
 force push. Always pass `owner=vishnuverse, repo=humanize`; PRs on a fork can otherwise default to the upstream.
 
 ## Agents
 | Agent | MCP servers (enable_tools) | Gated by name | Not enabled | Sandbox | Handoff label |
 | --- | --- | --- | --- | --- | --- |
-| **ticket-resolver** (P0) | github: `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment` (Jira optional: `getJiraIssue`, `addCommentToJiraIssue`) | `create_pull_request`, `add_issue_comment` (Jira: `addCommentToJiraIssue`, `transitionJiraIssue`) | `merge_pull_request`, `update_issue`, any delete/close | on | `bug → triaged → fix-proposed / cannot-reproduce` |
+| **ticket-resolver** (P0) | github: `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment` (Jira optional: `getJiraIssue`, `addCommentToJiraIssue`) | `create_pull_request`, `add_issue_comment` (Jira: `addCommentToJiraIssue`, `transitionJiraIssue`) | `merge_pull_request`, `update_issue`, any delete/close | on | `bug → triaged → fix-proposed / cannot-reproduce` |
 | runbook-executor (P1) | k8s (all), github (read + comment) | `deploy`, `rollback`, `restart`, `add_issue_comment` | raw `kubectl`, `delete_*` | on (for skills) | manual trigger |
 | release-captain (optional) | github (repos, pull_requests, git, issues-comment), registry | `create_tag`/release tool, `publish_package`, `merge_pull_request` | — | on | `needs-release → ready-to-deploy` |
 
