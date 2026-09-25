@@ -59,6 +59,7 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 
 - Fixtures planted 2026-09-26 ~01:50 IST (team chose to build before 12:00): 58 upstream tags pushed; five disclosed commits `chore(fixture #N)` on `main` → HEAD **`3145c20`**; suite 738 passed, 110 skipped (py3.12). Issues enabled; #1–#7 opened in order with label `bug` (#1–#6 bodies were edited once after a mis-ordered create); labels `triaged`, `fix-proposed`, `cannot-reproduce`, `needs-human` added.
 - Ruleset `protect-main (shipgate)` (id 24018372): deletion, non_fast_forward, pull_request; empty bypass list. A direct push to `main` with the owner's own token was **rejected** (GH013), so the owner's PAT can't reach `main` either way.
+- `GITHUB_PAT` in `.env` is fine-grained (expires 2026-10-25); reads the fork; gets 404 on another repo's collaborators endpoint, so it's limited to the fork. (checked 2026-09-26 02:00 IST, no value printed)
 - #6 conflict verified: restoring the correct `intword()` fails exactly `tests/test_number.py::test_intword[test_args10-1000.0 million]`.
 - #4 is a real-clock bug: freezegun's `tz_offset` shifts both local and UTC time, so it can't trigger it; `TZ=<zone>` does whenever that zone's date differs from UTC.
 
