@@ -3,7 +3,7 @@
 Hackathon project for TrueFoundry "Agents That Act" (Sat 26 Sep 2026, build window 12:00–19:00 IST).
 Agents run on **TrueForge** (open-source agent harness). Primary agent: **Release Captain**. Stretch: **Runbook Executor**.
 
-Read first: `SPEC.md` (what we build) → `HANDOVER.md` (where we are) → `AGENTS.md` (repo map).
+Read first: `SPEC.md` (what we build) → `IMPLEMENTATION_PLAN.md` (phases, who does what) → `HANDOVER.md` (where we are) → `AGENTS.md` (repo map).
 Decisions and learned facts live in `MEMORY.md`. Path-specific rules load from `.claude/rules/`.
 
 ## Non-negotiable hackathon rules

@@ -14,6 +14,7 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 - 2026-09-25 · ~~`mock-infra` JSON-state MCP~~ → real local kind cluster behind a `k8s` MCP · hackathon forbids mocks.
 - 2026-09-25 · Registry = TestPyPI (+ optional GHCR image) · free; real no-re-upload semantics make RC-14 realistic.
 - 2026-09-25 · Every agent ends with one fenced JSON handoff block (SPEC §6) · orchestrator never parses prose.
+- 2026-09-25 · Test repo stays `tinyshop` (small Python + pytest); FFmpeg / ffmpeg-based repos rejected · build and test time too long for 2 runs per release in a 7-hour window; keep it simple.
 
 ## Learned facts (TrueForge)
 - Local mode: `npx @truefoundry/trueforge@latest`, :8790, SQLite, no login — localhost only. Node >= 22.14. (trueforge.dev/quickstart)
