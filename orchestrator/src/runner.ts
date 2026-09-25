@@ -82,6 +82,8 @@ export interface RunMeta {
   exit_code: number;
   turn_ids: string[];
   unexpected_gate: boolean;
+  /** "continue" messages sent after a turn ended with no gate and no handoff. */
+  nudges: number;
   // extras (not in the contract, safe to ignore)
   unexpected_detail: { tool: string; mcp_server: string | null; tool_call_id: string; expected_tool: string | null } | null;
   error: string | null;
@@ -169,6 +171,12 @@ function progressLine(ev: Record<string, unknown>): string | null {
   return null;
 }
 
+/** Sent when a turn ends with no gate and no handoff (e.g. the model returned an empty completion). */
+export const NUDGE =
+  "Your last turn ended without the handoff JSON. If the procedure is finished or was stopped by a human, reply " +
+  "with only the handoff JSON block and nothing else. Otherwise continue with the next step of the procedure.";
+export const MAX_NUDGES = 2;
+
 export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResult> {
   const now = deps.now ?? (() => new Date());
   const { tf, decider, labels, log } = deps;
@@ -191,6 +199,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
   let status: RunStatus = "completed";
   let error: string | null = null;
   let unexpectedDetail: RunMeta["unexpected_detail"] = null;
+  let nudges = 0;
   const seen = new Set<string>();
   const onEvent = (ev: Record<string, unknown>) => {
     const id = typeof ev.id === "string" ? ev.id : null;
@@ -257,7 +266,17 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
       if (lastInfo.status !== "done") throw new Error(`turn ${turnId} ended ${lastInfo.status}`);
       const { pending, other } = pendingFromRequiredActions(lastInfo.requiredActions);
       if (other.length > 0) throw new Error(`turn ${turnId} needs unsupported action(s): ${other.join(", ")}`);
-      if (pending.length === 0) break;
+      if (pending.length === 0) {
+        // Relay only: a turn that stops with no gate and no handoff gets a fixed "continue" (max MAX_NUDGES).
+        if (nudges < MAX_NUDGES && !extractHandoff(lastInfo.outputText).ok) {
+          nudges++;
+          turnId = await tf.createTurn(sessionId, [{ type: "user.message", content: NUDGE }]);
+          turnIds.push(turnId);
+          log(`nudge ${nudges}/${MAX_NUDGES}: turn ended without a gate or a handoff`);
+          continue;
+        }
+        break;
+      }
 
       const events = await tf.listEvents(sessionId);
       const answers: TurnInput[] = [];
@@ -370,6 +389,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
     exit_code: EXIT[status],
     turn_ids: turnIds,
     unexpected_gate: unexpectedDetail !== null,
+    nudges,
     unexpected_detail: unexpectedDetail,
     error,
     handoff_error: handoff.ok ? null : handoff.error,

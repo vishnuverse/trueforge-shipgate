@@ -7,7 +7,7 @@ import { argsSha256 } from "../src/canonical.ts";
 import { ScriptDecider, type Decider } from "../src/decide.ts";
 import type { EventItem } from "../src/events.ts";
 import type { LabelOps } from "../src/labels.ts";
-import { runOnce, type RunOptions } from "../src/runner.ts";
+import { NUDGE, runOnce, type RunOptions } from "../src/runner.ts";
 import type { AgentRef, TrueForgeApi, TurnInfo, TurnInput } from "../src/trueforge.ts";
 import { DECISION_TURN, GATED_TURN, loadFixture } from "./helpers.ts";
 
@@ -116,8 +116,13 @@ test("script run on the fixture: STOP relayed, files written, no handoff -> exit
   assert.equal(res.status, "no_handoff");
   assert.equal(res.exitCode, 4);
   assert.match(res.runDir, /runs\/TR-DEV\/\d{8}T\d{6}Z$/);
-  // the resume turn carries exactly the scripted answer
-  assert.deepEqual(tf.turnInputs, [
+  // the resume turn carries exactly the scripted answer; the fixture never writes a handoff, so two nudges follow
+  assert.equal(readRun(res.runDir).meta.nudges, 2);
+  assert.deepEqual(tf.turnInputs.slice(2), [
+    [{ type: "user.message", content: NUDGE }],
+    [{ type: "user.message", content: NUDGE }],
+  ]);
+  assert.deepEqual(tf.turnInputs.slice(0, 2), [
     [{ type: "user.message", content: "Call the github get_me tool now." }],
     [
       {
@@ -138,7 +143,9 @@ test("script run on the fixture: STOP relayed, files written, no handoff -> exit
   assert.equal(run.meta.status, "no_handoff");
   assert.equal(run.meta.exit_code, 4);
   assert.equal(run.meta.session_id, "sess_fixture");
-  assert.deepEqual(run.meta.turn_ids, [GATED_TURN, DECISION_TURN]);
+  const turnIds = run.meta.turn_ids as string[];
+  assert.deepEqual(turnIds.slice(0, 2), [GATED_TURN, DECISION_TURN]);
+  assert.equal(turnIds.length, 4); // + 2 nudge turns
   assert.equal(run.meta.unexpected_gate, false);
   for (const k of ["run_id", "scenario", "issue", "repo", "agent", "mode", "started_at", "finished_at"]) {
     assert.ok(k in run.meta, k);
@@ -263,8 +270,9 @@ test("ui mode: the runner follows the turn the UI created instead of answering i
     }),
   };
   const res = await runOnce(options(root, { mode: "ui", scenarioId: null }), { tf, decider, labels: null, log: quiet });
-  assert.equal(tf.turnInputs.length, 1); // only the first user message; no approval sent by us
-  assert.deepEqual(res.meta.turn_ids, [GATED_TURN, DECISION_TURN]);
+  // no approval sent by us: only the first user message and the two nudges (the fixture has no handoff)
+  assert.ok(tf.turnInputs.flat().every((i) => i.type === "user.message"));
+  assert.deepEqual(res.meta.turn_ids.slice(0, 2), [GATED_TURN, DECISION_TURN]);
   assert.equal(res.records[0]?.mode, "ui");
   assert.equal(res.records[0]?.prefix, "NONE");
   assert.equal(res.records[0]?.run_id, "issue-1");
@@ -306,4 +314,66 @@ test("a TrueForge failure before the session is an error (exit 1) and touches no
   assert.equal(res.meta.session_id, null);
   assert.match(String(res.meta.error), /ECONNREFUSED/);
   assert.equal(labelCalls, 0);
+});
+
+/** Every turn finishes with no gate; `outputs[i]` is turn i+1's final text. */
+class SilentThenFake implements TrueForgeApi {
+  turnInputs: TurnInput[][] = [];
+  constructor(private readonly outputs: string[]) {}
+  async createSession(): Promise<string> {
+    return "sess_nudge";
+  }
+  async createTurn(_s: string, input: TurnInput[]): Promise<string> {
+    this.turnInputs.push(input);
+    return `turn_${this.turnInputs.length}`;
+  }
+  async waitForTurn(s: string, t: string): Promise<TurnInfo> {
+    return this.getTurn(s, t);
+  }
+  async getTurn(_s: string, t: string): Promise<TurnInfo> {
+    const text = this.outputs[Number(t.split("_")[1]) - 1] ?? "";
+    return { id: t, status: "done", requiredActions: [], outputText: text || null, errorMessage: null };
+  }
+  async listEvents(): Promise<EventItem[]> {
+    return this.turnInputs.map(
+      (_, i) =>
+        ({ turn_id: `turn_${i + 1}`, event: { type: "model.message", content: this.outputs[i] ?? "", tool_calls: [] } }) as EventItem,
+    );
+  }
+  async listTurns() {
+    return [];
+  }
+  async cancel(): Promise<void> {}
+}
+
+const HANDOFF_TEXT = `Done.\n\n\`\`\`json\n${JSON.stringify(HANDOFF)}\n\`\`\``;
+
+test("an empty final message gets one 'continue' nudge, then the handoff completes the run", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const tf = new SilentThenFake(["", HANDOFF_TEXT]);
+  const res = await runOnce(options(root), { tf, decider: new ScriptDecider([], { print: quiet }), labels: null, log: quiet });
+  assert.equal(res.exitCode, 0);
+  assert.equal(tf.turnInputs.length, 2);
+  const nudge = tf.turnInputs[1]?.[0] as { type: string; content: string };
+  assert.equal(nudge.type, "user.message");
+  assert.match(nudge.content, /continue/i);
+  assert.equal(readRun(res.runDir).meta.nudges, 1);
+});
+
+test("a silent agent is nudged at most twice, then the run ends without a handoff (exit 4)", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const tf = new SilentThenFake(["", "", "", ""]);
+  const res = await runOnce(options(root), { tf, decider: new ScriptDecider([], { print: quiet }), labels: null, log: quiet });
+  assert.equal(res.exitCode, 4);
+  assert.equal(tf.turnInputs.length, 3);
+  assert.equal(readRun(res.runDir).meta.nudges, 2);
+});
+
+test("a run that ends with a handoff is never nudged", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const tf = new SilentThenFake([HANDOFF_TEXT]);
+  const res = await runOnce(options(root), { tf, decider: new ScriptDecider([], { print: quiet }), labels: null, log: quiet });
+  assert.equal(res.exitCode, 0);
+  assert.equal(tf.turnInputs.length, 1);
+  assert.equal(readRun(res.runDir).meta.nudges, 0);
 });
