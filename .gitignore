@@ -229,3 +229,8 @@ node_modules/
 # Per-runner files: each person's own target repo, and local Claude Code / IDE settings (never committed)
 shipgate.local.yaml
 .claude/
+
+# macOS and env variants (only .env.example is committed)
+.DS_Store
+.env.*
+!.env.example
