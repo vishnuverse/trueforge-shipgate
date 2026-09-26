@@ -29,6 +29,20 @@ re-registered the agent with the re-worded skill (provider and both connectors `
 `scripts/score.sh TR-03` → **PASS 27/27**: Jev `uncertain` (margin 0.04), patch held, zero branch/push/PR calls,
 outcome `policy_blocked`. The humanize facts moved into labelled examples still reach the demo agent.
 
+**Deferred minors** (any-repo reviews; none blocks merge): loaders' file-not-found branch untested · Windows drive
+guard beyond spec · duplicate YAML keys load in Python but fail in TS · loaders don't reject whitespace/metacharacters
+in dirs or branch · `constants.py` exits 2 at import on a bad config · `targetRepo()` re-reads the config per call ·
+`reset.sh` guard duplicates the root lookup and says "cannot read shipgate.yaml" when uv is missing; only the mismatch
+path is tested · `setup_agents.ts` dead `RenderError` branch, no tsc coverage (add `scripts/*.ts` to the orchestrator
+tsconfig), skill-extras rendering untested · `setup.ts` `isObj` duplicates `isMapping`; malformed `TRUEFORGE_URL` exits
+1 not 2; github connector rebuilt on rotation (needs a comment) · `stop.sh` matches both pid files against one pattern ·
+`setup.sh`: `--check` also reads branch protection, a network error reads as "not protected", no `npx` preflight, three
+`die` messages lack a fix hint, dry-run on a fresh clone without a uv cache gives uv's offline error, branch names with
+`/` not URL-encoded · doctor shows a missing agent as "github gates []" · TrueForge URL precedence edge cases (old
+`.env` pins localhost; empty `TRUEFORGE_URL` not treated as unset by the setup scripts; `check.py` ignores the config) ·
+step 9 still says "e.g. the demo repo's number.py" outside examples · README/CLAUDE.md don't surface `--rotate-keys`,
+`--allow-remote`, `--smoke`; CLAUDE.md layout omits the setup scripts; README test counts stale.
+
 **Next**
 1. Merge decision for `feat/any-repo`.
 2. Next steps 1–3 of the 14:52 entry below still stand (second repo, public repo, Daytona demo).
