@@ -145,6 +145,9 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    in `sed -n 'A,Bp'` chunks of at most 300 lines and join them exactly. Push ONE file per push_files call, the
    test first: push_files {branch: "fix/issue-<n>", message: "fix(<module>): <summary> (#<n>)", files: [{path,
    content}]}. content = the file exactly as printed, non-ASCII characters kept as they are (e.g. the demo repo's number.py has "⁰¹²³").
+   Copy it character for character: the only difference from {{default_branch}} is your fix. Never reword, reflow or
+   "correct" any other line, docstring or comment, not even a typo or awkward wording; any such change breaks the
+   SHA check and ends the run.
    If push_files returns a JSON or validation error, send the same call once more; a second failure: stop (status
    failed, reason push_failed). Large files are pushed with push_files like any other. Never write payload files,
    never use mcp-client / mcp_client (TrueForge refuses writes from it and it fails the run), never contact
