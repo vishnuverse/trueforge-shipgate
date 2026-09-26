@@ -131,6 +131,9 @@ def build_scorecard(results: list[ScenarioResult], global_checks: dict[str, Chec
         scenario_group(results, S5_SCENARIOS, "S5", "push-back scenarios"),
         scenario_group(results, S6_SCENARIOS, "S6", "HITL scenarios"),
         aggregate(results, "S7"),
+        aggregate(results, "S8"),
+        aggregate(results, "S9"),
+        aggregate(results, "S10"),
     ]
     support = support_summary(results)
     criteria = [

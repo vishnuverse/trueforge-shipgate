@@ -98,8 +98,16 @@ OUTCOMES = (
     "needs_info",
     "security_redirect",
     "could_not_fix",
+    "policy_blocked",
     "stopped",
 )
+# Jev triage pre-check (spec docs/superpowers/specs/2026-09-26-jev-triage-design.md)
+TRIAGE_SERVER = "triage"
+TRIAGE_TOOL = "triage_ticket"
+TRIAGE_POLICY = "triage-v1"
+AI_FLAG = 0.5
+PATCH_WRITE_TOOLS = ("create_branch", "push_files", "create_pull_request")
+
 # Outcomes reached at the pre-checks (T3), possibly before a SHA is pinned.
 PRECHECK_OUTCOMES = ("out_of_scope", "duplicate", "needs_info", "security_redirect")
 PUSHBACK_AGAINST = ("ticket", "approver", "evidence")

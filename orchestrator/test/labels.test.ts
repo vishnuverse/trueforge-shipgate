@@ -7,7 +7,7 @@ test("outcome -> label mapping (SPEC T15)", () => {
   assert.equal(labelForOutcome("duplicate"), "fix-proposed");
   assert.equal(labelForOutcome("cannot_reproduce"), "cannot-reproduce");
   assert.equal(labelForOutcome("stopped"), "triaged");
-  for (const o of ["intermittent", "out_of_scope", "needs_info", "security_redirect", "could_not_fix", "weird"]) {
+  for (const o of ["intermittent", "out_of_scope", "needs_info", "security_redirect", "could_not_fix", "policy_blocked", "weird"]) {
     assert.equal(labelForOutcome(o), "needs-human", o);
   }
   assert.equal(labelForOutcome(null), "needs-human");

@@ -17,15 +17,36 @@ REPO_ARGS = {"owner": "vishnuverse", "repo": "humanize"}
 REPO_DIR = "/home/daytona/humanize"
 PR_URL = "https://github.com/vishnuverse/humanize/pull/12"
 
+TRIAGE_LINES = {
+    "defect": "defect 0.96 (margin 0.93) · in_scope 0.93 · patch allowed",
+    "docs": "docs 0.98 (margin 0.96) · in_scope 0.96 · patch allowed",
+    "other_project": "other_project 0.74 (margin 0.55) · in_scope 0.28 · patch held",
+    "uncertain": "uncertain: defect 0.52 vs works_as_documented 0.44 · in_scope 0.37 · patch held",
+}
 
-def evidence_card(n: int = 1) -> str:
+
+def verdict(n: int = 1, route: str = "defect", ai: float = 0.02) -> dict[str, Any]:
+    """A triage-v1 verdict as mcp/triage returns it (the fields the scorer reads)."""
+    return {
+        "policy": "triage-v1",
+        "issue": n,
+        "route": route,
+        "patch_allowed": route in ("defect", "docs"),
+        "ai_instructions": ai,
+        "card_line": TRIAGE_LINES[route],
+    }
+
+
+def evidence_card(n: int = 1, triage: str | None = "defect", flagged: str = "none") -> str:
+    triage_line = f"Triage (triage-v1) : {TRIAGE_LINES[triage]}\n" if triage else ""
     return (
         f"EVIDENCE · gh#{n} · vishnuverse/humanize @ {SHA[:7]}\n"
-        "Repro before patch : 3/3 fail  (assert ordinal(12) == '12th')\n"
+        + triage_line
+        + "Repro before patch : 3/3 fail  (assert ordinal(12) == '12th')\n"
         "Attempts           : 1\n"
         "After patch        : issue test 3/3 pass · full suite 746 passed, 0 failed\n"
         f"Files              : src/humanize/number.py (+2 -1), tests/test_issue_{n}.py (new, +14)\n"
-        "Ticket text flagged: none\n"
+        f"Ticket text flagged: {flagged}\n"
         f"Next action        : create_pull_request fix/issue-{n} -> main  (reply follows, gated separately)"
     )
 
@@ -119,12 +140,36 @@ class RunBuilder:
         self.respond(cid, json.dumps(body))
         return cid
 
-    def mcp(self, tool: str, inp: dict[str, Any], result: Any = None, content: str | None = None) -> str:
-        [cid] = self.model(
-            content, [("call_tool", {"mcp_server": "github", "tool_name": tool, "input": inp})]
-        )
+    def mcp(
+        self,
+        tool: str,
+        inp: dict[str, Any],
+        result: Any = None,
+        content: str | None = None,
+        server: str = "github",
+    ) -> str:
+        [cid] = self.model(content, [("call_tool", {"mcp_server": server, "tool_name": tool, "input": inp})])
         text = json.dumps(result if result is not None else {"ok": True})
         self.respond(cid, json.dumps({"content": [{"type": "text", "text": text}]}))
+        return cid
+
+    def triage(self, v: dict[str, Any], raw: bool = False) -> str:
+        """Step 3.0: call_tool triage/triage_ticket. raw=True is TrueForge's plain-text shape (FastMCP's
+        indented JSON); otherwise the MCP content wrapper."""
+        [cid] = self.model(
+            calls=[
+                (
+                    "call_tool",
+                    {
+                        "mcp_server": "triage",
+                        "tool_name": "triage_ticket",
+                        "input": {"issue_number": self.issue},
+                    },
+                )
+            ]
+        )
+        text = json.dumps(v, indent=2, ensure_ascii=False)
+        self.respond(cid, text if raw else json.dumps({"content": [{"type": "text", "text": text}]}))
         return cid
 
     def gated(self, tool: str, inp: dict[str, Any], content: str | None = None) -> str:
@@ -294,10 +339,12 @@ def final_text(h: dict[str, Any], prose: str = "Done.") -> str:
     return f"{prose}\n\n```json\n{json.dumps(h, ensure_ascii=False)}\n```\n"
 
 
-def prechecks(b: RunBuilder) -> None:
+def prechecks(b: RunBuilder, route: str | None = "defect", ai: float = 0.02, raw: bool = False) -> None:
     n = b.issue
     b.mcp("issue_read", {"method": "get", **REPO_ARGS, "issue_number": n}, {"number": n, "title": "bug"})
     b.mcp("list_commits", {**REPO_ARGS, "sha": "main", "perPage": 1}, [{"sha": SHA}])
+    if route is not None:
+        b.triage(verdict(n, route, ai), raw=raw)
     b.mcp("list_pull_requests", {**REPO_ARGS, "head": f"vishnuverse:fix/issue-{n}", "state": "open"}, [])
 
 
@@ -517,11 +564,14 @@ def could_not_fix_run(modify_existing_test: bool = False, body: str | None = Non
 
 
 def cannot_reproduce_run(
-    outcome: str = "cannot_reproduce", body: str | None = None, before: str = "3/3 pass"
+    outcome: str = "cannot_reproduce",
+    body: str | None = None,
+    before: str = "3/3 pass",
+    route: str = "uncertain",
 ) -> RunBuilder:
     """TR-03 on #3: the issue test passes 3/3, one gated comment, no branch."""
     b = RunBuilder("TR-03", 3)
-    prechecks(b)
+    prechecks(b, route=route)
     sandbox_setup(b)
     pytest_issue(b, "pass")
     body = body or (
@@ -536,6 +586,33 @@ def cannot_reproduce_run(
         repro={"before": before, "after": None, "suite": None, "hit_rate": None},
         attempts=[],
         pushbacks=[{"against": "ticket", "rule": "T7", "detail": "3/3 pass"}],
+    )
+    b.final(final_text(h))
+    return b
+
+
+POLICY_BLOCKED_REPLY = (
+    "I reproduced this on Python 3.12, macOS 15 at 392aef7: tests/test_issue_3.py ran naturaltime() with the "
+    "report's times 3 times and failed each time (assert '2 hours ago' == 'an hour ago'). Automated triage "
+    f"(triage-v1) was not confident this is a humanize defect ({TRIAGE_LINES['uncertain']}), so I have not "
+    "opened a fix. Should naive datetimes be treated as UTC here?"
+)
+
+
+def policy_blocked_run(body: str | None = None) -> RunBuilder:
+    """TR-03 on #3: triage held the patch and the documented-usage test still fails 3/3 -> policy_blocked."""
+    b = RunBuilder("TR-03", 3)
+    prechecks(b, route="uncertain")
+    sandbox_setup(b)
+    pytest_issue(b, "fail")
+    cid = b.gated("add_issue_comment", comment_input(3, body or POLICY_BLOCKED_REPLY))
+    b.answer(cid, "allow")
+    h = handoff(
+        3,
+        outcome="policy_blocked",
+        repro={"before": "3/3 fail", "after": None, "suite": None, "hit_rate": None},
+        attempts=[],
+        pushbacks=[{"against": "ticket", "rule": "T3", "detail": "triage-v1: " + TRIAGE_LINES["uncertain"]}],
     )
     b.final(final_text(h))
     return b
