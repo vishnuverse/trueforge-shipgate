@@ -87,7 +87,8 @@ read/write; the committed value is the humanize demo fork).
 
 ```bash
 git clone https://github.com/vishnuverse/trueforge-shipgate && cd trueforge-shipgate
-cp .env.example .env          # fill GITHUB_PAT, OPENAI_API_KEY, TYPESAFE_API_KEY (never commit .env)
+cp .env.example .env          # fill GITHUB_PAT, OPENAI_API_KEY, TYPESAFE_API_KEY, JIRA_EMAIL, JIRA_API_KEY (never commit .env)
+                              # no Jira? delete the jira: block in shipgate.yaml and skip the two JIRA_ keys
 $EDITOR shipgate.yaml         # your repo, install/test commands, source dir (the committed values run the demo)
 scripts/setup.sh              # installs, starts TrueForge + triage MCP, registers everything, checks, then prints:
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui
