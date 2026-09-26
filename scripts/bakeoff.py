@@ -185,7 +185,7 @@ def run(model, prices, results):
         ]["id"]
         today = time.strftime("%Y-%m-%d")
         kickoff = (
-            f"Resolve GitHub issue #1 in vishnuverse/humanize. Today is {today}. "
+            f"Resolve GitHub issue #1 in drax0945/humanize. Today is {today}. "
             "Evaluation mode (see <evaluation_mode>)."
         )
         tid = req(

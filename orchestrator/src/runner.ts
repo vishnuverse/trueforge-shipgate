@@ -15,7 +15,7 @@ import type { LabelOps } from "./labels.ts";
 import { extractHandoff, parsePrefix, type Prefix } from "./protocol.ts";
 import { sleep, type AgentRef, type TrueForgeApi, type TurnInfo, type TurnInput } from "./trueforge.ts";
 
-export const REPO = "vishnuverse/humanize";
+export const REPO = "drax0945/humanize";
 
 export type RunStatus = "completed" | "timeout" | "error" | "unexpected_gate" | "no_handoff";
 

@@ -1,6 +1,6 @@
 """Read-only clients for GitHub (REST) and TrueForge. Injectable so unit tests can fake them.
 
-The GitHub client only ever issues GET requests and refuses any repo other than vishnuverse/humanize.
+The GitHub client only ever issues GET requests and refuses any repo other than drax0945/humanize.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ _NEXT = re.compile(r'<([^>]+)>;\s*rel="next"')
 
 
 class GitHubClient:
-    """GET-only GitHub REST client pinned to vishnuverse/humanize."""
+    """GET-only GitHub REST client pinned to drax0945/humanize."""
 
     def __init__(
         self,

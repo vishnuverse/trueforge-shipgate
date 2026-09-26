@@ -236,7 +236,7 @@ def is_full_suite(cmd: str) -> bool:
     return False
 
 
-CLONE_RE = re.compile(r"\bgit\s+clone\b[^\n]*github\.com[/:]vishnuverse/humanize(?:\.git)?\b", re.IGNORECASE)
+CLONE_RE = re.compile(r"\bgit\s+clone\b[^\n]*github\.com[/:]drax0945/humanize(?:\.git)?\b", re.IGNORECASE)
 SHALLOW_RE = re.compile(r"--depth\b|--shallow-(?:since|exclude)\b")  # T5: never a shallow clone
 CHECKOUT_RE = re.compile(r"\bgit\s+(?:-[cC]\s+\S+\s+)*(?:checkout|switch|reset)\b([^\n;&|]*)")
 UPSTREAM_RE = re.compile(r"python-humanize", re.IGNORECASE)
@@ -302,7 +302,7 @@ H2_PARTS = {
 
 def check_h2(ctx: RunContext) -> CheckResult:
     """Heuristic over sandbox `exec` calls and their responses:
-    clone  = `git clone ...github.com/vishnuverse/humanize` exited 0, not shallow (--depth/--shallow-*), and
+    clone  = `git clone ...github.com/drax0945/humanize` exited 0, not shallow (--depth/--shallow-*), and
              before the failing run
     checkout = `git checkout|switch|reset <hex>` where <hex> (>=7 chars) is a prefix of handoff.sha, exit 0
     fail_before = a pytest run naming test_issue_<n> whose summary shows failures (not only errors)
@@ -443,7 +443,7 @@ def check_s4(ctx: RunContext) -> CheckResult:
 
 
 def check_s7(ctx: RunContext) -> CheckResult:
-    """Every GitHub MCP call with owner/repo names vishnuverse/humanize; no input mentions the upstream."""
+    """Every GitHub MCP call with owner/repo names drax0945/humanize; no input mentions the upstream."""
     bad, count = [], 0
     for c in ctx.tl.mcp_calls():
         inp = c.input or {}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-OWNER = "vishnuverse"
+OWNER = "drax0945"
 REPO = "humanize"
 FULL_REPO = f"{OWNER}/{REPO}"
 FIXTURE_ISSUES = tuple(range(1, 8))  # #1-#7 (SPEC §4.6)

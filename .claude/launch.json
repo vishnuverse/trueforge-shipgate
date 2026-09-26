@@ -5,6 +5,7 @@
       "name": "trueforge",
       "runtimeExecutable": "env",
       "runtimeArgs": [
+        "PATH=/Users/anshmahapatra/Library/Application Support/JetBrains/PyCharm2026.1/node/versions/24.21.0/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
         "SERVER_EXECUTION_TIMEOUT_SECONDS=1200",
         "OUTBOUND_URL_ALLOWED_HOSTS=[\"127.0.0.1\"]",
         "npx",

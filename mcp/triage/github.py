@@ -1,10 +1,10 @@
-"""Read one issue of vishnuverse/humanize for the triage MCP (spec §3-4). Read-only; the repo is fixed."""
+"""Read one issue of drax0945/humanize for the triage MCP (spec §3-4). Read-only; the repo is fixed."""
 
 from __future__ import annotations
 
 import httpx
 
-OWNER, REPO = "vishnuverse", "humanize"
+OWNER, REPO = "drax0945", "humanize"
 API = "https://api.github.com"
 TIMEOUT_S = 15.0
 

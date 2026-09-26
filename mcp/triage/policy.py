@@ -17,7 +17,7 @@ AI_FLAG = 0.5
 PATCH_ROUTES = ("defect", "docs")
 
 CONTEXT = (
-    "humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword, "
+    "humanize is a Python library (drax0945/humanize) with functions such as ordinal, intcomma, intword, "
     "naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize."
 )
 # Order matters: it breaks ties between equal probabilities.

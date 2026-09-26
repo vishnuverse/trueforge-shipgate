@@ -1,6 +1,7 @@
 """Triage MCP server (spec docs/superpowers/specs/2026-09-26-jev-triage-design.md).
 
-One read-only tool, triage_ticket(issue_number): read the issue from vishnuverse/humanize, ask TypeSafe Jev
+One read-only tool, triage_ticket(issue_number, summary): read the issue from drax0945/humanize, send
+TypeSafe Jev the title, the agent's short summary and the start of the body (never the full ticket), ask
 three questions, apply policy triage-v1, append an audit line, return the verdict. It never raises to the
 agent: every failure is an `error` verdict with patch_allowed false (fail closed).
 
@@ -81,7 +82,12 @@ def _audit(path: Path, verdict: dict[str, Any], latency_ms: int) -> None:
 
 
 def triage(
-    issue_number: int, *, client: httpx.Client, env: Mapping[str, str], audit_log: Path
+    issue_number: int,
+    *,
+    client: httpx.Client,
+    env: Mapping[str, str],
+    audit_log: Path,
+    summary: str | None = None,
 ) -> dict[str, Any]:
     start = time.monotonic()
     if issue_number < 1:
@@ -90,7 +96,10 @@ def triage(
         try:
             issue = github.fetch_issue(issue_number, token=env.get("GITHUB_PAT") or None, client=client)
             answers, model = jev.ask(
-                issue["title"], issue["body"], api_key=env.get("TYPESAFE_API_KEY") or None, client=client
+                issue["title"],
+                jev.ticket_text(issue["body"], summary),
+                api_key=env.get("TYPESAFE_API_KEY") or None,
+                client=client,
             )
             verdict = policy.decide(issue_number, answers, model)
         except (github.IssueError, jev.JevError, policy.AnswerError) as exc:
@@ -117,12 +126,15 @@ def build_app(
             openWorldHint=True,
         )
     )
-    def triage_ticket(issue_number: int) -> dict[str, Any]:
-        """Classify issue <issue_number> of vishnuverse/humanize with TypeSafe Jev under policy triage-v1.
+    def triage_ticket(issue_number: int, summary: str = "") -> dict[str, Any]:
+        """Classify issue <issue_number> of drax0945/humanize with TypeSafe Jev under policy triage-v1.
 
-        Returns route, patch_allowed and card_line. Copy card_line verbatim into the evidence card. Read-only.
+        summary: your own 1-2 sentence summary of the ticket (function, input, expected vs actual output),
+        at most 600 characters. Jev gets the title, this summary and the first 1000 characters of the
+        ticket body, never the full ticket. Returns route, patch_allowed and card_line. Copy card_line
+        verbatim into the evidence card. Read-only.
         """
-        return triage(issue_number, client=http, env=cfg, audit_log=audit_log)
+        return triage(issue_number, client=http, env=cfg, audit_log=audit_log, summary=summary)
 
     return app
 

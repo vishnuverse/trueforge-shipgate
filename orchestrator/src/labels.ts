@@ -1,6 +1,6 @@
-// Issue labels (SPEC T1/T15, contracts §7) via GitHub REST. Only vishnuverse/humanize, only five labels.
+// Issue labels (SPEC T1/T15, contracts §7) via GitHub REST. Only drax0945/humanize, only five labels.
 
-export const TARGET_REPO = "vishnuverse/humanize";
+export const TARGET_REPO = "drax0945/humanize";
 export const MANAGED_LABELS = ["bug", "triaged", "fix-proposed", "cannot-reproduce", "needs-human"] as const;
 export type ManagedLabel = (typeof MANAGED_LABELS)[number];
 /** Labels that describe where a ticket is; the end state keeps exactly one of them. */
