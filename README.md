@@ -21,7 +21,7 @@ replies to the reporter. If it can't reproduce the bug, it says so with evidence
 | 2 | One job, finished | One job: resolving a bug ticket, end to end. Nothing else is built yet |
 | 3 | Film the approval moment | The TrueForge session page shows the sandbox runs, then the "Tool Approval Required" card (`--approve ui`) |
 | 4 | Public repo, README works on another laptop, AI named | Quick start below; AI use disclosed at the end. *The repo is private while we build; it is made public for submission* |
-| 5 | Only our own accounts and keys; none in the repo or video | Our own GitHub, OpenRouter and TrueForge. Keys live in `.env` (gitignored) and TrueForge Settings; `.env.example` has names only |
+| 5 | Only our own accounts and keys; none in the repo or video | Our own OpenRouter, TypeSafe and GitHub accounts. Keys live in `.env` (gitignored) and are registered into TrueForge by `scripts/setup.sh`; `.env.example` has names only |
 
 ## How it works
 
@@ -72,44 +72,56 @@ Every answer is logged to `approvals.log` with a hash of the exact call it appro
 
 ## Quick start (fresh laptop)
 
-**You need:** Node ≥ 22.14, [uv](https://docs.astral.sh/uv/) (Python 3.12), git, an [OpenRouter](https://openrouter.ai)
-key, a [TypeSafe](https://docs.typesafe.ai/introduction) API key (Jev triage), and a GitHub **fine-grained** token for your fork of `humanize` (Contents, Issues, Pull requests: read/write).
+**You need:** Node ≥ 22.14, [uv](https://docs.astral.sh/uv/) (Python 3.12), git, curl, an
+[OpenRouter](https://openrouter.ai) key, a [TypeSafe](https://docs.typesafe.ai/introduction) API key (Jev triage),
+and a GitHub **fine-grained** token for the repo named in `shipgate.yaml` (Contents, Issues, Pull requests:
+read/write; the committed value is the humanize demo fork).
 
 ```bash
 git clone https://github.com/vishnuverse/trueforge-shipgate && cd trueforge-shipgate
-cp .env.example .env                              # fill TRUEFORGE_URL, GITHUB_PAT, TYPESAFE_API_KEY (never commit .env)
-uv sync && npm --prefix orchestrator ci
-SERVER_EXECUTION_TIMEOUT_SECONDS=1200 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@0.2.1   # UI + API on :8790; leave it running
-# (OUTBOUND_URL_ALLOWED_HOSTS lets TrueForge reach our local triage MCP; its SSRF guard blocks loopback by default)
-# (TrueForge 0.2.1 cancels any turn after 10 min by default; a ticket's first turn can take longer)
-```
-
-In the TrueForge UI, **Settings**:
-1. **Models → Add Custom Provider**: name `openrouter`, base URL `https://openrouter.ai/api/v1`, your OpenRouter key,
-   model name `deepseek-v4-flash` with model id `deepseek/deepseek-v4-flash`.
-2. **Connectors → github**: header `Authorization: Bearer <your GitHub token>`.
-3. **Sandbox**: nothing to do; TrueForge's built-in local sandbox is used (add Daytona under Sandbox providers to use it).
-
-Then, in a second terminal:
-```bash
-uv run mcp/triage/server.py &                                                  # triage MCP on 127.0.0.1:8803
-curl -s -X PUT http://localhost:8790/api/v1/settings/mcp-servers -H 'Content-Type: application/json' \
-  -d '{"manifest":{"type":"remote","name":"triage","url":"http://127.0.0.1:8803/mcp","description":"Jev triage pre-check (triage-v1), read-only"}}'
-npx --yes tsx scripts/setup_agents.ts --inline-skill                         # registers the ticket-resolver agent
+cp .env.example .env          # fill GITHUB_PAT, OPENROUTER_API_KEY, TYPESAFE_API_KEY (never commit .env)
+$EDITOR shipgate.yaml         # your repo, install/test commands, source dir (the committed values run the demo)
+scripts/setup.sh              # installs, starts TrueForge + triage MCP, registers everything, checks, then prints:
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui
 ```
+
+`scripts/setup.sh --dry-run` shows the plan without doing anything; `scripts/stop.sh` stops what it started;
+re-running it changes nothing that's already set up.
+
 You'll see the session link, then the agent's sandbox work, then the evidence card and a menu:
 `[a]pprove [r]evise [e]dit [s]top [v]iew`. With `--approve ui`, answer on the session page in TrueForge instead.
 
-### Using your own fork
-The target repo is fixed to `vishnuverse/humanize` on purpose (the orchestrator and `reset.sh` refuse any other).
-To run it on yours:
+### Using your own repo
+**Requirements:** a Python package tested with pytest; its default branch protected by a ruleset that requires pull
+requests with no bypass; a GitHub fine-grained token scoped to that repo only (Contents, Issues, Pull requests:
+read/write).
+
+Edit `shipgate.yaml`:
+
+| Key | What |
+| --- | --- |
+| `target.repo` | `owner/name` — the only repo any component will touch |
+| `target.default_branch` | must already be protected (`setup.sh` checks and refuses otherwise) |
+| `target.description` | 1–500 chars of context for Jev triage: what the package is (and isn't) |
+| `python.install` | run after `python3 -m venv .venv` to prepare it |
+| `python.test` | the pytest command the agent (and `setup.sh --smoke`) runs |
+| `python.source_dir` | fixes may only touch files under here |
+| `python.tests_dir` | the regression test lands at `<tests_dir>/test_issue_<n>.py` |
+| `trueforge.url` | your TrueForge instance (default `http://localhost:8790`) |
+| `trueforge.model` | the model id the agent runs on |
+
+Then run `scripts/setup.sh` as above. **Limits:** Jev's triage thresholds were tuned on humanize — expect more
+tickets held as `uncertain` on a different codebase, which is the safe direction. The `tests/scenarios/TR-*.yaml`
+scenarios and the scorecard (`check.py`) score the demo fork only; `reset.sh` refuses to run against any other repo.
+
+#### Scored demo (the humanize fork)
+To reproduce the scored demo fork instead of pointing at your own repo:
 1. Fork `python-humanize/humanize`, clone it, then apply the five planted bugs:
    `git fetch https://github.com/vishnuverse/humanize main && git cherry-pick 3190a3c 4bc9bc6 fec6bc1 3593e50 3145c20`.
 2. Push the upstream tags, enable Issues, and open issues #1–#7 from `tests/fixtures/humanize/` (titles in
    `fixtures.json`, bodies in `issues/`). Add a ruleset on `main`: PR required, no bypass.
-3. Replace `vishnuverse/humanize` (and the owner `vishnuverse`) in `agents/`, `skills/`, `orchestrator/src/`, `scripts/`.
-   A single `TARGET_REPO` setting is on the to-do list.
+3. Point `shipgate.yaml` at your fork (`target.repo: <you>/humanize`) — the committed file already matches
+   `vishnuverse/humanize`.
 
 ## Tests and scoring
 

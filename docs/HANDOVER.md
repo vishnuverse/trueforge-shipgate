@@ -4,6 +4,34 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 14:30 — Vishnu + Claude — Any-repo config + one-command setup: docs (Task 9 of 10, branch `feat/any-repo`)
+
+**Done**
+- Tasks 1–8 of `docs/superpowers/plans/2026-09-26-any-repo-setup.md` committed: `shipgate.yaml` + matching
+  Python/TypeScript loaders; scorer, orchestrator and the triage server read the target from config; skill and agent
+  spec are templates rendered at registration (`setup_agents.ts --inline-skill`); `reset.sh` refuses to run unless
+  the config target is the demo fork; `scripts/setup_trueforge.ts` (register provider + connectors, `--check`
+  doctor); `scripts/setup.sh` (one-command install/start/register/check, `--dry-run`/`--check`/`--no-start`/
+  `--rotate-keys`/`--allow-remote`/`--allow-unprotected`/`--smoke <issue>`) and `scripts/stop.sh`.
+- Task 9 (this entry): docs brought in line with the config-driven flow — README "Quick start" collapsed to
+  `cp .env.example .env` → edit `shipgate.yaml` → `scripts/setup.sh` → one `shipgate run` line; "Using your own
+  fork" replaced by "Using your own repo" (requirements, `shipgate.yaml` key table, limits) with the fixture setup
+  kept under "Scored demo (the humanize fork)"; `CLAUDE.md` Setup/Run/boundary 7/layout updated to match;
+  `docs/SPEC.md` §4.1/§4.7 note the config source and the scenario `repo:` key; `docs/contracts.md` gained
+  `## 9. shipgate.yaml` (schema + validation rules, verbatim from the spec) and `SHIPGATE_CONFIG` /
+  `SHIPGATE_ENV_FILE` / `SHIPGATE_PID_DIR` in its environment table; `AGENTS.md` directory map gained
+  `shipgate.yaml`, the `setup`/`stop` scripts and `orchestrator/src/{config,render,setup}.ts`; `.env.example` now
+  lists `OPENROUTER_API_KEY` (setup.sh requires it) alongside comments naming each key's reader.
+- Also: `tests/check/test_reset_guard.py` reformatted (`ruff format`) to clear a pre-existing E501, committed
+  separately from the docs.
+
+**Next**
+1. Task 10 (Live acceptance): fresh-clone `setup.sh --no-start --check` + `score.sh TR-01` from a temp clone; a
+   second repo only if a real one is offered. Until that lands, the any-repo flow is proven on the humanize fork only.
+2. Decide when to make `vishnuverse/trueforge-shipgate` public for submission.
+
+---
+
 ## 2026-09-26 12:05 — Vishnu + Claude — Jev triage pre-check built and accepted live (branch `feat/jev-triage`)
 
 **Done**

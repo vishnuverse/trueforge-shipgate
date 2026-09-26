@@ -38,11 +38,12 @@ Decisions and learned facts live in `docs/MEMORY.md`. Doc index: `docs/README.md
    other message is a fixed, capped (2) "continue" nudge when a turn ends with no gate and no handoff (SPEC §4.5).
    Judgement stays in the agent + skill.
 6. MCP servers we write run on the TrueForge host (localhost), speak streamable HTTP, and set `readOnlyHint` / `destructiveHint` on every tool.
-7. **Target repo = fork `vishnuverse/humanize`; its `main` is protected by a ruleset with no bypass** (PR required, no direct or force push). Agents never get `merge_pull_request` or `issue_write`, and always pass `owner=vishnuverse, repo=humanize` (never the upstream `python-humanize`).
+7. **Target repo = `shipgate.yaml` `target.repo`** (demo: fork `vishnuverse/humanize`). Its default branch must be protected with no bypass; `setup.sh` refuses otherwise. Agents never get `merge_pull_request` or `issue_write` and always pass the configured owner/repo.
 8. **Clone with full history and tags** (`git fetch --tags`, never `--depth`). The version comes from git tags (hatch-vcs); a shallow or tagless clone builds as `0.1.dev1`.
 
 ## Layout (short — full map in AGENTS.md)
 ```
+shipgate.yaml            target repo, install/test commands, source/tests dirs (rendered into skill + agent at registration)
 skills/ticket-resolver/  SKILL.md: the agent's procedure (delivered inline; repo is private)
 agents/                  agent specs (JSON), registered by scripts/setup_agents.ts
 orchestrator/            TypeScript on @truefoundry/trueforge-sdk: sessions, approvals (ui/terminal/script), run dirs, labels
@@ -58,22 +59,16 @@ Planned, not built yet: `mcp/k8s/` + `runbooks/` + `demo-app/` (Runbook Executor
 node -v                      # need >= 22.14
 python3 -V; uv --version     # 3.12 via uv
 cp .env.example .env         # fill keys; never commit .env
-SERVER_EXECUTION_TIMEOUT_SECONDS=1200 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@0.2.1   # :8790; 20 min turns; may reach the triage MCP
-uv sync                                       # python deps for scripts/
-npm --prefix orchestrator ci
+$EDITOR shipgate.yaml        # your repo, install/test commands, source dir (committed values run the demo)
+scripts/setup.sh             # installs deps, starts TrueForge + triage MCP, registers provider/connectors/agent, checks
 ```
-Configure in TrueForge UI (Settings), keys pasted by a human:
-- Models → Add Custom Provider `openrouter`: base URL `https://openrouter.ai/api/v1`, model `deepseek-v4-flash` =
-  `deepseek/deepseek-v4-flash` (fallback `glm-5-3-flash` = `z-ai/glm-5.3-flash`).
-- Connectors → `github` (`https://api.githubcopilot.com/mcp/`, header `Authorization: Bearer <GITHUB_PAT>`).
-- Sandbox: nothing for the built-in local sandbox; for the demo add Daytona under Sandbox providers (Snapshot-create).
 
 ## Run
 ```bash
-uv run mcp/triage/server.py                                              # triage MCP :8803 (Jev pre-check); register once via PUT /api/v1/settings/mcp-servers (README)
-npx --yes tsx scripts/setup_agents.ts --inline-skill                     # upsert agents/*.json with SKILL.md inlined
+scripts/setup.sh --check                                                    # doctor: services, provider, connectors, agent gates
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui (approve in the TrueForge UI)
 ```
+`scripts/stop.sh` stops what `scripts/setup.sh` started (TrueForge + the triage MCP), and nothing else.
 
 ## Test
 ```bash

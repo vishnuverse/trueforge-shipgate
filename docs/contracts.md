@@ -57,6 +57,7 @@ Approval record (one JSON object per line):
 id: TR-10
 title: Human says REVISE at the PR gate
 issue: 1
+repo: vishnuverse/humanize   # must equal shipgate.yaml's target.repo; check.py refuses a mismatch
 reset: true            # score.sh runs reset.sh first; false for TR-09 (runs after TR-01)
 timeout_min: 15
 approvals:             # orchestrator script mode consumes these in order
@@ -107,10 +108,15 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 | Name | Used by | Notes |
 | --- | --- | --- |
 | `TRUEFORGE_URL` | orchestrator, `check.py`, `setup_agents.ts` | default `http://localhost:8790` |
-| `GITHUB_PAT` | orchestrator (labels), `check.py` (reads), `reset.sh` | fine-grained, `vishnuverse/humanize` only |
+| `GITHUB_PAT` | `setup.sh` / `setup_trueforge.ts` (registers the `github` connector), orchestrator (labels), `check.py` (reads), `reset.sh` | fine-grained, scoped to `shipgate.yaml`'s `target.repo` only |
+| `OPENROUTER_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `openrouter` model provider) | never sent to the sandbox |
 | `TYPESAFE_API_KEY` | triage MCP (`mcp/triage/server.py`) | read on the host only; never in the sandbox |
+| `SHIPGATE_CONFIG` | both config loaders (`shipgate_config.py`, `orchestrator/src/config.ts`) | overrides the `shipgate.yaml` path; not a secret |
+| `SHIPGATE_ENV_FILE` | `setup.sh`, `setup_trueforge.ts` | overrides the `.env` path (tests use a temp file) |
+| `SHIPGATE_PID_DIR` | `setup.sh`, `stop.sh` | overrides `runs/pids` (tests use a temp dir) |
 
-Target repo is the constant `vishnuverse/humanize`; code refuses any other.
+Target repo comes from `shipgate.yaml`'s `target.repo` (demo: `vishnuverse/humanize`); every component refuses any
+other repo.
 
 ## 7. Handoff and labels
 
@@ -165,3 +171,35 @@ Server `triage` at `http://127.0.0.1:8803/mcp` (`uv run mcp/triage/server.py`), 
 Registered with: `PUT /api/v1/settings/mcp-servers` `{"manifest": {"type": "remote", "name": "triage", "url":
 "http://127.0.0.1:8803/mcp", "description": "Jev triage pre-check (triage-v1), read-only"}}`. TrueForge must run with
 `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (its SSRF guard blocks loopback by default).
+
+## 9. shipgate.yaml
+
+Committed at the repo root with the demo values. A user edits it for their repo. It holds no secrets.
+
+```yaml
+target:
+  repo: vishnuverse/humanize          # owner/name; the only repo any component may touch
+  default_branch: main
+  description: >-                     # context for Jev triage (≤ 500 chars): what the package is and is not
+    humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword,
+    naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize.
+python:
+  install: '.venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"'   # run after `python3 -m venv .venv`
+  test: ".venv/bin/python -m pytest -q -p no:cacheprovider --benchmark-disable --color=no"
+  source_dir: src/humanize            # fixes may change only files under this directory
+  tests_dir: tests                    # the regression test is <tests_dir>/test_issue_<n>.py
+trueforge:
+  url: http://localhost:8790
+  model: openrouter/deepseek-v4-flash
+```
+
+**Validation rules**, the same in both loaders:
+- unknown keys are an error
+- `repo` matches `^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`
+- `source_dir` and `tests_dir` are relative, have no `..` and no leading `/`
+- `install` and `test` are non-empty and contain no backtick, because they are inserted in backticks
+- `description` is 1–500 characters
+- `default_branch` is non-empty
+- `trueforge.url` is http(s)
+
+Each error names the file and the key.

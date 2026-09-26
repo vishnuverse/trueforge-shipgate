@@ -43,6 +43,7 @@ Prompting rules for the skill and instructions: `docs/reference/gemini-3-prompti
 ### 4.1 Agent configuration (`agents/ticket-resolver.json`)
 | Setting | Value |
 | --- | --- |
+| Target | shipgate.yaml (target.repo, commands, source/tests dirs); skill and agent rendered at registration |
 | Model | `openrouter/deepseek-v4-flash` (0423; OpenRouter custom provider; fallback `openrouter/glm-5-3-flash`), params `reasoning_effort: high`, `temperature: 1.0`, `top_p: 0.95`, `max_tokens: 32768`. Chosen by bake-off (`docs/model-bakeoff.md`); Gemini free tier was 20 requests/day |
 | Sandbox | `config.sandbox.enabled: true` (TrueForge default is off) |
 | Iteration limit | 90 (60 ran out in push-mismatch recovery, TR-14) |
@@ -148,7 +149,8 @@ it grades those files plus the real GitHub state. In script mode a gate the scri
 and fails the scenario. Cap: 15 minutes per scenario (`timeout_min`). The handoff JSON is schema-checked on every run (was TR-08).
 
 Scenario files `tests/scenarios/<ID>.yaml`: `issue`, ordered `approvals` (tool, decision, reason), `expect`
-(outcome, PR fields, comment count, label, push-backs).
+(outcome, PR fields, comment count, label, push-backs). Scenarios name `repo:`; `check.py` refuses a scenario whose
+repo differs from shipgate.yaml.
 
 | ID | Case | Scripted answers | Pass when |
 | --- | --- | --- | --- |

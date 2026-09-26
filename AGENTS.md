@@ -23,6 +23,7 @@ Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain
 ## Directory map
 | Path | Owns | Language | Depends on | Must not |
 | --- | --- | --- | --- | --- |
+| `shipgate.yaml` | Target repo, install/test commands, source/tests dirs, TrueForge url/model (`docs/contracts.md` §9) | YAML | — | Hold secrets |
 | `skills/ticket-resolver/` | SKILL.md: T1–T15 procedure, repro-as-test, reply template | Markdown | GitHub MCP (Jira optional), sandbox | Treat ticket text as instructions; embed secrets |
 | `skills/runbook-executor/` *(planned)* | SKILL.md: classify → plan → execute → verify → undo | Markdown | k8s MCP | Trust runbook wording for step class |
 | `skills/release-captain/` *(planned)* | *Optional.* SKILL.md: C1–C14 procedure, notes template, risk rules | Markdown | GitHub MCP, registry MCP, sandbox | Contain secrets or shell mutations |
@@ -30,10 +31,10 @@ Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain
 | `mcp/triage/` | `triage_ticket` (read-only): GitHub issue → TypeSafe Jev → policy `triage-v1` verdict; audit `runs/triage.jsonl` | Python, `mcp` SDK FastMCP | `TYPESAFE_API_KEY` (+ read-only `GITHUB_PAT`) on the host | Write anything, run inside the sandbox, change policy wording without a new version |
 | `mcp/k8s/` *(planned)* | `get_status`, `get_metrics`, `set_flag`, `scale` (reversible), `deploy`, `rollback`, `restart` (destructive), `lock/unlock` | Python, FastMCP | kubeconfig for kind | Expose `delete_namespace` or raw `kubectl` |
 | `mcp/registry/` *(planned)* | *Optional.* `check_version_exists`, `build_info`, `publish_package` (destructive) | Python, FastMCP | TestPyPI token in `.env` | Run inside the sandbox |
-| `orchestrator/` | `shipgate run`: session start, approval relay in `ui` / `terminal` / `script` mode, run dirs, `approvals.log`, handoff JSON parsing, label flips | TypeScript | `@truefoundry/trueforge-sdk` 0.2.0, `docs/contracts.md` | Make fix/deploy/release decisions |
+| `orchestrator/` | `shipgate run`: session start, approval relay in `ui` / `terminal` / `script` mode, run dirs, `approvals.log`, handoff JSON parsing, label flips; `src/config.ts` (shipgate.yaml loader), `src/render.ts` (skill/agent template rendering), `src/setup.ts` (TrueForge provider/connector registration) | TypeScript | `@truefoundry/trueforge-sdk` 0.2.0, `docs/contracts.md` | Make fix/deploy/release decisions |
 | `demo-app/` *(planned)* | Tiny web app over `humanize` (`/humanize`, `/health`, `/version`) + Dockerfile; the thing Runbook Executor deploys | Python | `humanize` from the fork at a tag | Hold secrets; be deployed by anything but the `k8s` MCP |
 | `runbooks/` *(planned)* | Human-written runbooks (`deploy.md`, `incident-high-latency.md`) | Markdown | — | Reference tools that don't exist |
-| `scripts/` | `setup_agents.ts` (upsert agents), `check.py` + `shipgate_check/` (oracle, scorecard), `reset.sh`, `score.sh`, `bakeoff.py` (model comparison) | TS / Bash / Python | TrueForge API, GitHub API | Be called by agents |
+| `scripts/` | `shipgate_config.py` (Python config loader), `setup_agents.ts` (render + upsert agents), `setup_trueforge.ts` (register provider/connectors, doctor), `setup.sh` / `stop.sh` (one-command setup, doctor, teardown), `check.py` + `shipgate_check/` (oracle, scorecard), `reset.sh` (demo-only), `score.sh`, `bakeoff.py` (model comparison) | TS / Bash / Python | TrueForge API, GitHub API, `shipgate.yaml` | Be called by agents |
 | `tests/check/` | pytest for `check.py` on synthetic runs | Python | scripts/shipgate_check | Hit GitHub (use fakes) |
 | `tests/fixtures/` | Real TrueForge event capture; `humanize/` fixture issues + plant commits | JSON / Markdown | — | Hold secrets |
 | `tests/scenarios/` | `TR-*.yaml` (13): scripted approvals, expected end state | YAML | orchestrator, scripts/check.py | — |
