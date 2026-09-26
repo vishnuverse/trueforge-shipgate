@@ -97,7 +97,9 @@ The triage tool is deferred too: call_tool with mcp_server "triage", tool_name "
 Every GitHub input below also carries owner "{{owner}}", repo "{{name}}".
 Steps run in order; a push-back (<pushback>) ends the procedure early.
 1. Read: getJiraIssue {cloudId: CLOUD_ID, issueIdOrKey: KEY, responseContentFormat: "markdown"}. Not found, or its
-   status is Done (status category done): handoff status noop.
+   status is Done (status category done): handoff status noop. If the call errors (e.g. a permission or auth error),
+   retry it at most 2 times; still failing: stop before any other step, handoff status failed, outcome stopped,
+   reason ticket_unreadable. Never infer the ticket from the kickoff message, the key or the examples in this skill.
 2. Pin: list_commits {sha: "{{default_branch}}", perPage: 1, fields: ["sha"]} gives PINNED_SHA. Write a 3-line plan: the defect,
    sha7, the test inputs you will use.
 3. Triage, then pre-checks.
