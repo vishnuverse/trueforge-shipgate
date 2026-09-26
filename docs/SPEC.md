@@ -45,7 +45,7 @@ Prompting rules for the skill and instructions: `docs/reference/gemini-3-prompti
 | --- | --- |
 | Model | `openrouter/deepseek-v4-flash` (0423; OpenRouter custom provider; fallback `openrouter/glm-5-3-flash`), params `reasoning_effort: high`, `temperature: 1.0`, `top_p: 0.95`, `max_tokens: 32768`. Chosen by bake-off (`docs/model-bakeoff.md`); Gemini free tier was 20 requests/day |
 | Sandbox | `config.sandbox.enabled: true` (TrueForge default is off) |
-| Iteration limit | 60 |
+| Iteration limit | 90 (60 ran out in push-mismatch recovery, TR-14) |
 | Skill | `ticket-resolver` (`skills/ticket-resolver/SKILL.md`), delivered **inline**: `setup_agents.ts --inline-skill` appends it to `instructions`. The repo stays private, and TrueForge fetches git skills anonymously (and can't preload them). |
 | GitHub MCP `enable_tools` | `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment` |
 | `require_approval_for_tools` | `create_pull_request`, `add_issue_comment` (by name; GitHub MCP marks neither as destructive) |

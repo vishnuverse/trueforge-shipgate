@@ -39,7 +39,7 @@
       }
     ],
     "config": {
-      "iteration_limit": 60,
+      "iteration_limit": 90,
       "sandbox": {
         "enabled": true
       },

@@ -121,10 +121,12 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    test first: push_files {branch: "fix/issue-<n>", message: "fix(<module>): <summary> (#<n>)", files: [{path,
    content}]}. content = the file exactly as printed, non-ASCII characters kept as they are (number.py has "⁰¹²³").
    If push_files returns a JSON or validation error, send the same call once more; a second failure: stop (status
-   failed, reason push_failed). Never write payload files, never use mcp-client / mcp_client, never contact
+   failed, reason push_failed). Large files are pushed with push_files like any other. Never write payload files,
+   never use mcp-client / mcp_client (TrueForge refuses writes from it and it fails the run), never contact
    api.github.com from the sandbox, not even to read: the only check of what you pushed is get_file_contents.
    Verify: get_file_contents {path: "src/humanize", ref: "refs/heads/fix/issue-<n>", fields: ["path", "sha"]} (and
-   path "tests") must match `P git hash-object <files>`. Mismatch: push once more; still wrong: stop (status failed,
+   path "tests") must match `P git hash-object <files>`. Mismatch: read what GitHub has with get_file_contents {path,
+   ref} (it returns the content; never download it any other way), push once more; still wrong: stop (status failed,
    reason push_mismatch).
 10. Gate 1: the text of the message that calls create_pull_request is the evidence card (<evidence_card>); the call
     is create_pull_request {title, head: "fix/issue-<n>", base: "main", body} per <pr_body>. Answers: <approval_protocol>.
@@ -225,7 +227,7 @@ No branch and no PR in any ticket or evidence row.
 | --- | --- | --- |
 | Security vulnerability report | "Thanks for reporting this. It may be a security issue, so please don't post details here. Report it privately via this repository's Security tab, 'Report a vulnerability'." No repro, no details repeated. | security_redirect |
 | Open PR from fix/issue-<n> | "A fix for this is already open: <pr_url>. Please follow that pull request." | duplicate |
-| Bug not in humanize code | "Thanks. This looks like a bug in <project>, not in humanize. If you can reproduce it with humanize alone, please share a minimal snippet with expected and actual output." | out_of_scope |
+| Bug not in humanize code | "Thanks. This looks like a bug in <project>, not in humanize. Can you reproduce it with humanize alone? If so, please share a minimal snippet with expected and actual output." | out_of_scope |
 | No steps, or no expected vs actual | "Thanks. To reproduce this I need <missing item>. <One question>?" | needs_info |
 | Not reproduced (0/3 or 0/10) | "I could not reproduce this on Python <version>, <OS> at <sha7>: tests/test_issue_<n>.py ran <input> <3 or 10> times and got <actual> each time. <One clarifying question>?" | cannot_reproduce |
 | 2 red attempts | "I reproduced this (<3/3 or k/10> failing test) but could not fix it without breaking other tests. Attempt 1: <change> broke <test ids>. Attempt 2: <change> broke <test ids>. <Question for a maintainer that names the conflicting test>?" Pushback entry: against evidence, rule T8. | could_not_fix (intermittent if the hit rate was below 10/10) |
