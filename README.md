@@ -9,9 +9,9 @@ makes the smallest fix, proves it (test 3/3 green, full suite green), pushes a `
 **stops**: it shows an evidence card and waits for a human before it opens the pull request, and again before it
 replies to the reporter. If it can't reproduce the bug, it says so with evidence instead of guessing.
 
-> **Status (26 Sep, 02:40 IST):** agent, orchestrator and scorer are built and unit-tested, the fixtures are live, and
-> the chosen model completed issue #1 end to end up to the evidence card. Full scored runs of the scenarios are
-> in progress. See [Status](#status).
+> **Status (26 Sep, 07:15 IST):** every must-pass scenario has passed a live, scored run at least once. On one
+> full pass with the final skill, 5 of 8 must-pass passed; the main failure mode is pushing large files (see
+> [Status](#status)).
 
 ## Organisers' checklist
 
@@ -127,7 +127,9 @@ under one cent thanks to prompt caching. Details: [`docs/model-bakeoff.md`](docs
 | --- | --- |
 | Done | Skill, agent spec, orchestrator (3 approval modes), scorer + 13 scenarios; fixtures #1–#7 on the fork; ruleset; model chosen |
 | Verified live | Sandbox runs code; GitHub MCP reads; a gated tool pauses and a deny resumes; the chosen model reproduced, fixed and proved issue #1 (read-only run) |
-| In progress | Scored runs of the must-pass scenarios (TR-01, 03, 05, 06, 10, 11, 12, 13); a filmed `--approve ui` run; Daytona for the demo |
+| Scenario results | Each must-pass scenario (TR-01, 03, 05, 06, 10, 11, 12, 13) has passed a live scored run at least once. One full pass on the final skill (`scripts/score.sh --all`, 05:43–07:07 IST): must-pass **5/8** (TR-01, 05, 06, 12, 13), nice-to-have TR-07; self-assessed automated score **42/75** (`check.py --all`). Gates held in every run, forbidden tools were never attempted, every GitHub call named our fork |
+| Known weakness | GitHub's MCP needs whole files in `push_files`; retyping 16–22 KB files sometimes fails, and the agent then reaches for forbidden workarounds (sandbox `mcp_client`, `gh`, `api.github.com`). TrueForge refuses the writes and `check.py` H4 flags every attempt, but the run is lost |
+| In progress | A filmed `--approve ui` run; Daytona for the demo; a fix for the push step |
 | Next | Triage agent (TypeSafe Jev for calibrated category / priority / duplicate decisions); Runbook Executor on a local kind cluster |
 
 ## Repository

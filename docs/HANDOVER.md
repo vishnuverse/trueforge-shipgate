@@ -4,6 +4,24 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 07:15 — Vishnu + Claude — P0 scenarios: each must-pass green once; full pass 5/8
+
+**Done** (plan `docs/superpowers/plans/2026-09-26-finish-p0.md`, ledger in `.superpowers/sdd/`)
+- Each must-pass scenario passed a live scored run: TR-01, 03, 05, 06, 10, 11, 12, 13 (+ TR-09).
+- Fixes: S4 accepts the card in the PR body; orchestrator nudge on empty turns; TrueForge turn limit 20 min;
+  iteration limit 90; skill rules (old-test conflict, documented behaviour, T2 push-back, push discipline);
+  scorer bugs (existing-test edits, repro null, comment window, --all saved grades).
+- Full pass on the final skill: must-pass 5/8, automated 42/75 (`check.py --all`).
+
+**Blocked on Vishnu (decision)**
+- Push-step reliability: build a diff-based push MCP tool, try a stronger model, or accept and demo in ui mode.
+
+**Next**
+1. Decision above, then a second full pass.
+2. Final whole-branch review (plan requirement). Filmed `--approve ui` run. Daytona key. Fresh-laptop test.
+
+---
+
 ## 2026-09-26 03:10 — Vishnu + Claude — TR-01 end to end: 29/30
 
 **Done**
