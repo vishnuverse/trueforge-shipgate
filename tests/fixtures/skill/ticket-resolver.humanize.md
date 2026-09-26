@@ -84,6 +84,9 @@ The triage tool is deferred too: call_tool with mcp_server "triage", tool_name "
 Every GitHub input below also carries owner "vishnuverse", repo "humanize"; issue_number is a JSON number.
 Steps run in order; a push-back (<pushback>) ends the procedure early.
 1. Read: issue_read {method: "get", issue_number: n}. Not found, closed, or a pull request: handoff status noop.
+   If the call errors (e.g. a permission or auth error), retry it at most 2 times; still failing: stop before any
+   other step, handoff status failed, outcome stopped, reason ticket_unreadable. Never infer the issue from the
+   kickoff message, the issue number or the examples in this skill.
 2. Pin: list_commits {sha: "main", perPage: 1, fields: ["sha"]} gives PINNED_SHA. Write a 3-line plan: the defect,
    sha7, the test inputs you will use.
 3. Triage, then pre-checks.
