@@ -681,3 +681,37 @@ def test_comment_posted_just_before_the_run_is_not_counted(runs_dir: Path, check
     )
     code, out = check("TR-01", github=gh, trueforge=FakeTrueForge(saved_agent()))
     assert status_of(out, "expect.comments.count") == "PASS", out
+
+
+def _github_right_after_tr01() -> FakeGitHub:
+    return FakeGitHub(
+        pulls=[
+            {
+                "number": 12,
+                "title": "fix: ordinal(12) returns 12th",
+                "body": rf.evidence_card(1) + "\n\nFixes #1",
+                "head": {"ref": "fix/issue-1"},
+                "base": {"ref": "main"},
+            }
+        ],
+        files={12: [{"filename": "src/humanize/number.py"}, {"filename": "tests/test_issue_1.py"}]},
+        issues={1: {"number": 1, "state": "open", "labels": [{"name": "fix-proposed"}]}},
+        comments={
+            1: [{"user": {"login": "vishnuverse"}, "created_at": "2026-09-26T12:03:00Z", "body": rf.PR_URL}]
+        },
+    )
+
+
+def _result_of(out: str, sid: str) -> str:
+    return next(s["result"] for s in json.loads(out)["scenarios"] if s["id"] == sid)
+
+
+def test_all_uses_the_grade_saved_at_run_time_not_todays_github(runs_dir: Path, check) -> None:
+    rf.fixed_run().write(runs_dir, ts="20260926T120000Z")
+    code, out = check("TR-01", github=_github_right_after_tr01(), trueforge=FakeTrueForge(saved_agent()))
+    assert code == 0, out
+    reset = FakeGitHub(issues={1: {"number": 1, "state": "open", "labels": [{"name": "bug"}]}})  # later reset
+    _, out = check("--all", "--json", github=reset, trueforge=FakeTrueForge(saved_agent()))
+    assert _result_of(out, "TR-01") == "PASS", out
+    _, out = check("--all", "--json", "--regrade", github=reset, trueforge=FakeTrueForge(saved_agent()))
+    assert _result_of(out, "TR-01") == "FAIL", out

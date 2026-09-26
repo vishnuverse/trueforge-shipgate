@@ -48,6 +48,10 @@ class CheckResult:
     def as_dict(self) -> dict[str, str]:
         return {"status": self.status, "id": self.id, "reason": self.reason}
 
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CheckResult:
+        return cls(str(d["status"]), str(d["id"]), str(d.get("reason", "")))
+
 
 def ok(cid: str, reason: str) -> CheckResult:
     return CheckResult(PASS, cid, reason)

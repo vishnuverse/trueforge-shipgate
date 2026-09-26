@@ -48,6 +48,11 @@ def _parser() -> argparse.ArgumentParser:
     )
     p.add_argument("--json", action="store_true", help="print JSON instead of text")
     p.add_argument(
+        "--regrade",
+        action="store_true",
+        help="with --all: grade against GitHub now, not the grade saved at run time",
+    )
+    p.add_argument(
         "--plan", action="store_true", help="print 'ID issue reset timeout_min' in run order and exit"
     )
     p.add_argument("--runs-dir", type=Path, help="default: <repo>/runs")
@@ -98,14 +103,33 @@ class Sources:
             self.lines.append(fail("trueforge", str(exc)))
 
 
-def grade(scenario: Scenario, runs_dir: Path, src: Sources) -> tuple[ScenarioResult, Timeline | None]:
+# Grade saved by `check.py <ID>` right after a run: GitHub state (PRs, comments, labels) is only true
+# until the next scenario resets the fork, so `--all` reuses it unless --regrade.
+SAVED_GRADE = "check.json"
+
+
+def grade(
+    scenario: Scenario, runs_dir: Path, src: Sources, use_saved: bool = False
+) -> tuple[ScenarioResult, Timeline | None]:
     path = latest_run_path(runs_dir, scenario.id)
     if path is None:
         return ScenarioResult(scenario, None), None
     run = load_run(path)
     ctx = build_context(scenario, run, src.gh, runs_dir)
+    saved = path / SAVED_GRADE
+    if use_saved and saved.exists():
+        data = json.loads(saved.read_text(encoding="utf-8"))
+        checks = [CheckResult.from_dict(c) for c in data.get("checks", [])]
+        return ScenarioResult(scenario, path, checks, data.get("support") or support_metrics(ctx)), ctx.tl
     checks = common_checks(ctx) + scenario_checks(ctx)
     return ScenarioResult(scenario, path, checks, support_metrics(ctx)), ctx.tl
+
+
+def _save_grade(result: ScenarioResult) -> None:
+    if result.run_path is None:
+        return
+    body = {"checks": [c.as_dict() for c in result.checks], "support": result.support}
+    (result.run_path / SAVED_GRADE).write_text(json.dumps(body, indent=1, ensure_ascii=False) + "\n", "utf-8")
 
 
 def _print(out: TextIO, text: str = "") -> None:
@@ -131,6 +155,8 @@ def cmd_plan(scenarios: list[Scenario], only: str | None, out: TextIO) -> int:
 
 def cmd_one(scenario: Scenario, runs_dir: Path, src: Sources, as_json: bool, out: TextIO) -> int:
     result, tl = grade(scenario, runs_dir, src)
+    if result.has_run and src.gh.available:
+        _save_grade(result)
     lines = list(src.lines)
     if not result.has_run:
         lines.append(fail("run", f"no run under {_rel(runs_dir / scenario.id)}/<UTC_TS>/"))
@@ -157,11 +183,13 @@ def cmd_one(scenario: Scenario, runs_dir: Path, src: Sources, as_json: bool, out
     return 1 if failed else 0
 
 
-def cmd_all(scenarios: list[Scenario], runs_dir: Path, src: Sources, as_json: bool, out: TextIO) -> int:
+def cmd_all(
+    scenarios: list[Scenario], runs_dir: Path, src: Sources, as_json: bool, out: TextIO, regrade: bool = False
+) -> int:
     results: list[ScenarioResult] = []
     timelines: list[Timeline] = []
     for s in run_order(scenarios):
-        res, tl = grade(s, runs_dir, src)
+        res, tl = grade(s, runs_dir, src, use_saved=not regrade)
         results.append(res)
         if tl is not None:
             timelines.append(tl)
@@ -244,5 +272,5 @@ def main(
         return 2
     src = Sources(args.offline, github, trueforge)
     if args.all:
-        return cmd_all(scenarios, runs_dir, src, args.json, out)
+        return cmd_all(scenarios, runs_dir, src, args.json, out, regrade=args.regrade)
     return cmd_one(scenarios[0], runs_dir, src, args.json, out)
