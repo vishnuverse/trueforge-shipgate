@@ -1,12 +1,14 @@
 /**
  * Register the model provider, connectors and doctor-check TrueForge for Ticket Resolver (spec any-repo §4).
+ * With a jira: section in shipgate.yaml it also registers the `jira` connector (JIRA_EMAIL + JIRA_API_KEY) and
+ * checks the ticket-resolver-jira agent.
  *   npx --yes tsx scripts/setup_trueforge.ts [--rotate-keys] [--allow-remote]   # register (keys from .env)
  *   npx --yes tsx scripts/setup_trueforge.ts --check                            # doctor only
  * Exit 0 ok, 1 a step failed, 2 usage/config error. Never prints key values.
  */
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { ConfigError, ROOT, loadConfig } from "../orchestrator/src/config.ts";
+import { ConfigError, type JiraConfig, ROOT, loadConfig } from "../orchestrator/src/config.ts";
 import { SetupError, doctor, registerAll } from "../orchestrator/src/setup.ts";
 
 async function main(argv: string[]): Promise<number> {
@@ -19,8 +21,11 @@ async function main(argv: string[]): Promise<number> {
   const envFile = process.env.SHIPGATE_ENV_FILE ?? join(ROOT, ".env");
   if (existsSync(envFile)) process.loadEnvFile(envFile);
   let base: string;
+  let jira: JiraConfig | null;
   try {
-    base = (process.env.TRUEFORGE_URL ?? loadConfig().trueforgeUrl).replace(/\/+$/, "");
+    const cfg = loadConfig();
+    base = (process.env.TRUEFORGE_URL ?? cfg.trueforgeUrl).replace(/\/+$/, "");
+    jira = cfg.jira; // null: GitHub only, no jira connector and no Jira agent checks
   } catch (err) {
     if (err instanceof ConfigError) {
       console.error(`setup_trueforge: ${err.message}`);
@@ -30,14 +35,22 @@ async function main(argv: string[]): Promise<number> {
   }
   try {
     if (argv.includes("--check")) {
-      const checks = await doctor(base);
+      const checks = await doctor(base, fetch, jira);
       for (const c of checks) console.log(`${c.ok ? "✓" : "✗"} ${c.name}: ${c.detail}`);
       return checks.every((c) => c.ok) ? 0 : 1;
     }
     await registerAll(
       base,
-      { openrouterKey: process.env.OPENROUTER_API_KEY, githubPat: process.env.GITHUB_PAT },
+      {
+        openrouterKey: process.env.OPENROUTER_API_KEY,
+        githubPat: process.env.GITHUB_PAT,
+        jiraEmail: process.env.JIRA_EMAIL,
+        jiraToken: process.env.JIRA_API_KEY,
+      },
       { rotateKeys: argv.includes("--rotate-keys"), allowRemote: argv.includes("--allow-remote") },
+      fetch,
+      console.log,
+      jira,
     );
     return 0;
   } catch (err) {
