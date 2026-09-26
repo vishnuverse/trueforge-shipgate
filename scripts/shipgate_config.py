@@ -56,7 +56,12 @@ class Config:
 
 
 def config_path() -> Path:
-    return Path(os.environ.get("SHIPGATE_CONFIG") or ROOT / "shipgate.yaml")
+    """SHIPGATE_CONFIG, else the git-ignored shipgate.local.yaml (each runner's own target),
+    else shipgate.yaml."""
+    if os.environ.get("SHIPGATE_CONFIG"):
+        return Path(os.environ["SHIPGATE_CONFIG"])
+    local = ROOT / "shipgate.local.yaml"
+    return local if local.exists() else ROOT / "shipgate.yaml"
 
 
 def _relative(value: str) -> bool:

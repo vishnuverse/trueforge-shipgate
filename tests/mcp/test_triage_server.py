@@ -13,7 +13,7 @@ from shipgate_config import Config
 
 ENV = {"TYPESAFE_API_KEY": "test-key-not-real", "GITHUB_PAT": "test-pat-not-real"}
 CFG = Config(
-    repo="drax0945/humanize", default_branch="main", description="humanize is a Python library.",
+    repo="vishnuverse/humanize", default_branch="main", description="humanize is a Python library.",
     install="x", test="y", source_dir="src/humanize", tests_dir="tests",
     trueforge_url="http://localhost:8790", model="m",
 )  # fmt: skip

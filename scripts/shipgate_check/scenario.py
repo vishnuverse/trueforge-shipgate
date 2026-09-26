@@ -63,11 +63,24 @@ class Scenario:
     depends_on: str | None = None
     path: Path | None = None
     raw: dict[str, Any] = field(default_factory=dict)
-    repo: str = ""
 
 
 def _fail(path: Path, msg: str) -> ScenarioError:
     return ScenarioError(f"{path.name}: {msg}")
+
+
+DEMO_FORKS_FILE = "demo-forks.txt"
+
+
+def demo_forks(scenarios_dir: Path) -> set[str]:
+    """Forks that carry the planted fixtures (#1-#7), lowercased.
+
+    Scored scenarios and reset.sh run only on these."""
+    try:
+        lines = (Path(scenarios_dir) / DEMO_FORKS_FILE).read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return set()
+    return {ln.strip().lower() for ln in lines if ln.strip() and not ln.strip().startswith("#")}
 
 
 def load_scenario(path: Path) -> Scenario:
@@ -78,7 +91,7 @@ def load_scenario(path: Path) -> Scenario:
         raise _fail(path, f"invalid YAML: {exc}") from exc
     if not isinstance(data, dict):
         raise _fail(path, "top level must be a mapping")
-    for key in ("id", "title", "issue", "repo", "reset", "timeout_min", "must_pass", "approvals", "expect"):
+    for key in ("id", "title", "issue", "reset", "timeout_min", "must_pass", "approvals", "expect"):
         if key not in data:
             raise _fail(path, f"missing key {key!r}")
     sid = data["id"]
@@ -87,13 +100,6 @@ def load_scenario(path: Path) -> Scenario:
     issue = data["issue"]
     if not isinstance(issue, int) or isinstance(issue, bool) or issue < 1:
         raise _fail(path, "issue must be a positive integer")
-    repo = data["repo"]
-    if not isinstance(repo, str) or repo.lower() != FULL_REPO.lower():
-        raise _fail(
-            path,
-            f"repo {repo!r} is not the configured target {FULL_REPO!r} (shipgate.yaml); "
-            "scenarios are demo-only",
-        )
     for key in ("reset", "must_pass"):
         if not isinstance(data[key], bool):
             raise _fail(path, f"{key} must be true or false")
@@ -128,6 +134,12 @@ def load_scenario(path: Path) -> Scenario:
     depends_on = data.get("depends_on")
     if depends_on is not None and (not isinstance(depends_on, str) or not ID_RE.match(depends_on)):
         raise _fail(path, "depends_on must be a scenario ID")
+    if FULL_REPO.lower() not in demo_forks(path.parent):
+        raise _fail(
+            path,
+            f"the configured target {FULL_REPO!r} is not a demo fork listed in {DEMO_FORKS_FILE}; "
+            "scored scenarios run only on a fork that carries the planted fixtures",
+        )
     return Scenario(
         id=sid,
         title=str(data["title"]),
@@ -140,7 +152,6 @@ def load_scenario(path: Path) -> Scenario:
         depends_on=depends_on,
         path=path,
         raw=data,
-        repo=repo,
     )
 
 

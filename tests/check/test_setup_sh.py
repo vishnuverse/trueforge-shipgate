@@ -18,7 +18,8 @@ FAKE = {
 def run(
     *args: str, env_file: Path | None = None, extra: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess:
-    env = {k: v for k, v in os.environ.items() if k not in ("SHIPGATE_CONFIG", *FAKE)}
+    env = {k: v for k, v in os.environ.items() if k not in FAKE}
+    env["SHIPGATE_CONFIG"] = str(ROOT / "shipgate.yaml")  # never a developer's shipgate.local.yaml
     if env_file is not None:
         env["SHIPGATE_ENV_FILE"] = str(env_file)
     env.update(extra or {})
@@ -43,7 +44,7 @@ def test_dry_run_prints_the_plan_and_no_secret(tmp_path: Path) -> None:
     for phrase in (
         "would start TrueForge",
         "would register",
-        "drax0945/humanize",
+        "vishnuverse/humanize",
         "would create missing labels",
     ):
         assert phrase in out, phrase

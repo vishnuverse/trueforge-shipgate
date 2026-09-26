@@ -41,10 +41,10 @@ Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain
 | `docs/` | SPEC, contracts, HANDOVER, MEMORY, plan, reference notes (index `docs/README.md`) | Markdown | — | Hold secrets |
 | `.claude/rules/` | Path-scoped rules for Claude Code | Markdown | — | Duplicate CLAUDE.md |
 
-External repo: `shipgate.yaml` `target.repo`, demo **`drax0945/humanize`** (public fork of `python-humanize/humanize`)
+External repo: `shipgate.yaml` `target.repo`, demo **`vishnuverse/humanize`** (public fork of `python-humanize/humanize`)
 — the code being fixed. Planted
 fixture issues #1–#7 (docs/SPEC.md §4.6). `main` is protected by a ruleset with no bypass: PR required, no direct or
-force push. Always pass `owner=drax0945, repo=humanize` (the configured owner/repo); PRs on a fork can otherwise
+force push. Always pass `owner=vishnuverse, repo=humanize` (the configured owner/repo); PRs on a fork can otherwise
 default to the upstream.
 
 ## Agents

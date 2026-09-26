@@ -13,9 +13,9 @@ from shipgate_check.canonical import args_sha256
 from shipgate_check.events import decision_prefix
 
 SHA = "392aef707c0e74341ab4a51420984e9ea6b566c5"
-REPO_ARGS = {"owner": "drax0945", "repo": "humanize"}
+REPO_ARGS = {"owner": "vishnuverse", "repo": "humanize"}
 REPO_DIR = "/home/daytona/humanize"
-PR_URL = "https://github.com/drax0945/humanize/pull/12"
+PR_URL = "https://github.com/vishnuverse/humanize/pull/12"
 
 TRIAGE_LINES = {
     "defect": "defect 0.96 (margin 0.93) · in_scope 0.93 · patch allowed",
@@ -40,7 +40,7 @@ def verdict(n: int = 1, route: str = "defect", ai: float = 0.02) -> dict[str, An
 def evidence_card(n: int = 1, triage: str | None = "defect", flagged: str = "none") -> str:
     triage_line = f"Triage (triage-v1) : {TRIAGE_LINES[triage]}\n" if triage else ""
     return (
-        f"EVIDENCE · gh#{n} · drax0945/humanize @ {SHA[:7]}\n"
+        f"EVIDENCE · gh#{n} · vishnuverse/humanize @ {SHA[:7]}\n"
         + triage_line
         + "Repro before patch : 3/3 fail  (assert ordinal(12) == '12th')\n"
         "Attempts           : 1\n"
@@ -60,7 +60,7 @@ class RunBuilder:
         self._ids = itertools.count(1)
         self._calls: dict[str, dict[str, Any]] = {}  # call id -> {tool, input, server}
         self.turn_ids: list[str] = []
-        self._new_turn([{"type": "user.message", "content": f"Resolve gh#{issue} on drax0945/humanize"}])
+        self._new_turn([{"type": "user.message", "content": f"Resolve gh#{issue} on vishnuverse/humanize"}])
 
     # --- raw events ---------------------------------------------------------------------------------
     def _id(self, prefix: str = "01m3") -> str:
@@ -281,7 +281,7 @@ class RunBuilder:
             "run_id": self.scenario,
             "scenario": self.scenario,
             "issue": self.issue,
-            "repo": "drax0945/humanize",
+            "repo": "vishnuverse/humanize",
             "agent": "ticket-resolver",
             "session_id": "01session",
             "mode": "script",
@@ -312,7 +312,7 @@ def handoff(n: int = 1, outcome: str = "fixed", status: str = "ok", **over: Any)
         "stage": "resolve",
         "status": status,
         "outcome": outcome,
-        "repo": "drax0945/humanize",
+        "repo": "vishnuverse/humanize",
         "sha": SHA,
         "ticket": f"gh#{n}",
         "branch": f"fix/issue-{n}" if outcome == "fixed" else None,
@@ -345,11 +345,11 @@ def prechecks(b: RunBuilder, route: str | None = "defect", ai: float = 0.02, raw
     b.mcp("list_commits", {**REPO_ARGS, "sha": "main", "perPage": 1}, [{"sha": SHA}])
     if route is not None:
         b.triage(verdict(n, route, ai), raw=raw)
-    b.mcp("list_pull_requests", {**REPO_ARGS, "head": f"drax0945:fix/issue-{n}", "state": "open"}, [])
+    b.mcp("list_pull_requests", {**REPO_ARGS, "head": f"vishnuverse:fix/issue-{n}", "state": "open"}, [])
 
 
 def sandbox_setup(b: RunBuilder) -> None:
-    b.exec(f"git clone https://github.com/drax0945/humanize {REPO_DIR}", 0, "Cloning into 'humanize'...")
+    b.exec(f"git clone https://github.com/vishnuverse/humanize {REPO_DIR}", 0, "Cloning into 'humanize'...")
     b.exec(f"cd {REPO_DIR} && git fetch --tags && git checkout {SHA[:7]}", 0, "HEAD is now at 392aef7")
     b.exec(f'cd {REPO_DIR} && pip install -q -e ".[tests]"', 0, "")
 
@@ -626,7 +626,7 @@ class FakeGitHub:
 
     def __init__(
         self,
-        login: str = "drax0945",
+        login: str = "vishnuverse",
         pulls: list[dict[str, Any]] | None = None,
         files: dict[int, list[dict[str, Any]]] | None = None,
         issues: dict[int, dict[str, Any]] | None = None,

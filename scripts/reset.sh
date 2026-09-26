@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reset the Ticket Resolver fixtures on drax0945/humanize, and nothing else.
+# Reset the Ticket Resolver fixtures on the configured target, only if it is a demo fork.
 #
 #   scripts/reset.sh          # dry run (default): print the plan, change nothing
 #   scripts/reset.sh --yes    # apply the plan
@@ -7,10 +7,10 @@
 # Plan: close open PRs whose head starts with fix/, delete fix/* branches, delete issue comments written by the
 # token's user on #1-#7, set the labels on #1-#7 to exactly `bug`, reopen any closed fixture issue.
 # Auth: GH_TOKEN=$GITHUB_PAT when GITHUB_PAT is set (env, else .env at the repo root); otherwise gh's own login.
+# Target: shipgate.local.yaml / shipgate.yaml target.repo; refuses unless it is listed in tests/scenarios/demo-forks.txt.
 # Works with macOS bash 3.2.
 set -o pipefail
 
-REPO="drax0945/humanize" # hard-coded on purpose: this script refuses to touch any other repo
 ISSUES="1 2 3 4 5 6 7"
 APPLY=0
 
@@ -27,11 +27,24 @@ for arg in "$@"; do
       exit 0
       ;;
     *)
-      echo "reset.sh: unknown argument '$arg' (the target is fixed: $REPO)" >&2
+      echo "reset.sh: unknown argument '$arg'" >&2
       exit 2
       ;;
   esac
 done
+
+# Demo-only: this script closes PRs, deletes branches and rewrites labels, so it runs only on a listed demo fork.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CFG_REPO="$(cd "$HERE" && uv run --quiet python scripts/shipgate_config.py target.repo)" || {
+  echo "reset.sh: cannot read shipgate.yaml / shipgate.local.yaml; refusing" >&2
+  exit 2
+}
+REPO="$(printf '%s' "$CFG_REPO" | tr 'A-Z' 'a-z')"
+if ! sed -e 's/#.*//' -e 's/[[:space:]]//g' "$HERE/tests/scenarios/demo-forks.txt" 2>/dev/null | tr 'A-Z' 'a-z' |
+  grep -qx "$REPO"; then
+  echo "reset.sh: refusing: the config targets $CFG_REPO, which is not a demo fork listed in tests/scenarios/demo-forks.txt" >&2
+  exit 2
+fi
 
 for var in GH_REPO SHIPGATE_REPO; do
   val="${!var}"
@@ -41,16 +54,6 @@ for var in GH_REPO SHIPGATE_REPO; do
   fi
 done
 unset GH_REPO
-
-# Demo-only: this script closes PRs, deletes branches and rewrites labels, so it never runs against a user's repo.
-CFG_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && uv run --quiet python scripts/shipgate_config.py target.repo)" || {
-  echo "reset.sh: cannot read shipgate.yaml; refusing" >&2
-  exit 2
-}
-if [ "$(printf '%s' "$CFG_REPO" | tr 'A-Z' 'a-z')" != "$REPO" ]; then
-  echo "reset.sh: refusing: shipgate.yaml targets $CFG_REPO; this script only resets the demo fork $REPO" >&2
-  exit 2
-fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -z "$GITHUB_PAT" ] && [ -f "$ROOT/.env" ]; then

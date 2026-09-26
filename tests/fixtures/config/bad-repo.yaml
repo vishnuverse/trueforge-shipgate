@@ -1,7 +1,7 @@
 target:
   repo: not a repo
   default_branch: main
-  description: humanize is a Python library (drax0945/humanize) with functions such as ordinal, intcomma, intword, naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize.
+  description: humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword, naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize.
 python:
   install: .venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"
   test: .venv/bin/python -m pytest -q -p no:cacheprovider --benchmark-disable --color=no

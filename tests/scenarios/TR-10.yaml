@@ -3,7 +3,6 @@
 id: TR-10
 title: Human says REVISE at the PR gate
 issue: 1
-repo: drax0945/humanize
 must_pass: true
 reset: true
 timeout_min: 15
