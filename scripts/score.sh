@@ -55,6 +55,12 @@ if [ -z "$PLAN" ]; then
   exit 2
 fi
 
+# The agent's first step is triage_ticket; without the triage MCP every run would fail closed (patch held).
+if [ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' http://127.0.0.1:8803/mcp)" = "000" ]; then
+  echo "score.sh: the triage MCP is not answering on 127.0.0.1:8803; start it with: uv run mcp/triage/server.py" >&2
+  exit 2
+fi
+
 if [ "$1" != "--all" ]; then
   read -r id issue reset timeout <<EOF
 $PLAN

@@ -30,6 +30,13 @@
           "create_pull_request",
           "add_issue_comment"
         ]
+      },
+      {
+        "name": "triage",
+        "enable_tools": [
+          "triage_ticket"
+        ],
+        "require_approval_for_tools": []
       }
     ],
     "skills": [
@@ -47,6 +54,9 @@
         "enabled": false
       },
       "ask_user_questions": {
+        "enabled": false
+      },
+      "web_search": {
         "enabled": false
       }
     }

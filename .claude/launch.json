@@ -6,6 +6,7 @@
       "runtimeExecutable": "env",
       "runtimeArgs": [
         "SERVER_EXECUTION_TIMEOUT_SECONDS=1200",
+        "OUTBOUND_URL_ALLOWED_HOSTS=[\"127.0.0.1\"]",
         "npx",
         "--yes",
         "@truefoundry/trueforge@0.2.1"
