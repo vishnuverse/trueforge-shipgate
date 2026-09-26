@@ -48,6 +48,9 @@ test("another repo leaves no demo names outside the labelled examples", () => {
   for (const bad of ["vishnuverse", "src/humanize", "python-humanize", "benchmark-disable"]) {
     assert.ok(!skill.includes(bad), bad);
   }
+  for (const bad of ["humanize", "naturaltime", "freezegun", "ordinal", "django"]) {
+    assert.ok(!skill.toLowerCase().includes(bad), `demo-repo fact '${bad}' stated outside a labelled example`);
+  }
   assert.ok(!/\bmain\b/.test(skill), "default branch 'main' left in the skill");
   assert.ok(skill.includes("acme/widgets") && skill.includes("widgets/<file>") && skill.includes("test/test_issue_<n>.py"));
   assert.ok(skill.includes("fix/issue-<n> → trunk"));
