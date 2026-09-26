@@ -72,3 +72,26 @@ def test_local_file_overrides_the_committed_one(tmp_path: Path, monkeypatch: pyt
     assert shipgate_config.load_config().repo == "acme/my.pkg_x"
     monkeypatch.setenv("SHIPGATE_CONFIG", str(tmp_path / "shipgate.yaml"))
     assert shipgate_config.config_path() == tmp_path / "shipgate.yaml"
+
+
+def test_jira_section_is_optional_and_parsed() -> None:
+    assert load_config(FIXTURES / "valid.yaml").jira is None
+    jira = load_config(FIXTURES / "valid-jira.yaml").jira
+    assert jira is not None
+    assert (jira.site, jira.project, jira.cloud_id) == (
+        "developertunnel.atlassian.net",
+        "KAN",
+        "ce61dd8b-2e04-4815-9b7b-60a570df782b",
+    )
+    assert (jira.status_start, jira.status_review, jira.status_open) == ("In Progress", "In Review", "To Do")
+    assert jira.key_re().match("KAN-4") and not jira.key_re().match("kan-4")
+    assert not jira.key_re().match("SAM1-4") and not jira.key_re().match("KAN-0")
+    assert jira.ticket_url("KAN-4") == "https://developertunnel.atlassian.net/browse/KAN-4"
+
+
+def test_ticket_names_follow_the_shared_rule() -> None:
+    from shipgate_config import ticket_names
+
+    for case in json.loads((FIXTURES / "ticket-names.json").read_text()):
+        got = ticket_names(case["key"], case["tests_dir"])
+        assert got == {k: case[k] for k in ("ref", "slug", "branch", "test_file")}

@@ -14,3 +14,10 @@ python:
 trueforge:
   url: http://localhost:8790
   model: openrouter/deepseek-v4-flash
+jira:                                 # optional: Jira as a second ticket source (shipgate run --ticket KAN-<n>)
+  site: developertunnel.atlassian.net
+  cloud_id: ce61dd8b-2e04-4815-9b7b-60a570df782b
+  project: KAN                        # the only project any component may touch
+  status_start: In Progress           # statuses the orchestrator moves a ticket to (like GitHub labels)
+  status_review: In Review
+  status_open: To Do
