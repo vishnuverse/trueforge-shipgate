@@ -17,8 +17,10 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 recovery vs strict scorer, nudge/final-verdict use two sources, corrupt check.json aborts --all, 'against' wording for
 cannot_reproduce, redundant `seen` set, loose TR-03 steps regex, #3-specific example in hard rule 11.
 
+**Update 08:45** UI dry run passed (PR #24, REVISE at Gate 1, exit 0). Film terminal + browser side by side.
+
 **Next**
-1. Filmed `--approve ui` run on #1 (REVISE once); Daytona key → one run there.
+1. Filmed `--approve ui` run on #1 (REVISE once) — dry run done; Daytona key → one run there.
 2. Fresh-laptop README test; decide on the uncommitted fixture edits (`tests/fixtures/humanize/issues/{1,2,4,6}.md`).
 3. After P0: Jev Triage; Runbook Executor on kind. Before submitting: make the repo public.
 
