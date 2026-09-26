@@ -110,8 +110,9 @@ Edit `shipgate.yaml`:
 | `trueforge.url` | your TrueForge instance (default `http://localhost:8790`) |
 | `trueforge.model` | the model id the agent runs on |
 
-Then run `scripts/setup.sh` as above. **Limits:** Jev's triage thresholds were tuned on humanize — expect more
-tickets held as `uncertain` on a different codebase, which is the safe direction. The `tests/scenarios/TR-*.yaml`
+Then run `scripts/setup.sh` as above. **Limits:** the triage questions (policy `triage-v1`) name humanize, and its
+thresholds were tuned on it, so on another repo most tickets will likely be held as `uncertain` (investigate-only,
+no patch) until a retuned policy exists; that is the safe direction. The `tests/scenarios/TR-*.yaml`
 scenarios and the scorecard (`check.py`) score the demo fork only; `reset.sh` refuses to run against any other repo.
 The any-repo flow itself (`shipgate.yaml` + `scripts/setup.sh` against a non-default target) is proven on the
 humanize fork only — no second repo has been run live yet.

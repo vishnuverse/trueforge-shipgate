@@ -135,7 +135,7 @@ def build_app(
 
     @app.tool(
         annotations=ToolAnnotations(
-            title="Triage a humanize ticket",
+            title=f"Triage a {target.name} ticket",
             readOnlyHint=True,
             destructiveHint=False,
             idempotentHint=True,

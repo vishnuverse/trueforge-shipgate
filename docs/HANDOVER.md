@@ -4,6 +4,27 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 15:01 — Claude — Any-repo final-review fix wave (branch `feat/any-repo`)
+
+**Done** (whole-branch review: 5 Important, fixed per the controller's rulings)
+- I1: the triage server's `.env` reader now accepts `export KEY=value` lines (they were skipped, so every ticket got
+  an `error` verdict and was held although `setup.sh`'s preflight passed).
+- I2: the skill states no humanize fact as a rule any more; hard rule 11, the Defect / Failing-run definitions and
+  steps 3c, 6, 6b are generic, and each humanize fact is an `Example (demo repo vishnuverse/humanize, <where>)` line
+  just before its section's closing tag. Golden re-rendered.
+- I3: the triage tool's title comes from the config (`Triage a <name> ticket`).
+
+**Known limit (ruling, not fixed):** the triage questions (policy `triage-v1`, `mcp/triage/policy.py`) name humanize.
+On another repo most tickets will likely be held as `uncertain` (investigate-only, no patch) until a retuned policy
+(`triage-v2`, re-probed) exists.
+
+**Next**
+1. Re-register the agent (`setup_agents.ts --inline-skill` or `setup.sh --no-start`) so the live TrueForge agent gets
+   the re-worded skill.
+2. Next steps 1–3 of the 14:52 entry below still stand (second repo, public repo, Daytona demo).
+
+---
+
 ## 2026-09-26 14:52 — Claude — Any-repo config + one-command setup: live acceptance (Task 10 of 10, branch `feat/any-repo`)
 
 **Done** (plan `.superpowers/sdd/2026-09-26-any-repo-setup/task-10-brief.md`, live against the running install; no keys

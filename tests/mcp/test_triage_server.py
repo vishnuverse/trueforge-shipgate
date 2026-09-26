@@ -138,6 +138,13 @@ def test_tool_is_read_only_and_takes_one_integer(tmp_path: Path) -> None:
     assert tool.inputSchema["properties"]["issue_number"]["type"] == "integer"
 
 
+def test_tool_title_names_the_configured_repo(tmp_path: Path) -> None:
+    cfg = Config(**{**CFG.__dict__, "repo": "acme/widgets"})
+    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl", config=cfg)
+    [tool] = asyncio.run(app.list_tools())
+    assert tool.annotations.title == "Triage a widgets ticket"
+
+
 def test_tool_call_returns_structured_verdict_and_json_text(tmp_path: Path) -> None:
     app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl", config=CFG)
     content, structured = asyncio.run(app.call_tool("triage_ticket", {"issue_number": 1}))
