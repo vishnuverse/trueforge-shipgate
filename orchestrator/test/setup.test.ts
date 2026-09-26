@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { OPENROUTER_MODELS, SetupError, doctor, isLoopback, registerAll, type FetchLike } from "../src/setup.ts";
+import { OPENAI_MODELS, OPENROUTER_MODELS, SetupError, doctor, isLoopback, registerAll, type FetchLike } from "../src/setup.ts";
 
 const KEY = "sk-or-test-not-real";
 const PAT = "github_pat_test_not_real";
@@ -16,8 +16,9 @@ function fakeTrueForge(providers: Row[] = [], servers: Row[] = [], agent: Record
     if (u.pathname === "/api/v1/settings/model-providers") {
       if (init.method === "PUT") {
         const m = body.manifest;
-        providers = [...providers.filter((p) => p.name !== m.name), { name: m.name, manifest: m }];
-        return json({ name: m.name, manifest: m });
+        const name = m.name ?? m.type; // well-known provider types (openai) are named by their type
+        providers = [...providers.filter((p) => p.name !== name), { name, manifest: m }];
+        return json({ name, manifest: m });
       }
       return json(providers);
     }
@@ -127,3 +128,70 @@ test("doctor passes a good install and names each problem", async () => {
   const failed = res.filter((c) => !c.ok).map((c) => c.name);
   assert.deepEqual(failed.sort(), ["agent gates", "agent web_search", "connector triage", "provider openrouter"].sort());
 });
+
+const OKEY = "sk-openai-test-not-real";
+const connectors: Row[] = [{ name: "github", manifest: {} }, { name: "triage", manifest: {} }];
+
+test("an openai/ model registers the openai provider with that model and OPENAI_API_KEY", async () => {
+  const tf = fakeTrueForge([], structuredClone(connectors));
+  const steps = await registerAll("http://localhost:8790", { openaiKey: OKEY }, opts, tf.fetchFn, log, "openai/gpt-6-luna");
+  assert.deepEqual(
+    steps.map((s) => [s.item, s.action]),
+    [["model provider openai", "created"], ["connector github", "kept"], ["connector triage", "kept"]],
+  );
+  const p = tf.state().providers.find((x) => x.name === "openai");
+  assert.equal(p?.manifest.type, "openai");
+  assert.deepEqual(p?.manifest.models, OPENAI_MODELS);
+  assert.ok(OPENAI_MODELS.some((m) => m.name === "gpt-6-luna"));
+  assert.deepEqual(p?.manifest.auth, { api_key: OKEY });
+  assert.ok(!tf.state().providers.some((x) => x.name === "openrouter"), "no OpenRouter provider or key needed");
+  assert.ok(logs.every((l) => !l.includes(OKEY)));
+});
+
+test("an openai/ model without OPENAI_API_KEY names the key and sends nothing", async () => {
+  const tf = fakeTrueForge([], structuredClone(connectors));
+  await assert.rejects(
+    registerAll("http://localhost:8790", { openrouterKey: KEY }, opts, tf.fetchFn, log, "openai/gpt-6-luna"),
+    (e: unknown) => e instanceof SetupError && /OPENAI_API_KEY/.test(e.message),
+  );
+  assert.equal(tf.calls.filter((c) => c.method === "PUT").length, 0);
+});
+
+test("an unsupported provider prefix is refused before any request", async () => {
+  const tf = fakeTrueForge();
+  await assert.rejects(
+    registerAll("http://localhost:8790", { openaiKey: OKEY }, opts, tf.fetchFn, log, "mistral/large"),
+    (e: unknown) => e instanceof SetupError && /unsupported/.test(e.message),
+  );
+  assert.equal(tf.calls.length, 0);
+});
+
+test("doctor checks the provider of the configured model", async () => {
+  const agent = {
+    name: "ticket-resolver",
+    manifest: {
+      mcp_servers: [
+        { name: "github", require_approval_for_tools: ["create_pull_request", "add_issue_comment"] },
+        { name: "triage", enable_tools: ["triage_ticket"], require_approval_for_tools: [] },
+      ],
+      config: { web_search: { enabled: false } },
+    },
+  };
+  const servers: Row[] = [
+    { name: "github", manifest: {}, auth_status: { status: "authenticated" } },
+    { name: "triage", manifest: {}, auth_status: { status: "not_required" } },
+  ];
+  const withOpenai = await doctor(
+    "http://localhost:8790",
+    fakeTrueForge([{ name: "openai", manifest: { type: "openai" } }], servers, agent).fetchFn,
+    "openai/gpt-6-luna",
+  );
+  assert.ok(withOpenai.every((c) => c.ok), JSON.stringify(withOpenai));
+  const onlyOpenrouter = await doctor(
+    "http://localhost:8790",
+    fakeTrueForge([{ name: "openrouter", manifest: {} }], servers, agent).fetchFn,
+    "openai/gpt-6-luna",
+  );
+  assert.deepEqual(onlyOpenrouter.filter((c) => !c.ok).map((c) => c.name), ["provider openai"]);
+});
+

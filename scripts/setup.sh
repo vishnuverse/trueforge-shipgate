@@ -96,10 +96,16 @@ for tool in node uv git curl; do command -v "$tool" >/dev/null 2>&1 || die "$too
 node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=14)?0:1)' ||
   die "Node >= 22.14 required (have $(node -v))" 1
 [ -f "$ENV_FILE" ] || die "$ENV_FILE missing: cp .env.example .env and fill it" 2
-for key in GITHUB_PAT OPENROUTER_API_KEY TYPESAFE_API_KEY; do
+MODEL="$(cfg trueforge.model)" || exit 2
+case "$MODEL" in
+  openai/*) PROVIDER=openai PROVIDER_KEY=OPENAI_API_KEY ;;
+  openrouter/*) PROVIDER=openrouter PROVIDER_KEY=OPENROUTER_API_KEY ;;
+  *) die "trueforge.model $MODEL: unsupported provider (use openai/... or openrouter/...)" 2 ;;
+esac
+for key in GITHUB_PAT "$PROVIDER_KEY" TYPESAFE_API_KEY; do
   [ -n "$(env_value "$key")" ] || die "$ENV_FILE: $key is empty" 2
 done
-ok ".env has GITHUB_PAT, OPENROUTER_API_KEY, TYPESAFE_API_KEY (values not shown)"
+ok ".env has GITHUB_PAT, $PROVIDER_KEY, TYPESAFE_API_KEY (values not shown); model $MODEL"
 TARGET="$(cfg target.repo)" || exit 2
 BRANCH="$(cfg target.default_branch)" || exit 2
 TF_URL="${TRUEFORGE_URL:-$(cfg trueforge.url)}" || exit 2
@@ -133,7 +139,7 @@ case "$SMOKE" in *-*) SMOKE_LABEL="$SMOKE" ;; esac
 if [ "$DRY" = 1 ]; then
   plan "install dependencies: uv sync; npm --prefix orchestrator ci"
   [ "$NOSTART" = 1 ] || plan "start TrueForge 0.2.1 at $TF_URL (20-min turns, loopback allow-list) and the triage MCP on 127.0.0.1:8803, unless already running"
-  plan "register in TrueForge: model provider openrouter, connectors github and triage (keys from .env, sent only to a local TrueForge$([ "$ROTATE" = 1 ] && echo ', rotated')), then the ticket-resolver agent rendered from shipgate.yaml"
+  plan "register in TrueForge: model provider $PROVIDER, connectors github and triage (keys from .env, sent only to a local TrueForge$([ "$ROTATE" = 1 ] && echo ', rotated')), then the ticket-resolver agent rendered from shipgate.yaml"
   plan "require branch protection on $TARGET@$BRANCH$([ "$UNPROT" = 1 ] && echo ' (override given)')"
   plan "create missing labels on $TARGET: $(printf '%s ' $LABELS | sed 's/:[0-9a-f]*//g')"
   [ -z "$JIRA_PROJECT" ] || plan "check that the Jira token reads $JIRA_SITE (GET /rest/api/3/myself)"

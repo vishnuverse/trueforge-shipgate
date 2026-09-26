@@ -12,4 +12,4 @@
 | [research-and-plan.md](research-and-plan.md) | Pre-event research: rules, judging, competitors, all three agent designs and test catalogues | Background, or building P1 / optional agents |
 | [superpowers/plans/](superpowers/plans/) | Step-by-step execution plans (current: Jev triage pre-check) | You pick up the next task |
 | [superpowers/specs/](superpowers/specs/) | Design specs behind the plans (current: Jev triage pre-check, triage-v1) | You change a design decision |
-| [reference/](reference/) | Notes that shaped the skill: **DeepSeek V4 + GLM-5.3 prompting (current model)**, Gemini 3 prompting, SWE-agent patterns, issue-ai-agent + TypeSafe, a `gh`-based fix-issue draft | Improving the skill or prompt |
+| [reference/](reference/) | Notes that shaped the skill: **GPT-6 Luna prompting + prompt caching (current model)**, DeepSeek V4 + GLM-5.3 prompting (previous model), Gemini 3 prompting, SWE-agent patterns, issue-ai-agent + TypeSafe, a `gh`-based fix-issue draft | Improving the skill or prompt |

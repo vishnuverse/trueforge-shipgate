@@ -112,7 +112,8 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 | --- | --- | --- |
 | `TRUEFORGE_URL` | orchestrator, `setup.sh`, `setup_agents.ts`, `setup_trueforge.ts`, `check.py` | optional; env `TRUEFORGE_URL` overrides `shipgate.yaml` `trueforge.url` when set (the orchestrator also reads it from `.env`, `setup.sh` from the environment only; `check.py` falls back to `http://localhost:8790` instead) |
 | `GITHUB_PAT` | `setup.sh` / `setup_trueforge.ts` (registers the `github` connector), orchestrator (labels), `check.py` (reads), `reset.sh` | fine-grained, scoped to `shipgate.yaml`'s `target.repo` only |
-| `OPENROUTER_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `openrouter` model provider) | never sent to the sandbox |
+| `OPENAI_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `openai` model provider) | required only when `trueforge.model` starts with `openai/`; never sent to the sandbox |
+| `OPENROUTER_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `openrouter` model provider) | required only when `trueforge.model` starts with `openrouter/`; never sent to the sandbox |
 | `TYPESAFE_API_KEY` | triage MCP (`mcp/triage/server.py`) | read on the host only; never in the sandbox |
 | `JIRA_EMAIL`, `JIRA_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `jira` connector, Basic auth), triage MCP (reads tickets), orchestrator (moves status and labels), `check.py` (reads), `seed_jira.py` | Atlassian account email + API token; only needed when `shipgate.yaml` has `jira:`; host only, never in the sandbox |
 | `SHIPGATE_CONFIG` | both config loaders (`shipgate_config.py`, `orchestrator/src/config.ts`) | overrides the `shipgate.yaml` path; not a secret |
@@ -197,7 +198,7 @@ python:
   tests_dir: tests                    # the regression test is <tests_dir>/test_issue_<n>.py
 trueforge:
   url: http://localhost:8790
-  model: openrouter/deepseek-v4-flash
+  model: openai/gpt-6-luna            # <provider>/<model>: openai/... or openrouter/...
 ```
 
 **Validation rules**, the same in both loaders:

@@ -12,12 +12,14 @@ from shipgate_config import ROOT
 FAKE = {
     "GITHUB_PAT": "ghp_fake_value_1234",
     "OPENROUTER_API_KEY": "sk-or-fake-5678",
+    "OPENAI_API_KEY": "sk-oa-fake-3456",
     "TYPESAFE_API_KEY": "ts-fake-9012",
     "JIRA_EMAIL": "dev-fake@example.test",
     "JIRA_API_KEY": "jira-fake-3456",
 }
 GITHUB_ONLY = {k: v for k, v in FAKE.items() if not k.startswith("JIRA_")}
 NO_JIRA = ROOT / "tests" / "fixtures" / "config" / "valid.yaml"  # shipgate.yaml carries a jira: section
+OPENROUTER_CONFIG = NO_JIRA  # trueforge.model: openrouter/...; shipgate.yaml uses openai/...
 
 
 def run(
@@ -51,6 +53,7 @@ def test_dry_run_prints_the_plan_and_no_secret(tmp_path: Path) -> None:
         "would register",
         "vishnuverse/humanize",
         "would create missing labels",
+        "model provider openai",
     ):
         assert phrase in out, phrase
     assert all(v not in out for v in FAKE.values())
@@ -60,7 +63,7 @@ def test_dry_run_prints_the_plan_and_no_secret(tmp_path: Path) -> None:
 def test_export_and_quoted_env_lines_count(tmp_path: Path) -> None:
     lines = [
         'export GITHUB_PAT="ghp_fake_value_1234"',
-        "OPENROUTER_API_KEY='sk-or-fake-5678'",
+        "OPENAI_API_KEY='sk-oa-fake-3456'",
         "TYPESAFE_API_KEY=ts-fake-9012",
         'export JIRA_EMAIL="dev-fake@example.test"',
         "JIRA_API_KEY='jira-fake-3456'",
@@ -73,9 +76,27 @@ def test_empty_key_is_a_usage_error_naming_the_key(tmp_path: Path) -> None:
     r = run(
         "scripts/setup.sh",
         "--dry-run",
-        env_file=env_file(tmp_path, ["GITHUB_PAT=x", "OPENROUTER_API_KEY=", "TYPESAFE_API_KEY=y"]),
+        env_file=env_file(tmp_path, ["GITHUB_PAT=x", "OPENAI_API_KEY=", "TYPESAFE_API_KEY=y"]),
     )
+    assert r.returncode == 2 and "OPENAI_API_KEY" in r.stderr
+
+
+def test_only_the_configured_providers_key_is_required(tmp_path: Path) -> None:
+    """trueforge.model picks the provider: openai/... needs OPENAI_API_KEY, openrouter/... its own key."""
+    base = ["GITHUB_PAT=x", "TYPESAFE_API_KEY=z", "JIRA_EMAIL=e", "JIRA_API_KEY=j"]
+    openai_only = env_file(tmp_path, [*base, "OPENAI_API_KEY=y"])
+    assert run("scripts/setup.sh", "--dry-run", env_file=openai_only).returncode == 0
+    r = run(
+        "scripts/setup.sh", "--dry-run",
+        env_file=openai_only, extra={"SHIPGATE_CONFIG": str(OPENROUTER_CONFIG)},
+    )  # fmt: skip
     assert r.returncode == 2 and "OPENROUTER_API_KEY" in r.stderr
+    openrouter_only = env_file(tmp_path, [*base, "OPENROUTER_API_KEY=y"])
+    r = run(
+        "scripts/setup.sh", "--dry-run",
+        env_file=openrouter_only, extra={"SHIPGATE_CONFIG": str(OPENROUTER_CONFIG)},
+    )  # fmt: skip
+    assert r.returncode == 0 and "model provider openrouter" in r.stdout + r.stderr
 
 
 def test_config_error_exits_2(tmp_path: Path) -> None:

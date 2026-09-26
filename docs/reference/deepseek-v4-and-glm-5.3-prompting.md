@@ -1,5 +1,9 @@
 # Prompting reference: DeepSeek V4 Flash and GLM-5.3-Flash via OpenRouter
 
+> **Superseded 2026-09-26** as the current-model reference by
+> [`gpt-6-luna-prompting-and-caching.md`](gpt-6-luna-prompting-and-caching.md). Still valid when `shipgate.yaml`
+> sets `trueforge.model: openrouter/...`.
+
 Our notes for the Ticket Resolver model (primary DeepSeek V4 Flash, fallback GLM-5.3-Flash), reached through OpenRouter as
 a TrueForge `custom` provider. Paraphrased from vendor docs and model cards, researched 2026-09-26; each point cites its
 source. **[unverified]** = inference or not confirmable. TrueForge behaviour was read from the installed 0.2.1 source

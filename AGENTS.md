@@ -55,7 +55,7 @@ default to the upstream.
 | runbook-executor (P1) | k8s (all), github (read + comment) | `deploy`, `rollback`, `restart`, `add_issue_comment` | raw `kubectl`, `delete_*` | on (for skills) | manual trigger |
 | release-captain (optional) | github (repos, pull_requests, git, issues-comment), registry | `create_tag`/release tool, `publish_package`, `merge_pull_request` | — | on | `needs-release → ready-to-deploy` |
 
-Ticket Resolver's GitHub tool names are verified against the live server (`docs/MEMORY.md`); model `openrouter/deepseek-v4-flash`. Other rows are planned.
+Ticket Resolver's GitHub tool names are verified against the live server (`docs/MEMORY.md`); model `openai/gpt-6-luna`. Other rows are planned.
 
 ## Data flow — resolve (P0)
 1. `shipgate run --issue <n>` (manual trigger) → sets `triaged` → creates a `ticket-resolver` session.

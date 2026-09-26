@@ -4,6 +4,26 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 16:20 — Claude — Model switched to OpenAI `gpt-6-luna` (branch `feat/jira`)
+
+**Done**
+- `shipgate.yaml` (and this Mac's `shipgate.local.yaml`) `trueforge.model: openai/gpt-6-luna`. `setup.ts` picks the
+  TrueForge provider from the model prefix: `openai/` → well-known `openai` provider (no `name` in the manifest,
+  `OPENAI_API_KEY`), `openrouter/` → the old `custom` provider. The doctor checks the matching provider; `setup.sh`
+  requires only that provider's key.
+- Agent params: `reasoning_effort: high`, `max_tokens: 32768`, `prompt_cache_key: shipgate-ticket-resolver-v1`;
+  `temperature`/`top_p` dropped (unconfirmed for Luna). Golden `tests/fixtures/skill/ticket-resolver.humanize.json`
+  regenerated.
+- New reference `docs/reference/gpt-6-luna-prompting-and-caching.md` (model card, caching rules applied to
+  TrueForge's `store:false` Responses path); the DeepSeek reference is marked superseded.
+- Tests: orchestrator 151/151, typecheck clean, `pytest tests/check` 155 passed, ruff clean. Not yet run live.
+
+**Next**
+- User: `scripts/setup.sh --no-start` (sends `OPENAI_API_KEY` to the local TrueForge, creates the `openai`
+  provider, re-registers the agent), then one scored TR-01 on `gpt-6-luna`; check `cached_tokens` on turn 2+.
+- If OpenAI rejects a param, drop it from `agents/ticket-resolver.json` and regenerate the golden.
+- Retry `openai.com/index/better-prompt-caching-for-gpt-6/` (403 during research).
+
 ## 2026-09-26 15:25 — Claude — Merged main (summarize-before-Jev) into `feat/any-repo`; demo target `drax0945/humanize`
 
 **Done**

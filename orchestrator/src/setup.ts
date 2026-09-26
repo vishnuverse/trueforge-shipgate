@@ -5,6 +5,7 @@ export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 export class SetupError extends Error {}
 export interface Secrets {
   openrouterKey?: string;
+  openaiKey?: string;
   githubPat?: string;
 }
 export interface SetupOptions {
@@ -34,6 +35,16 @@ export const OPENROUTER_MODELS = [
     properties: { context_length: 1310720, max_output_tokens: 128000, reasoning_efforts: ["low", "high", "max"] },
   },
 ];
+// OpenAI is a well-known TrueForge provider type: its manifest has no name (the provider is named "openai") and
+// base_url defaults to api.openai.com. Facts: docs/reference/gpt-6-luna-prompting-and-caching.md §1.
+export const OPENAI_MODELS = [
+  {
+    name: "gpt-6-luna",
+    model_id: "gpt-6-luna",
+    properties: { context_length: 1050000, max_output_tokens: 128000, reasoning_efforts: ["none", "low", "medium", "high", "xhigh"] },
+  },
+];
+export const DEFAULT_MODEL = "openrouter/deepseek-v4-flash";
 export const GITHUB_MCP_URL = "https://api.githubcopilot.com/mcp/";
 export const TRIAGE_MCP_URL = "http://127.0.0.1:8803/mcp";
 const GATES = ["add_issue_comment", "create_pull_request"];
@@ -80,8 +91,37 @@ class Api {
 
 const nameOf = (row: Json): string => {
   const m = isObj(row.manifest) ? row.manifest : {};
-  return String(row.name ?? m.name ?? "");
+  return String(row.name ?? m.name ?? m.type ?? "");
 };
+
+interface ProviderPlan {
+  name: string;
+  keyName: string;
+  key: string | undefined;
+  manifest: (key: string) => Json;
+}
+
+/** The TrueForge model provider behind shipgate.yaml's trueforge.model ("<provider>/<model>"). */
+function providerFor(model: string, secrets: Secrets): ProviderPlan {
+  const prefix = model.split("/")[0];
+  if (prefix === "openrouter") {
+    return {
+      name: "openrouter",
+      keyName: "OPENROUTER_API_KEY",
+      key: secrets.openrouterKey,
+      manifest: (key) => ({ type: "custom", name: "openrouter", base_url: OPENROUTER_BASE_URL, models: OPENROUTER_MODELS, auth: { api_key: key } }),
+    };
+  }
+  if (prefix === "openai") {
+    return {
+      name: "openai",
+      keyName: "OPENAI_API_KEY",
+      key: secrets.openaiKey,
+      manifest: (key) => ({ type: "openai", models: OPENAI_MODELS, auth: { api_key: key } }),
+    };
+  }
+  throw new SetupError(`unsupported model provider "${prefix}" in trueforge.model (use openrouter/... or openai/...)`);
+}
 
 export async function registerAll(
   base: string,
@@ -89,24 +129,24 @@ export async function registerAll(
   opts: SetupOptions,
   fetchFn: FetchLike = fetch,
   log: (s: string) => void = console.log,
+  model: string = DEFAULT_MODEL,
 ): Promise<Step[]> {
+  const plan = providerFor(model, secrets);
   if (!isLoopback(base) && !opts.allowRemote) {
     throw new SetupError(`refusing to send keys to ${new URL(base).host}: TrueForge is not local (--allow-remote overrides)`);
   }
   const api = new Api(base.replace(/\/+$/, ""), fetchFn);
   const steps: Step[] = [];
 
-  const provider = (await api.list("/settings/model-providers")).find((p) => nameOf(p) === "openrouter");
+  const provider = (await api.list("/settings/model-providers")).find((p) => nameOf(p) === plan.name);
   if (provider === undefined || opts.rotateKeys) {
-    if (!secrets.openrouterKey) throw new SetupError("OPENROUTER_API_KEY is not set in .env");
+    if (!plan.key) throw new SetupError(`${plan.keyName} is not set in .env`);
     const existing = provider && isObj(provider.manifest) ? provider.manifest : undefined;
-    const manifest = existing
-      ? { ...existing, auth: { api_key: secrets.openrouterKey } }
-      : { type: "custom", name: "openrouter", base_url: OPENROUTER_BASE_URL, models: OPENROUTER_MODELS, auth: { api_key: secrets.openrouterKey } };
+    const manifest = existing ? { ...existing, auth: { api_key: plan.key } } : plan.manifest(plan.key);
     await api.call("PUT", "/settings/model-providers", { manifest });
-    steps.push({ item: "model provider openrouter", action: provider ? "rotated" : "created" });
+    steps.push({ item: `model provider ${plan.name}`, action: provider ? "rotated" : "created" });
   } else {
-    steps.push({ item: "model provider openrouter", action: "kept" });
+    steps.push({ item: `model provider ${plan.name}`, action: "kept" });
   }
 
   const servers = await api.list("/settings/mcp-servers");
@@ -138,13 +178,14 @@ export async function registerAll(
   return steps;
 }
 
-export async function doctor(base: string, fetchFn: FetchLike = fetch): Promise<Check[]> {
+export async function doctor(base: string, fetchFn: FetchLike = fetch, model: string = DEFAULT_MODEL): Promise<Check[]> {
+  const providerName = providerFor(model, {}).name;
   const api = new Api(base.replace(/\/+$/, ""), fetchFn);
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
 
   const providers = await api.list("/settings/model-providers");
-  add("provider openrouter", providers.some((p) => nameOf(p) === "openrouter"), "model provider registered");
+  add(`provider ${providerName}`, providers.some((p) => nameOf(p) === providerName), `model provider for ${model} registered`);
   const servers = await api.list("/settings/mcp-servers");
   for (const want of ["github", "triage"]) {
     const row = servers.find((s) => nameOf(s) === want);

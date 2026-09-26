@@ -21,13 +21,13 @@ replies to the reporter. If it can't reproduce the bug, it says so with evidence
 | 2 | One job, finished | One job: resolving a bug ticket, end to end. Nothing else is built yet |
 | 3 | Film the approval moment | The TrueForge session page shows the sandbox runs, then the "Tool Approval Required" card (`--approve ui`) |
 | 4 | Public repo, README works on another laptop, AI named | Quick start below; AI use disclosed at the end. *The repo is private while we build; it is made public for submission* |
-| 5 | Only our own accounts and keys; none in the repo or video | Our own OpenRouter, TypeSafe and GitHub accounts. Keys live in `.env` (gitignored) and are registered into TrueForge by `scripts/setup.sh`; `.env.example` has names only |
+| 5 | Only our own accounts and keys; none in the repo or video | Our own OpenAI, OpenRouter (bake-off), TypeSafe and GitHub accounts. Keys live in `.env` (gitignored) and are registered into TrueForge by `scripts/setup.sh`; `.env.example` has names only |
 
 ## How it works
 
 ```
  you ──► orchestrator ──────────────► TrueForge 0.2.1 (localhost:8790): agent loop, approvals, sessions
- (approve / REVISE /     (TypeScript, SDK)        │ model: deepseek-v4-flash via OpenRouter
+ (approve / REVISE /     (TypeScript, SDK)        │ model: gpt-6-luna via OpenAI
   EDIT / STOP)                                    │
                         ┌─────────────────────────┼──────────────────────────────┐
                         ▼                         ▼                              ▼
@@ -80,13 +80,14 @@ Every answer is logged to `approvals.log` with a hash of the exact call it appro
 ## Quick start (fresh laptop)
 
 **You need:** Node ≥ 22.14, [uv](https://docs.astral.sh/uv/) (Python 3.12), git, curl, an
-[OpenRouter](https://openrouter.ai) key, a [TypeSafe](https://docs.typesafe.ai/introduction) API key (Jev triage),
+[OpenAI API](https://platform.openai.com) key (or an [OpenRouter](https://openrouter.ai) key for an `openrouter/...`
+model), a [TypeSafe](https://docs.typesafe.ai/introduction) API key (Jev triage),
 and a GitHub **fine-grained** token for the repo named in `shipgate.yaml` (Contents, Issues, Pull requests:
 read/write; the committed value is the humanize demo fork).
 
 ```bash
 git clone https://github.com/vishnuverse/trueforge-shipgate && cd trueforge-shipgate
-cp .env.example .env          # fill GITHUB_PAT, OPENROUTER_API_KEY, TYPESAFE_API_KEY (never commit .env)
+cp .env.example .env          # fill GITHUB_PAT, OPENAI_API_KEY, TYPESAFE_API_KEY (never commit .env)
 $EDITOR shipgate.yaml         # your repo, install/test commands, source dir (the committed values run the demo)
 scripts/setup.sh              # installs, starts TrueForge + triage MCP, registers everything, checks, then prints:
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui
@@ -150,10 +151,13 @@ grades each run from TrueForge's session events **and** the real GitHub state, a
 can check automatically (harness doing the work, where it stops, how many must-pass scenarios pass).
 
 ## Model and cost
-`deepseek/deepseek-v4-flash` via OpenRouter, chosen by a bake-off of four cheap models on the real task:
-two failed, DeepSeek and GLM-5.3-Flash passed, DeepSeek was faster. A ticket run costs a median of **$0.015**
-(38 scored runs; prompt caching does most of the work); a run that struggles with a push can reach $0.12. The whole
-day, about 45 runs including the bake-offs, cost **$0.91**. Details: [`docs/model-bakeoff.md`](docs/model-bakeoff.md).
+`gpt-6-luna` via OpenAI (`shipgate.yaml` `trueforge.model: openai/gpt-6-luna`; list price $0.10 / M input tokens,
+$0.01 cached, $0.50 output). Every turn re-sends the whole context, so the agent keeps its instructions byte-identical
+and sets a static `prompt_cache_key`; notes in
+[`docs/reference/gpt-6-luna-prompting-and-caching.md`](docs/reference/gpt-6-luna-prompting-and-caching.md).
+Before the switch the agent ran on `deepseek/deepseek-v4-flash` via OpenRouter, chosen by a bake-off of four cheap
+models on the real task: a median of **$0.015** per ticket run over 38 scored runs, **$0.91** for the whole day
+([`docs/model-bakeoff.md`](docs/model-bakeoff.md)). Setting `trueforge.model: openrouter/deepseek-v4-flash` still works.
 
 ## Status
 
@@ -186,7 +190,7 @@ Opus for planning, design and the main session; Sonnet, Haiku and Fable as imple
 teammate also used Claude Code with Claude Sonnet 5). It helped plan and research (TrueForge source, SWE-agent,
 model prompting guides), wrote the spec, and wrote the code: the skill, the orchestrator and the scorer were built by
 parallel Claude Code subagents against a shared contract, then reviewed and merged. It also planted the disclosed
-fixture bugs. The agent itself runs on `deepseek/deepseek-v4-flash` through OpenRouter. The humans chose the scope,
+fixture bugs. The agent itself runs on OpenAI `gpt-6-luna` (earlier `deepseek/deepseek-v4-flash` through OpenRouter). The humans chose the scope,
 approved each design section, and own every decision recorded in `docs/MEMORY.md`.
 
 The bugs the agent fixes were **planted on purpose** in the demo fork `vishnuverse/humanize` (commits titled

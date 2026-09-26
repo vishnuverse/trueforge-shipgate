@@ -19,8 +19,11 @@ async function main(argv: string[]): Promise<number> {
   const envFile = process.env.SHIPGATE_ENV_FILE ?? join(ROOT, ".env");
   if (existsSync(envFile)) process.loadEnvFile(envFile);
   let base: string;
+  let model: string;
   try {
-    base = (process.env.TRUEFORGE_URL ?? loadConfig().trueforgeUrl).replace(/\/+$/, "");
+    const cfg = loadConfig();
+    base = (process.env.TRUEFORGE_URL ?? cfg.trueforgeUrl).replace(/\/+$/, "");
+    model = cfg.model;
   } catch (err) {
     if (err instanceof ConfigError) {
       console.error(`setup_trueforge: ${err.message}`);
@@ -30,14 +33,17 @@ async function main(argv: string[]): Promise<number> {
   }
   try {
     if (argv.includes("--check")) {
-      const checks = await doctor(base);
+      const checks = await doctor(base, fetch, model);
       for (const c of checks) console.log(`${c.ok ? "✓" : "✗"} ${c.name}: ${c.detail}`);
       return checks.every((c) => c.ok) ? 0 : 1;
     }
     await registerAll(
       base,
-      { openrouterKey: process.env.OPENROUTER_API_KEY, githubPat: process.env.GITHUB_PAT },
+      { openrouterKey: process.env.OPENROUTER_API_KEY, openaiKey: process.env.OPENAI_API_KEY, githubPat: process.env.GITHUB_PAT },
       { rotateKeys: argv.includes("--rotate-keys"), allowRemote: argv.includes("--allow-remote") },
+      fetch,
+      console.log,
+      model,
     );
     return 0;
   } catch (err) {
