@@ -79,7 +79,7 @@ uv run pytest tests/check -q                  # scorer unit tests
 npm --prefix orchestrator test                # orchestrator unit tests (+ run typecheck)
 scripts/reset.sh                              # dry run: what would be reset on vishnuverse/humanize (--yes to apply)
 scripts/score.sh TR-01                        # reset → run in script mode → check.py TR-01
-uv run python scripts/check.py --all          # every scenario with a run + self-assessed scorecard
+uv run python scripts/check.py --all          # every scenario's grade saved at run time + scorecard (--regrade = live)
 ```
 A scenario passes only if `check.py` prints no FAIL; it checks events, `approvals.jsonl` and the real GitHub state.
 

@@ -26,7 +26,7 @@ card shown, handoff block present, steps, wall time, and cost from OpenRouter's 
 | openai/gpt-oss-20b | 0.018 / 0.09 / – | Fail: never set up the repo properly; no handoff | 262 s | 20 | $0.0015 |
 
 Total spend for the bake-off: **$0.026** (OpenRouter key usage). Prompt caching did most of the work: DeepSeek read
-437k input tokens, 412k of them from cache. A full ticket run therefore costs well under one cent.
+437k input tokens, 412k of them from cache. In the later scored scenario runs (with gates), a ticket cost a median of $0.015; one that struggled with a push reached $0.12.
 
 ## Round 2: 0423 vs 0731 (same day)
 The prompting research found our slug is the April **0423 preview** and that a re-post-trained **0731** release scores

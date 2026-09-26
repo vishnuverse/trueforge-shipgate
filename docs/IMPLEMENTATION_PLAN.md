@@ -1,5 +1,9 @@
 # docs/IMPLEMENTATION_PLAN.md — 2 contributors
 
+> Historical: the day plan written before the build. For what was built and how it went, see
+> [`HANDOVER.md`](HANDOVER.md) and [`SPEC.md`](SPEC.md); the executed plan is
+> [`superpowers/plans/2026-09-26-finish-p0.md`](superpowers/plans/2026-09-26-finish-p0.md).
+
 Scope for a 2-person team: **Ticket Resolver first** (SPEC §4), then **Runbook Executor** (SPEC §5).
 **Release Captain is optional** (SPEC §6) and has no slot in this timeline.
 Build window: Sat 26 Sep 2026, 12:00–19:00 IST. Submit by 18:45 (15 min buffer).

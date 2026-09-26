@@ -9,9 +9,9 @@ makes the smallest fix, proves it (test 3/3 green, full suite green), pushes a `
 **stops**: it shows an evidence card and waits for a human before it opens the pull request, and again before it
 replies to the reporter. If it can't reproduce the bug, it says so with evidence instead of guessing.
 
-> **Status (26 Sep, 07:15 IST):** every must-pass scenario has passed a live, scored run at least once. On one
-> full pass with the final skill, 5 of 8 must-pass passed; the main failure mode is pushing large files (see
-> [Status](#status)).
+> **Status (26 Sep, 08:50 IST):** every must-pass scenario has passed a live, scored run at least once, and a human
+> UI run on issue #1 went end to end. On one full pass with the final skill, 5 of 8 must-pass passed; the main failure
+> mode is pushing large files (see [Status](#status)).
 
 ## Organisers' checklist
 
@@ -106,8 +106,8 @@ To run it on yours:
 ## Tests and scoring
 
 ```bash
-uv run pytest tests/check -q                 # scorer unit tests (33)
-npm --prefix orchestrator test               # orchestrator unit tests (66)
+uv run pytest tests/check -q                 # scorer unit tests (47)
+npm --prefix orchestrator test               # orchestrator unit tests (72)
 scripts/score.sh TR-01                       # reset the fork → run with scripted approvals → grade
 uv run python scripts/check.py --all         # all scenarios with a run + a self-assessed scorecard
 ```
@@ -118,8 +118,9 @@ can check automatically (harness doing the work, where it stops, how many must-p
 
 ## Model and cost
 `deepseek/deepseek-v4-flash` via OpenRouter, chosen by a bake-off of four cheap models on the real task:
-two failed, DeepSeek and GLM-5.3-Flash passed, DeepSeek was faster. The whole bake-off cost $0.026; a ticket run costs
-under one cent thanks to prompt caching. Details: [`docs/model-bakeoff.md`](docs/model-bakeoff.md).
+two failed, DeepSeek and GLM-5.3-Flash passed, DeepSeek was faster. A ticket run costs a median of **$0.015**
+(38 scored runs; prompt caching does most of the work); a run that struggles with a push can reach $0.12. The whole
+day, about 45 runs including the bake-offs, cost **$0.91**. Details: [`docs/model-bakeoff.md`](docs/model-bakeoff.md).
 
 ## Status
 
@@ -128,8 +129,8 @@ under one cent thanks to prompt caching. Details: [`docs/model-bakeoff.md`](docs
 | Done | Skill, agent spec, orchestrator (3 approval modes), scorer + 13 scenarios; fixtures #1–#7 on the fork; ruleset; model chosen |
 | Verified live | Sandbox runs code; GitHub MCP reads; a gated tool pauses and a deny resumes; the chosen model reproduced, fixed and proved issue #1 (read-only run) |
 | Scenario results | Each must-pass scenario (TR-01, 03, 05, 06, 10, 11, 12, 13) has passed a live scored run at least once. One full pass on the final skill (`scripts/score.sh --all`, 05:43–07:07 IST): must-pass **5/8** (TR-01, 05, 06, 12, 13), nice-to-have TR-07; self-assessed automated score **42/75** (`check.py --all`). Gates held in every run, forbidden tools were never attempted, every GitHub call named our fork |
-| Known weakness | GitHub's MCP needs whole files in `push_files`; retyping 16–22 KB files sometimes fails, and the agent then reaches for forbidden workarounds (sandbox `mcp_client`, `gh`, `api.github.com`). TrueForge refuses the writes and `check.py` H4 flags every attempt, but the run is lost |
-| In progress | A filmed `--approve ui` run; Daytona for the demo; a fix for the push step |
+| Known weakness | GitHub's MCP needs whole files in `push_files`; retyping 16–22 KB files sometimes fails, and the agent then reaches for forbidden workarounds (sandbox `mcp_client`, `gh`, `api.github.com`). TrueForge refuses the writes and `check.py` H4 flags every attempt, but the run is lost. Accepted for the event: the demo runs with a human approving in the UI, and a derailed run is re-run |
+| Demo | UI dry run passed on #1 (human `REVISE` at the PR gate → revised title → PR vishnuverse/humanize#24 → reply). Next: the filmed run, on Daytona once its key arrives |
 | Next | Triage agent (TypeSafe Jev for calibrated category / priority / duplicate decisions); Runbook Executor on a local kind cluster |
 
 ## Repository

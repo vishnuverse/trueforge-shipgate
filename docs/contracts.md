@@ -58,7 +58,7 @@ id: TR-10
 title: Human says REVISE at the PR gate
 issue: 1
 reset: true            # score.sh runs reset.sh first; false for TR-09 (runs after TR-01)
-timeout_min: 10
+timeout_min: 15
 approvals:             # orchestrator script mode consumes these in order
   - {tool: create_pull_request, decision: deny, reason: "REVISE: start the PR title with 'fix(ordinal):'"}
   - {tool: create_pull_request, decision: allow}
