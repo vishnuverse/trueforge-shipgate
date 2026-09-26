@@ -8,6 +8,8 @@ import json
 import re
 from typing import Any
 
+from shipgate_config import ticket_names
+
 from .constants import (
     DECISIONS,
     FULL_REPO,
@@ -16,6 +18,7 @@ from .constants import (
     PUSHBACK_AGAINST,
     STAGE,
     STATUSES,
+    TESTS_DIR,
 )
 
 # Same rule as orchestrator/src/protocol.ts: a one-line "```json {...}```" block is accepted too.
@@ -45,8 +48,11 @@ def _str_or_none(value: Any) -> bool:
     return value is None or isinstance(value, str)
 
 
-def validate_handoff(h: Any, issue: int | None = None) -> list[str]:
-    """Return a list of schema problems (empty = valid)."""
+def validate_handoff(h: Any, issue: int | None = None, ticket: str | None = None) -> list[str]:
+    """Return a list of schema problems (empty = valid).
+
+    GitHub run: `ticket` is `gh#<issue>` and a fixed run's branch `fix/issue-<issue>`. Jira run (`ticket`
+    given): `ticket` is the key itself (KAN-4) and the branch `fix/<slug>` (fix/kan-4)."""
     if not isinstance(h, dict):
         return [f"handoff is {type(h).__name__}, not an object"]
     errs: list[str] = []
@@ -85,11 +91,14 @@ def validate_handoff(h: Any, issue: int | None = None) -> list[str]:
         elif not isinstance(sha, str) or not _SHA.match(sha):
             errs.append(f"sha={sha!r} is not a 7-40 char lowercase hex SHA")
     if "ticket" in h:
-        ticket = h["ticket"]
-        if not isinstance(ticket, str) or not re.fullmatch(r"gh#\d+", ticket):
-            errs.append(f"ticket={ticket!r}, want 'gh#<n>'")
-        elif issue is not None and ticket != f"gh#{issue}":
-            errs.append(f"ticket={ticket!r}, want 'gh#{issue}'")
+        got = h["ticket"]
+        if ticket is not None:
+            if got != ticket:
+                errs.append(f"ticket={got!r}, want {ticket!r}")
+        elif not isinstance(got, str) or not re.fullmatch(r"gh#\d+", got):
+            errs.append(f"ticket={got!r}, want 'gh#<n>'")
+        elif issue is not None and got != f"gh#{issue}":
+            errs.append(f"ticket={got!r}, want 'gh#{issue}'")
     if "branch" in h and not _str_or_none(h["branch"]):
         errs.append("branch must be a string or null")
     if "pr_url" in h:
@@ -99,8 +108,12 @@ def validate_handoff(h: Any, issue: int | None = None) -> list[str]:
         elif pr_url is not None and not _PR_URL.match(pr_url):
             errs.append(f"pr_url={pr_url!r} is not a {FULL_REPO} pull URL")
     if outcome == "fixed":
-        if issue is not None and h.get("branch") != f"fix/issue-{issue}":
-            errs.append(f"outcome fixed but branch={h.get('branch')!r}, want 'fix/issue-{issue}'")
+        if ticket is not None:
+            want_branch: str | None = ticket_names(ticket, TESTS_DIR)["branch"]
+        else:
+            want_branch = f"fix/issue-{issue}" if issue is not None else None
+        if want_branch is not None and h.get("branch") != want_branch:
+            errs.append(f"outcome fixed but branch={h.get('branch')!r}, want {want_branch!r}")
         if not h.get("pr_url"):
             errs.append("outcome fixed but pr_url is empty")
     repro = h.get("repro")

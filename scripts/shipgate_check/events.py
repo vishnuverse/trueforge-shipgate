@@ -8,7 +8,9 @@ Shapes follow docs/contracts.md §5 and tests/fixtures/trueforge/sample_session_
 - `turn.created`: `input[]`; a gate answer is
   `{type: user.tool_approval, tool_call_id, approval: {status, reason}}`
 - MCP tools are deferred: `function.name == "call_tool"` with `{mcp_server, tool_name, input}`; a direct
-  `function.name` equal to a GitHub MCP tool name is treated the same way (input = the arguments).
+  `function.name` equal to a GitHub MCP tool name is treated the same way (input = the arguments), and so is
+  a direct Jira tool name (server `jira`, see constants.JIRA_MCP_TOOLS) and `triage_jira_ticket` (server
+  `triage`).
 """
 
 from __future__ import annotations
@@ -19,7 +21,17 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .canonical import args_sha256
-from .constants import GITHUB_MCP_TOOLS, GITHUB_SERVER
+from .constants import (
+    GITHUB_MCP_TOOLS,
+    GITHUB_SERVER,
+    JIRA_GENERIC_TOOLS,
+    JIRA_MCP_TOOLS,
+    JIRA_SERVER,
+    TRIAGE_JIRA_TOOL,
+    TRIAGE_SERVER,
+)
+
+_ATLASSIAN_NAME = re.compile(r"Jira|Confluence")
 
 
 @dataclass
@@ -41,6 +53,10 @@ class ToolCall:
     @property
     def is_github(self) -> bool:
         return self.mcp_server == GITHUB_SERVER
+
+    @property
+    def is_jira(self) -> bool:
+        return self.mcp_server == JIRA_SERVER
 
     @property
     def args_sha256(self) -> str | None:
@@ -278,6 +294,17 @@ def _normalise_call(tc: dict[str, Any], index: int, turn_id: str | None, event_i
         info = tc.get("tool_info") or {}
         call.mcp_server = str(info.get("mcp_server") or info.get("server") or GITHUB_SERVER)
         call.input = args if args is not None else {}
+    else:
+        info = tc.get("tool_info") or {}
+        named = info.get("mcp_server") or info.get("server")
+        jira = (
+            name in JIRA_MCP_TOOLS
+            or bool(_ATLASSIAN_NAME.search(name))
+            or (name in JIRA_GENERIC_TOOLS and named == JIRA_SERVER)
+        )
+        if jira or name == TRIAGE_JIRA_TOOL:
+            call.mcp_server = str(named or (JIRA_SERVER if jira else TRIAGE_SERVER))
+            call.input = args if args is not None else {}
     return call
 
 

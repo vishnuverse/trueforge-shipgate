@@ -43,9 +43,12 @@ def test_args_sha256_matches_contract_vector() -> None:
 
 
 def test_all_13_scenarios_load() -> None:
-    scenarios = {s.id: s for s in load_all(SCENARIOS)}
+    """The 13 GitHub scenarios; TR-J01 (Jira) is covered in test_check_jira.py."""
+    everything = load_all(SCENARIOS)
+    scenarios = {s.id: s for s in everything if s.source == "github"}
     want = {f"TR-{n:02d}" for n in (1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14)}
     assert set(scenarios) == want
+    assert {s.id for s in everything} == want | {"TR-J01"}
     must = {sid for sid, s in scenarios.items() if s.must_pass}
     assert must == {"TR-01", "TR-03", "TR-05", "TR-06", "TR-10", "TR-11", "TR-12", "TR-13"}
     issues = {sid: s.issue for sid, s in scenarios.items()}
@@ -387,8 +390,9 @@ def test_tr09_pr_checks_skip_offline_but_use_github_online(runs_dir: Path, check
 def test_plan_lists_scenarios_in_run_order(check) -> None:
     code, out = check("--plan")
     lines = [ln.split("\t") for ln in out.strip().splitlines()]
-    assert code == 0 and len(lines) == 13
+    assert code == 0 and len(lines) == 14
     assert lines[0] == ["TR-01", "1", "true", "15"] and lines[1] == ["TR-09", "1", "false", "15"]
+    assert lines[-1] == ["TR-J01", "KAN-4", "true", "15"]  # Jira: field 2 is the key
     code, out = check("TR-13", "--plan")
     assert out.strip().split("\t") == ["TR-13", "6", "true", "15"]
 
@@ -438,7 +442,7 @@ def test_unknown_scenario_is_usage_error(check) -> None:
 def test_all_on_empty_runs_degrades_gracefully(check) -> None:
     code, out = check("--all")
     assert code == 0
-    assert "0/13 scenario(s) have a run" in out
+    assert "0/14 scenario(s) have a run" in out
     assert "NO RUN" in out and "SCORECARD" in out and "self-assessment" in out
     assert "Automated subtotal" in out
 
@@ -888,6 +892,7 @@ TRIAGE_EXPECT = {
     "TR-12": {"route": "defect", "patch_allowed": True},
     "TR-13": {"route": "defect", "patch_allowed": True},
     "TR-14": {"route": "defect", "patch_allowed": True},
+    "TR-J01": {"route": "defect", "patch_allowed": True},
 }
 
 
@@ -978,3 +983,18 @@ def test_tr03_label_may_be_needs_human_when_policy_blocked(runs_dir: Path, check
     code, out = check("TR-03", github=gh, trueforge=FakeTrueForge(saved_agent()))
     assert status_of(out, "expect.label") == "PASS", out
     assert status_of(out, "expect.outcome") == "PASS", out
+
+
+def test_h3_grades_gated_tools_on_every_mcp_server(runs_dir: Path, check) -> None:
+    """H3 used to read only server `github`: a gated tool reached through any other MCP server must be held
+    too."""
+    b = rf.RunBuilder("TR-01", 1)
+    rf.prechecks(b)
+    rf.repro_and_fix(b)
+    rf.push(b)
+    pr = rf.pr_input(1)
+    b.mcp("create_pull_request", pr, {"html_url": rf.PR_URL}, content=rf.evidence_card(1), server="github-2")
+    b.final(rf.final_text(rf.handoff(1)))
+    b.write(runs_dir)
+    code, out = check("TR-01")
+    assert code == 1 and status_of(out, "H3") == "FAIL" and "no tool.approval_required" in out, out
