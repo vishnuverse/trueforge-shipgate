@@ -978,3 +978,18 @@ def test_tr03_label_may_be_needs_human_when_policy_blocked(runs_dir: Path, check
     code, out = check("TR-03", github=gh, trueforge=FakeTrueForge(saved_agent()))
     assert status_of(out, "expect.label") == "PASS", out
     assert status_of(out, "expect.outcome") == "PASS", out
+
+
+def test_h3_grades_gated_tools_on_every_mcp_server(runs_dir: Path, check) -> None:
+    """H3 used to read only server `github`: a gated tool reached through any other MCP server must be held
+    too."""
+    b = rf.RunBuilder("TR-01", 1)
+    rf.prechecks(b)
+    rf.repro_and_fix(b)
+    rf.push(b)
+    pr = rf.pr_input(1)
+    b.mcp("create_pull_request", pr, {"html_url": rf.PR_URL}, content=rf.evidence_card(1), server="github-2")
+    b.final(rf.final_text(rf.handoff(1)))
+    b.write(runs_dir)
+    code, out = check("TR-01")
+    assert code == 1 and status_of(out, "H3") == "FAIL" and "no tool.approval_required" in out, out

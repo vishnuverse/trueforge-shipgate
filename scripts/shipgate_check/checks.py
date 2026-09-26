@@ -188,7 +188,8 @@ def build_context(scenario: Scenario, run: RunDir, gh: GitHubView, runs_dir: Pat
 
 
 def _gated_calls(tl: Timeline) -> list[ToolCall]:
-    return [c for c in tl.calls if c.is_github and c.tool in GATED_TOOLS]
+    """Every MCP call to a gated tool, on any MCP server (not only `github`)."""
+    return [c for c in tl.calls if c.is_mcp and c.tool in GATED_TOOLS]
 
 
 def _allowed_and_ran(tl: Timeline, call: ToolCall) -> bool:
