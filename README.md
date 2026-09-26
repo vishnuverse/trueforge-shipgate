@@ -67,6 +67,59 @@ once with OAuth in the TrueForge UI (`setup.sh` keeps an OAuth-connected entry);
 
 Design: [`docs/SPEC.md`](docs/SPEC.md) §4. Interfaces: [`docs/contracts.md`](docs/contracts.md).
 
+## System design
+
+TrueForge runs unchanged from `npx @truefoundry/trueforge@0.2.1` on localhost. Everything we built sits around it:
+it configures TrueForge through its REST API, drives it through the SDK, gives the agent its procedure and tools, and
+grades what happened. No fork, no patch to TrueForge.
+
+```mermaid
+flowchart LR
+  human(["Human<br/>approve / REVISE / EDIT / STOP"])
+  subgraph ours_host["Ours, on the host"]
+    orch["Orchestrator (TypeScript, SDK)<br/>shipgate run --issue N | --ticket KAN-N<br/>relays gates, moves labels / Jira status,<br/>parses the handoff"]
+    setup["setup.sh + setup_trueforge.ts + setup_agents.ts<br/>register provider, connectors, agents; doctor"]
+    triage["Triage MCP (Python, 127.0.0.1:8803)<br/>triage_ticket / triage_jira_ticket<br/>TypeSafe Jev + policy triage-v1, read-only"]
+    check["Scorer check.py + 14 scenarios<br/>events, approvals, real GitHub + Jira state"]
+  end
+  subgraph tf["TrueForge 0.2.1 (npx, unchanged)"]
+    loop["Agent loop + sessions / turns / events"]
+    gate["Approval holds<br/>require_approval_for_tools (by name)"]
+    sandbox["Built-in local sandbox<br/>exec: clone, pytest, patch"]
+    mcp["MCP gateway (connectors)"]
+  end
+  subgraph agentdef["Ours, loaded into TrueForge"]
+    agents["Agents: ticket-resolver, ticket-resolver-jira<br/>(tools allow-list + gates by name)"]
+    skill["Skills: T1–T15 procedure, evidence card,<br/>push-back table, approval protocol"]
+  end
+  model["Model: OpenRouter<br/>deepseek-v4-flash"]
+  gh["GitHub remote MCP<br/>issues, branch, push, PR"]
+  jira["Atlassian remote MCP v2<br/>getJiraIssue, addOrEditJiraIssueComment"]
+
+  human <--> orch
+  orch -- "SDK: create session / turn,<br/>user.tool_approval" --> loop
+  setup -- "REST /api/v1/settings, /agents" --> tf
+  agents --> loop
+  skill --> loop
+  loop --> model
+  loop --> sandbox
+  loop --> gate
+  loop --> mcp
+  mcp --> gh
+  mcp --> jira
+  mcp --> triage
+  check -. "reads" .-> loop
+```
+
+| TrueForge gives us (`npx`, as is) | We built on top |
+| --- | --- |
+| Agent loop, sessions, turns and an event log | **Skills** (`skills/*/SKILL.md`): the whole procedure: pin a SHA, write a failing test, fix, 5-point evidence check, push-back rules, approval protocol, handoff JSON |
+| Model providers | **Agent specs** (`agents/*.json`, rendered from `shipgate.yaml`): one agent per ticket source, tools allow-listed, writes gated **by name** |
+| MCP connectors (remote HTTP, header or OAuth auth) | **Triage MCP** (`mcp/triage/`): our own read-only server; TypeSafe Jev classifies the ticket, policy `triage-v1` decides `patch_allowed`, fail-closed, audited |
+| Built-in local sandbox (`exec`) | **Jira integration**: second agent + skill, Atlassian MCP wired with two named tools, orchestrator-driven status, seed/reset script |
+| Approval holds (`require_approval_for_tools`) | **Orchestrator** (`orchestrator/`): runs a ticket, relays every gate from the UI, terminal or a script, logs each answer with a hash of the exact call, sets labels / Jira status, parses the handoff |
+| REST API + SDK | **Setup and doctor** (`scripts/setup.sh`): one command installs, starts, registers provider, connectors and agents, and checks gates and branch protection; **scorer** (`scripts/check.py`): grades each run against events and the real GitHub/Jira state |
+
 ## Where it stops
 
 | Line | How it's enforced |
