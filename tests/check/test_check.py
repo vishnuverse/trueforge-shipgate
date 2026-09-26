@@ -647,3 +647,37 @@ def test_tr03_accepts_the_real_agent_reply_and_0_of_3_fail(runs_dir: Path, check
     code, out = check("TR-03")
     assert status_of(out, "expect.comments.matches") == "PASS", out
     assert status_of(out, "expect.repro") == "PASS", out
+
+
+def test_comment_posted_just_before_the_run_is_not_counted(runs_dir: Path, check) -> None:
+    """Back-to-back scenarios (TR-01 then TR-09): the previous reply lands seconds before this run starts."""
+    rf.fixed_run().write(runs_dir, ts="20260926T120000Z")
+    gh = FakeGitHub(
+        pulls=[
+            {
+                "number": 12,
+                "title": "fix: ordinal(12) returns 12th",
+                "body": rf.evidence_card(1) + "\n\nFixes #1",
+                "head": {"ref": "fix/issue-1"},
+                "base": {"ref": "main"},
+            }
+        ],
+        files={12: [{"filename": "src/humanize/number.py"}, {"filename": "tests/test_issue_1.py"}]},
+        issues={1: {"number": 1, "state": "open", "labels": [{"name": "fix-proposed"}]}},
+        comments={
+            1: [
+                {
+                    "user": {"login": "vishnuverse"},
+                    "created_at": "2026-09-26T11:59:50Z",
+                    "body": "previous run",
+                },
+                {
+                    "user": {"login": "vishnuverse"},
+                    "created_at": "2026-09-26T12:03:00Z",
+                    "body": f"Fixed in {rf.PR_URL}",
+                },
+            ]
+        },
+    )
+    code, out = check("TR-01", github=gh, trueforge=FakeTrueForge(saved_agent()))
+    assert status_of(out, "expect.comments.count") == "PASS", out

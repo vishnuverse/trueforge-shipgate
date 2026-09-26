@@ -642,7 +642,9 @@ def _comments(ctx: RunContext, issue: int | None = None) -> tuple[list[str], str
             if (c.get("user") or {}).get("login") != login:
                 continue
             created = parse_time(c.get("created_at"))
-            if start is not None and created is not None and created < start - CLOCK_SKEW:
+            # No look-back: the agent's own comment always comes minutes after the run starts, while the
+            # previous back-to-back scenario's reply can land seconds before it (TR-01 -> TR-09).
+            if start is not None and created is not None and created < start:
                 continue
             bodies.append(c.get("body") or "")
         return bodies, "github"
