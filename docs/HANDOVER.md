@@ -13,6 +13,9 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
   steps 3c, 6, 6b are generic, and each humanize fact is an `Example (demo repo vishnuverse/humanize, <where>)` line
   just before its section's closing tag. Golden re-rendered.
 - I3: the triage tool's title comes from the config (`Triage a <name> ticket`).
+- I4: the orchestrator's TrueForge URL falls back to `shipgate.yaml` `trueforge.url` (env `TRUEFORGE_URL` still
+  wins); `.env.example` now has `TRUEFORGE_URL` commented out, so an existing `.env` copied from the old example
+  still pins `http://localhost:8790` for the orchestrator until that line is removed.
 
 **Known limit (ruling, not fixed):** the triage questions (policy `triage-v1`, `mcp/triage/policy.py`) name humanize.
 On another repo most tickets will likely be held as `uncertain` (investigate-only, no patch) until a retuned policy

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { defaultPrompt, parseCli, resolveTimeoutMin } from "../src/cli.ts";
+import { defaultPrompt, parseCli, resolveTimeoutMin, resolveTrueforgeUrl } from "../src/cli.ts";
 import { parseDotenv } from "../src/env.ts";
 import { uiSessionUrl, utcStamp } from "../src/runner.ts";
 
@@ -79,6 +79,12 @@ test("timeout: explicit flag wins, then the scenario, then a human-friendly defa
   // The deadline keeps running while a person reads the approval card, so human modes get room.
   assert.equal(resolveTimeoutMin(null, null, "ui"), 60);
   assert.equal(resolveTimeoutMin(null, null, "terminal"), 60);
+});
+
+test("TrueForge URL: env TRUEFORGE_URL overrides shipgate.yaml trueforge.url; trailing slashes dropped", () => {
+  assert.equal(resolveTrueforgeUrl(undefined, "http://tf.example:9000/"), "http://tf.example:9000");
+  assert.equal(resolveTrueforgeUrl("", "http://tf.example:9000"), "http://tf.example:9000");
+  assert.equal(resolveTrueforgeUrl("http://localhost:8790//", "http://tf.example:9000"), "http://localhost:8790");
 });
 
 test("the kickoff prompt names the configured repo", () => {

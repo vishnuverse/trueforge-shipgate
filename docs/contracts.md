@@ -78,8 +78,8 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 
 ## 5. TrueForge 0.2.1 API facts (verified on this machine)
 
-- Base URL `TRUEFORGE_URL` (default `http://localhost:8790`), prefix `/api/v1`, no auth in local mode. OpenAPI at
-  `/api/v1/openapi.json`.
+- Base URL: `shipgate.yaml` `trueforge.url`, overridden by env `TRUEFORGE_URL` (§6); prefix `/api/v1`, no auth in
+  local mode. OpenAPI at `/api/v1/openapi.json`.
 - Create session: `POST /sessions` `{"agent": {"name": "ticket-resolver"}, "metadata": {}}` (or an inline
   `{"agent": {"spec": AgentSpec}}`). Response `data.id`.
 - Create turn: `POST /sessions/{id}/turns` `{"input": [...], "stream": false}` → `data.id` with `state.status`
@@ -107,7 +107,7 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 
 | Name | Used by | Notes |
 | --- | --- | --- |
-| `TRUEFORGE_URL` | orchestrator, `check.py`, `setup_agents.ts` | default `http://localhost:8790` |
+| `TRUEFORGE_URL` | orchestrator, `setup.sh`, `setup_agents.ts`, `setup_trueforge.ts`, `check.py` | optional; env `TRUEFORGE_URL` overrides `shipgate.yaml` `trueforge.url` when set (the orchestrator also reads it from `.env`, `setup.sh` from the environment only; `check.py` falls back to `http://localhost:8790` instead) |
 | `GITHUB_PAT` | `setup.sh` / `setup_trueforge.ts` (registers the `github` connector), orchestrator (labels), `check.py` (reads), `reset.sh` | fine-grained, scoped to `shipgate.yaml`'s `target.repo` only |
 | `OPENROUTER_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `openrouter` model provider) | never sent to the sandbox |
 | `TYPESAFE_API_KEY` | triage MCP (`mcp/triage/server.py`) | read on the host only; never in the sandbox |

@@ -8,7 +8,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { ScriptDecider, StdioLineReader, TerminalDecider, UiDecider, type Decider, type Mode } from "./decide.ts";
-import { ConfigError } from "./config.ts";
+import { ConfigError, loadConfig } from "./config.ts";
 import { loadDotenv, repoRoot } from "./env.ts";
 import { GitHubLabels, targetRepo } from "./labels.ts";
 import { runOnce, type RunOptions } from "./runner.ts";
@@ -97,11 +97,17 @@ export function defaultPrompt(issue: number, mode: Mode, today: string = localDa
   return `Resolve GitHub issue #${issue} in ${repo}. Approval mode: ${mode}. Today is ${today}.`;
 }
 
+/** The TrueForge base URL: env TRUEFORGE_URL when set and non-empty, else shipgate.yaml trueforge.url. */
+export function resolveTrueforgeUrl(envValue: string | undefined, configUrl: string): string {
+  return (envValue || configUrl).replace(/\/+$/, "");
+}
+
 async function main(argv: string[]): Promise<number> {
   const root = repoRoot();
   loadDotenv(root);
   const args = parseCli(argv);
-  const repo = targetRepo();
+  const config = loadConfig();
+  const repo = config.repo;
 
   const scenariosDir = process.env.SHIPGATE_SCENARIOS_DIR
     ? resolve(process.env.SHIPGATE_SCENARIOS_DIR)
@@ -125,7 +131,7 @@ async function main(argv: string[]): Promise<number> {
     agentLabel = args.agent;
   }
 
-  const trueforgeUrl = (process.env.TRUEFORGE_URL || "http://localhost:8790").replace(/\/+$/, "");
+  const trueforgeUrl = resolveTrueforgeUrl(process.env.TRUEFORGE_URL, config.trueforgeUrl);
   const tf = new TrueForgeClient(trueforgeUrl);
   const labels = args.labels ? new GitHubLabels(repo, process.env.GITHUB_PAT ?? "") : null;
 
