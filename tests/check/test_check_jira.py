@@ -31,7 +31,7 @@ def test_tr_j01_is_the_jira_twin_of_tr01() -> None:
         "tests/test_kan_4.py",
         "test_kan_4",
     )
-    assert (s.plan_ref, s.label, s.reset, s.must_pass) == ("KAN-4", "Jira KAN-4", True, False)
+    assert (s.plan_ref, s.label, s.reset, s.must_pass) == ("KAN-4", "Jira KAN-4", True, True)
     assert [(a.tool, a.decision) for a in s.approvals] == [
         ("create_pull_request", "allow"),
         ("addOrEditJiraIssueComment", "allow"),

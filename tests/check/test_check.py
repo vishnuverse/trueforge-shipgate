@@ -462,8 +462,8 @@ def test_all_scorecard_arithmetic(runs_dir: Path, check) -> None:
     # H1-H4 pass in every run that applies -> 30/30
     assert [c["status"] for c in crit["harness"]["checks"]] == ["PASS"] * 4
     assert crit["harness"]["points"] == 30.0
-    # 3 of 8 must-pass scenarios pass -> 25 * 3/8 = 9.375 -> 9.4
-    assert crit["runs"]["points"] == 9.4
+    # 3 of 9 must-pass scenarios pass (TR-J01 is must-pass) -> 25 * 3/9 = 8.33 -> 8.3
+    assert crit["runs"]["points"] == 8.3
     # S1, S2 skipped (offline); S3, S4, S7, S8, S9, S10 pass; S5 fails (TR-03); S6 not all run
     # -> 6/10 of 20 = 12.0
     stops = {c["id"]: c["status"] for c in crit["stops"]["checks"]}
@@ -481,11 +481,11 @@ def test_all_scorecard_arithmetic(runs_dir: Path, check) -> None:
     }
     assert crit["stops"]["points"] == 12.0
     assert crit["job"]["points"] is None and crit["demo"]["points"] is None
-    assert body["scorecard"]["auto_points"] == 51.4
+    assert body["scorecard"]["auto_points"] == 50.3
     assert body["scorecard"]["auto_max"] == 75 and body["scorecard"]["manual_max"] == 25
     assert body["scorecard"]["support"]["runs"] == 4
     code, text = check("--all")
-    assert "FAIL TR-03:expect.outcome" in text and "51.4/75" in text
+    assert "FAIL TR-03:expect.outcome" in text and "50.3/75" in text
 
 
 # --- read-only clients ------------------------------------------------------------------------------
