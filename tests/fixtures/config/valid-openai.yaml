@@ -13,7 +13,7 @@ python:
   tests_dir: tests                    # the regression test is <tests_dir>/test_issue_<n>.py
 trueforge:
   url: http://localhost:8790
-  model: openrouter/deepseek-v4-flash
+  model: openai/gpt-6-luna
 jira:                                 # optional: Jira as a second ticket source (shipgate run --ticket KAN-<n>)
   site: developertunnel.atlassian.net
   cloud_id: ce61dd8b-2e04-4815-9b7b-60a570df782b

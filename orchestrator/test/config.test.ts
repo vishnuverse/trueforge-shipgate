@@ -29,7 +29,7 @@ test("committed shipgate.yaml is the demo", () => {
   const c = loadConfig(join(ROOT, "shipgate.yaml"));
   assert.equal(c.repo, "vishnuverse/humanize");
   assert.equal(c.defaultBranch, "main");
-  assert.equal(c.model, "openai/gpt-6-luna");
+  assert.equal(c.model, "openrouter/deepseek-v4-flash");
   assert.ok(!c.description.includes("\n"));
 });
 

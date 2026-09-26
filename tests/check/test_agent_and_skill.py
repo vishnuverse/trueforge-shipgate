@@ -107,13 +107,7 @@ def test_jira_agent_gates_every_write_by_name() -> None:
 
 
 def test_jira_agent_shares_the_github_agents_model_and_config() -> None:
-    def without_cache_key(model: dict) -> dict:
-        return {**model, "params": {k: v for k, v in model["params"].items() if k != "prompt_cache_key"}}
-
-    assert without_cache_key(JIRA_SPEC["manifest"]["model"]) == without_cache_key(SPEC["manifest"]["model"])
-    # each agent has its own static cache key: the two prompts share no prefix worth caching together
-    keys = {s["manifest"]["model"]["params"].get("prompt_cache_key") for s in (SPEC, JIRA_SPEC)}
-    assert None not in keys and len(keys) == 2
+    assert JIRA_SPEC["manifest"]["model"] == SPEC["manifest"]["model"]
     assert JIRA_SPEC["manifest"]["config"] == SPEC["manifest"]["config"]
     config = JIRA_SPEC["manifest"]["config"]
     assert config["web_search"] == {"enabled": False}
