@@ -45,6 +45,10 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 - New reference `docs/reference/gpt-6-luna-prompting-and-caching.md` (model card, caching rules applied to
   TrueForge's `store:false` Responses path); the DeepSeek reference is marked superseded.
 - Tests: orchestrator 151/151, typecheck clean, `pytest tests/check` 155 passed, ruff clean. Not yet run live.
+- Fix (16:40): an existing provider that lacks the configured model now gets it appended (`updated`; the masked key
+  is sent back, so TrueForge keeps the stored one), and the doctor fails when the provider doesn't list the model.
+  Found by the Jira session: the UI-made `openai` provider had no `gpt-6-luna`, so agent registration returned 422.
+  First live run (KAN-4): 76% of input tokens from cache, about $0.06; no PR, because a concurrent reset deleted the branch.
 
 **Next**
 - User: `scripts/setup.sh --no-start` (sends `OPENAI_API_KEY` to the local TrueForge, creates the `openai`

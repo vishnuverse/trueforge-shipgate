@@ -19,7 +19,7 @@ export interface SetupOptions {
 }
 export interface Step {
   item: string;
-  action: "created" | "kept" | "rotated";
+  action: "created" | "kept" | "rotated" | "updated";
 }
 export interface Check {
   name: string;
@@ -112,8 +112,15 @@ interface ProviderPlan {
   name: string;
   keyName: string;
   key: string | undefined;
+  /** The configured model's entry when setup knows it (OPENAI_MODELS / OPENROUTER_MODELS). */
+  entry: Json | undefined;
   manifest: (key: string) => Json;
 }
+
+/** Model names the provider row serves (TrueForge manifest.models[].name). */
+const modelsOf = (row: Json | undefined): Json[] =>
+  row && isObj(row.manifest) && Array.isArray(row.manifest.models) ? row.manifest.models.filter(isObj) : [];
+const modelName = (model: string): string => model.slice(model.indexOf("/") + 1);
 
 /** The TrueForge model provider behind shipgate.yaml's trueforge.model ("<provider>/<model>"). */
 function providerFor(model: string, secrets: Secrets): ProviderPlan {
@@ -123,6 +130,7 @@ function providerFor(model: string, secrets: Secrets): ProviderPlan {
       name: "openrouter",
       keyName: "OPENROUTER_API_KEY",
       key: secrets.openrouterKey,
+      entry: OPENROUTER_MODELS.find((m) => m.name === modelName(model)),
       manifest: (key) => ({ type: "custom", name: "openrouter", base_url: OPENROUTER_BASE_URL, models: OPENROUTER_MODELS, auth: { api_key: key } }),
     };
   }
@@ -131,6 +139,7 @@ function providerFor(model: string, secrets: Secrets): ProviderPlan {
       name: "openai",
       keyName: "OPENAI_API_KEY",
       key: secrets.openaiKey,
+      entry: OPENAI_MODELS.find((m) => m.name === modelName(model)),
       manifest: (key) => ({ type: "openai", models: OPENAI_MODELS, auth: { api_key: key } }),
     };
   }
@@ -153,13 +162,27 @@ export async function registerAll(
   const api = new Api(base.replace(/\/+$/, ""), fetchFn);
   const steps: Step[] = [];
 
+  // The provider must serve the configured model, or registering the agent fails (HTTP 422). An existing provider
+  // keeps its models; a missing configured one is appended. Without a rotation the masked key from GET goes back
+  // unchanged, which TrueForge treats as "keep the stored key", so adding a model sends no secret.
   const provider = (await api.list("/settings/model-providers")).find((p) => nameOf(p) === plan.name);
-  if (provider === undefined || opts.rotateKeys) {
+  const existing = provider && isObj(provider.manifest) ? provider.manifest : undefined;
+  const served = modelsOf(provider);
+  const hasModel = served.some((m) => m.name === modelName(model));
+  if (!hasModel && plan.entry === undefined) {
+    throw new SetupError(
+      `model ${model} is not in the ${plan.name} provider and setup does not know it: add it in TrueForge Settings → Models`,
+    );
+  }
+  const models = hasModel ? served : [...served, plan.entry];
+  if (existing === undefined || opts.rotateKeys) {
     if (!plan.key) throw new SetupError(`${plan.keyName} is not set in .env`);
-    const existing = provider && isObj(provider.manifest) ? provider.manifest : undefined;
-    const manifest = existing ? { ...existing, auth: { api_key: plan.key } } : plan.manifest(plan.key);
+    const manifest = existing ? { ...existing, models, auth: { api_key: plan.key } } : plan.manifest(plan.key);
     await api.call("PUT", "/settings/model-providers", { manifest });
-    steps.push({ item: `model provider ${plan.name}`, action: provider ? "rotated" : "created" });
+    steps.push({ item: `model provider ${plan.name}`, action: existing ? "rotated" : "created" });
+  } else if (!hasModel) {
+    await api.call("PUT", "/settings/model-providers", { manifest: { ...existing, models } });
+    steps.push({ item: `model provider ${plan.name}`, action: "updated" });
   } else {
     steps.push({ item: `model provider ${plan.name}`, action: "kept" });
   }
@@ -241,7 +264,13 @@ export async function doctor(
   const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
 
   const providers = await api.list("/settings/model-providers");
-  add(`provider ${providerName}`, providers.some((p) => nameOf(p) === providerName), `model provider for ${model} registered`);
+  const row = providers.find((p) => nameOf(p) === providerName);
+  const serves = modelsOf(row).some((m) => m.name === modelName(model));
+  add(
+    `provider ${providerName}`,
+    serves,
+    row === undefined ? `no ${providerName} model provider` : serves ? `serves ${model}` : `does not list ${modelName(model)} (setup.sh adds it)`,
+  );
   const servers = await api.list("/settings/mcp-servers");
   for (const want of jira === null ? ["github", "triage"] : ["github", "triage", "jira"]) {
     const row = servers.find((s) => nameOf(s) === want);

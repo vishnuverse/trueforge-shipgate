@@ -19,6 +19,7 @@ const JIRA: JiraConfig = {
   statusOpen: "To Do",
 };
 type Row = { name: string; manifest: Record<string, unknown>; auth_status?: { status: string } };
+const DEEPSEEK = [{ name: "deepseek-v4-flash" }]; // the default model's entry, enough for "the provider serves it"
 
 function fakeTrueForge(
   providers: Row[] = [],
@@ -83,7 +84,7 @@ test("creates the provider and both connectors on an empty TrueForge", async () 
 
 test("keeps what exists and sends no secret", async () => {
   const tf = fakeTrueForge(
-    [{ name: "openrouter", manifest: { name: "openrouter", models: [] } }],
+    [{ name: "openrouter", manifest: { name: "openrouter", models: DEEPSEEK } }],
     [{ name: "github", manifest: {} }, { name: "triage", manifest: {} }],
   );
   const steps = await registerAll("http://localhost:8790", {}, opts, tf.fetchFn, log);
@@ -91,7 +92,7 @@ test("keeps what exists and sends no secret", async () => {
   assert.equal(tf.calls.filter((c) => c.method === "PUT").length, 0);
 });
 
-test("rotating keys keeps the user's extra models", async () => {
+test("rotating keys keeps the user's extra models and adds the configured one", async () => {
   const extra = { name: "gpt-5-nano", model_id: "openai/gpt-5-nano", properties: { context_length: 400000, max_output_tokens: 128000 } };
   const tf = fakeTrueForge(
     [{ name: "openrouter", manifest: { type: "custom", name: "openrouter", base_url: "https://openrouter.ai/api/v1", models: [extra], auth: { api_key: "***" } } }],
@@ -99,7 +100,7 @@ test("rotating keys keeps the user's extra models", async () => {
   );
   await registerAll("http://localhost:8790", { openrouterKey: KEY, githubPat: PAT }, { ...opts, rotateKeys: true }, tf.fetchFn, log);
   const provider = tf.state().providers.find((p) => p.name === "openrouter");
-  assert.deepEqual(provider?.manifest.models, [extra]);
+  assert.deepEqual(provider?.manifest.models, [extra, OPENROUTER_MODELS[0]]);
   assert.deepEqual(provider?.manifest.auth, { api_key: KEY });
   assert.equal(tf.calls.filter((c) => c.method === "PUT" && c.path.includes("mcp-servers")).length, 1); // github only
 });
@@ -145,7 +146,7 @@ test("doctor passes a good install and names each problem", async () => {
     { name: "github", manifest: {}, auth_status: { status: "authenticated" } },
     { name: "triage", manifest: {}, auth_status: { status: "not_required" } },
   ];
-  const ok = await doctor("http://localhost:8790", fakeTrueForge([{ name: "openrouter", manifest: {} }], servers, good).fetchFn);
+  const ok = await doctor("http://localhost:8790", fakeTrueForge([{ name: "openrouter", manifest: { models: DEEPSEEK } }], servers, good).fetchFn);
   assert.ok(ok.every((c) => c.ok), JSON.stringify(ok));
   const bad = structuredClone(good);
   (bad.manifest.config.web_search as { enabled: boolean }).enabled = true;
@@ -209,7 +210,7 @@ test("doctor checks the provider of the configured model", async () => {
   ];
   const withOpenai = await doctor(
     "http://localhost:8790",
-    fakeTrueForge([{ name: "openai", manifest: { type: "openai" } }], servers, agent).fetchFn,
+    fakeTrueForge([{ name: "openai", manifest: { type: "openai", models: [{ name: "gpt-6-luna" }] } }], servers, agent).fetchFn,
     "openai/gpt-6-luna",
   );
   assert.ok(withOpenai.every((c) => c.ok), JSON.stringify(withOpenai));
@@ -219,6 +220,40 @@ test("doctor checks the provider of the configured model", async () => {
     "openai/gpt-6-luna",
   );
   assert.deepEqual(onlyOpenrouter.filter((c) => !c.ok).map((c) => c.name), ["provider openai"]);
+});
+
+test("an existing provider without the configured model gets it added, keeping its models and stored key", async () => {
+  const other = { name: "gpt-5-5", model_id: "gpt-5.5", properties: {} };
+  const masked = { api_key: "sk--***REDACTED" }; // GET masks the key; PUT with the mask keeps the stored one
+  const tf = fakeTrueForge(
+    [{ name: "openai", manifest: { type: "openai", base_url: "https://api.openai.com/v1", models: [other], auth: masked } }],
+    structuredClone(connectors),
+  );
+  const steps = await registerAll("http://localhost:8790", {}, opts, tf.fetchFn, log, "openai/gpt-6-luna");
+  assert.deepEqual(steps[0], { item: "model provider openai", action: "updated" });
+  const p = tf.state().providers.find((x) => x.name === "openai");
+  assert.deepEqual(p?.manifest.models, [other, OPENAI_MODELS[0]]);
+  assert.deepEqual(p?.manifest.auth, masked);
+});
+
+test("a model setup does not know and the provider lacks is named before anything is written", async () => {
+  const tf = fakeTrueForge([{ name: "openai", manifest: { type: "openai", models: [] } }], structuredClone(connectors));
+  await assert.rejects(
+    registerAll("http://localhost:8790", { openaiKey: OKEY }, opts, tf.fetchFn, log, "openai/gpt-9"),
+    (e: unknown) => e instanceof SetupError && e.message.includes("openai/gpt-9") && e.message.includes("Settings"),
+  );
+  assert.equal(tf.calls.filter((c) => c.method === "PUT").length, 0);
+});
+
+test("doctor fails the provider check when the provider lacks the configured model", async () => {
+  const checks = await doctor(
+    "http://localhost:8790",
+    fakeTrueForge([{ name: "openai", manifest: { type: "openai", models: [{ name: "gpt-5-5" }] } }]).fetchFn,
+    "openai/gpt-6-luna",
+  );
+  const provider = checks.find((c) => c.name === "provider openai");
+  assert.equal(provider?.ok, false);
+  assert.match(provider?.detail ?? "", /gpt-6-luna/);
 });
 
 // ---------- Jira (shipgate.yaml jira: section) ----------
@@ -251,7 +286,7 @@ test("without jira configured, no jira connector and no Jira key needed", async 
 test("an existing jira connector (e.g. connected by OAuth) is kept and needs no Jira key", async () => {
   const oauth: Row = { name: "jira", manifest: { name: "jira", url: JIRA_MCP_URL, auth: { type: "oauth" } } };
   const tf = fakeTrueForge(
-    [{ name: "openrouter", manifest: { name: "openrouter", models: [] } }],
+    [{ name: "openrouter", manifest: { name: "openrouter", models: DEEPSEEK } }],
     [{ name: "github", manifest: {} }, { name: "triage", manifest: {} }, oauth],
   );
   const steps = await registerAll("http://localhost:8790", {}, opts, tf.fetchFn, log, undefined, JIRA);
@@ -262,7 +297,7 @@ test("an existing jira connector (e.g. connected by OAuth) is kept and needs no 
 test("rotating keys rewrites the jira connector with the new token", async () => {
   const old: Row = { name: "jira", manifest: { name: "jira", auth: { type: "header", headers: { Authorization: "Basic old" } } } };
   const tf = fakeTrueForge(
-    [{ name: "openrouter", manifest: { name: "openrouter", models: [] } }],
+    [{ name: "openrouter", manifest: { name: "openrouter", models: DEEPSEEK } }],
     [{ name: "github", manifest: {} }, { name: "triage", manifest: {} }, old],
   );
   const steps = await registerAll("http://localhost:8790", both, { ...opts, rotateKeys: true }, tf.fetchFn, log, undefined, JIRA);
@@ -298,7 +333,7 @@ const jiraServers: Row[] = [
   { name: "triage", manifest: {}, auth_status: { status: "not_required" } },
   { name: "jira", manifest: {}, auth_status: { status: "authenticated" } },
 ];
-const providers: Row[] = [{ name: "openrouter", manifest: {} }];
+const providers: Row[] = [{ name: "openrouter", manifest: { models: DEEPSEEK } }];
 const JIRA_CHECKS = ["connector jira", "jira agent gates", "jira agent tools", "jira agent triage", "jira agent web_search"];
 
 test("doctor with jira passes the committed agent files", async () => {
