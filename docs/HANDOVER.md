@@ -24,9 +24,13 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 On another repo most tickets will likely be held as `uncertain` (investigate-only, no patch) until a retuned policy
 (`triage-v2`, re-probed) exists.
 
+**Live check after the fix wave (15:20):** triage MCP restarted on the final code; `scripts/setup.sh --no-start`
+re-registered the agent with the re-worded skill (provider and both connectors `kept`, no key sent; doctor all ✓);
+`scripts/score.sh TR-03` → **PASS 27/27**: Jev `uncertain` (margin 0.04), patch held, zero branch/push/PR calls,
+outcome `policy_blocked`. The humanize facts moved into labelled examples still reach the demo agent.
+
 **Next**
-1. Re-register the agent (`setup_agents.ts --inline-skill` or `setup.sh --no-start`) so the live TrueForge agent gets
-   the re-worded skill.
+1. Merge decision for `feat/any-repo`.
 2. Next steps 1–3 of the 14:52 entry below still stand (second repo, public repo, Daytona demo).
 
 ---
