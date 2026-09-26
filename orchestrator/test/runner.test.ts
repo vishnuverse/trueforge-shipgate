@@ -370,6 +370,106 @@ test("a silent agent is nudged at most twice, then the run ends without a handof
   assert.equal(readRun(res.runDir).meta.nudges, 2);
 });
 
+/** Allows every gate and remembers the Jira context each gate was shown with. */
+function recordingDecider(seen: unknown[]): Decider {
+  return {
+    mode: "script",
+    close: () => {},
+    decide: async (c) => {
+      seen.push(c.jira ?? null);
+      return { decision: "allow", reason: null, unexpected: false };
+    },
+  };
+}
+
+function recordingLabels(calls: string[], failStart = false): LabelOps {
+  return {
+    onStart: async (t) => {
+      calls.push(`start ${JSON.stringify(t)}`);
+      if (failStart) throw new Error("Jira GET /rest/api/2/issue/KAN-4 -> 401");
+      return ["+triaged", "status:To Do->In Progress"];
+    },
+    onEnd: async (t, outcome) => {
+      calls.push(`end ${JSON.stringify(t)} ${String(outcome)}`);
+      return [];
+    },
+  };
+}
+
+test("jira run: runs/<KEY>/, meta issue null + ticket + source, session metadata, labels get the key", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const tf = new FakeTrueForge(withFinalMessage(loadFixture(), HANDOFF_TEXT));
+  const calls: string[] = [];
+  const seen: unknown[] = [];
+  const opts = options(root, { issue: null, ticket: "KAN-4", jiraCloudId: "cloud-1", scenarioId: null });
+  const res = await runOnce(opts, { tf, decider: recordingDecider(seen), labels: recordingLabels(calls), log: quiet });
+  assert.equal(res.status, "completed");
+  assert.match(res.runDir, /runs\/KAN-4\/\d{8}T\d{6}Z$/);
+  assert.deepEqual(tf.created[0]?.metadata, {
+    shipgate_run_id: "KAN-4",
+    ticket: "KAN-4",
+    source: "jira",
+    repo: "vishnuverse/humanize",
+    approve_mode: "script",
+  });
+  assert.deepEqual(calls, ['start "KAN-4"', 'end "KAN-4" stopped']);
+  assert.deepEqual(seen, [{ key: "KAN-4", cloudId: "cloud-1" }]);
+  assert.equal(res.records[0]?.run_id, "KAN-4");
+  const meta = readRun(res.runDir).meta;
+  assert.deepEqual(Object.keys(meta).slice(0, 6), ["run_id", "scenario", "issue", "ticket", "source", "repo"]);
+  assert.equal(meta.run_id, "KAN-4");
+  assert.equal(meta.issue, null);
+  assert.equal(meta.ticket, "KAN-4");
+  assert.equal(meta.source, "jira");
+  // a scenario id still names the run
+  const scen = await runOnce(options(root, { issue: null, ticket: "KAN-4", scenarioId: "TR-J01" }), {
+    tf: new FakeTrueForge(withFinalMessage(loadFixture(), HANDOFF_TEXT)),
+    decider: recordingDecider([]),
+    labels: null,
+    log: quiet,
+  });
+  assert.match(scen.runDir, /runs\/TR-J01\//);
+  assert.equal(scen.meta.ticket, "KAN-4");
+});
+
+test("github run: meta has no ticket/source keys, session metadata as before, no Jira context at the gate", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const tf = new FakeTrueForge(withFinalMessage(loadFixture(), HANDOFF_TEXT));
+  const calls: string[] = [];
+  const seen: unknown[] = [];
+  const res = await runOnce(options(root), { tf, decider: recordingDecider(seen), labels: recordingLabels(calls), log: quiet });
+  assert.deepEqual(tf.created[0]?.metadata, {
+    shipgate_run_id: "TR-DEV",
+    issue: "1",
+    repo: "vishnuverse/humanize",
+    approve_mode: "script",
+  });
+  assert.deepEqual(calls, ["start 1", "end 1 stopped"]);
+  assert.deepEqual(seen, [null]);
+  const meta = readRun(res.runDir).meta;
+  assert.equal(meta.issue, 1);
+  assert.ok(!("ticket" in meta) && !("source" in meta));
+});
+
+test("a Jira status failure is recorded and the run goes on", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const tf = new FakeTrueForge(withFinalMessage(loadFixture(), HANDOFF_TEXT));
+  const calls: string[] = [];
+  const opts = options(root, { issue: null, ticket: "KAN-4", scenarioId: null });
+  const res = await runOnce(opts, { tf, decider: recordingDecider([]), labels: recordingLabels(calls, true), log: quiet });
+  assert.equal(res.status, "completed");
+  assert.deepEqual(res.meta.labels.errors, ["start: Jira GET /rest/api/2/issue/KAN-4 -> 401"]);
+  assert.equal(calls.length, 2); // the end update still ran
+});
+
+test("run options need exactly one of issue / ticket", async () => {
+  const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
+  const deps = { tf: new FakeTrueForge(loadFixture()), decider: recordingDecider([]), labels: null, log: quiet };
+  await assert.rejects(runOnce(options(root, { ticket: "KAN-4" }), deps), /not both/);
+  await assert.rejects(runOnce(options(root, { issue: null }), deps), /issue or ticket is required/);
+  assert.equal(deps.tf.created.length, 0);
+});
+
 test("a run that ends with a handoff is never nudged", async () => {
   const root = mkdtempSync(join(tmpdir(), "shipgate-run-"));
   const tf = new SilentThenFake([HANDOFF_TEXT]);

@@ -43,6 +43,31 @@ test("load from a scenarios dir; bad ids and mismatched ids are refused", () => 
   assert.throws(() => parseScenario("approvals: [{tool: x, decision: maybe}]", "x.yaml"), /allow\|deny/);
 });
 
+test("a Jira scenario names ticket: instead of issue:", () => {
+  const j01 = `id: TR-J01
+ticket: KAN-4
+timeout_min: 15
+approvals:
+  - {tool: create_pull_request, decision: allow}
+  - {tool: addOrEditJiraIssueComment, decision: allow}
+`;
+  const s = parseScenario(j01, "TR-J01.yaml", "TR-J01");
+  assert.equal(s.ticket, "KAN-4");
+  assert.equal(s.issue, null);
+  assert.deepEqual(
+    s.approvals.map((a) => a.tool),
+    ["create_pull_request", "addOrEditJiraIssueComment"],
+  );
+  assert.equal(parseScenario(TR10, "TR-10.yaml").ticket, null);
+});
+
+test("exactly one of issue / ticket; a ticket must look like a Jira key", () => {
+  assert.throws(() => parseScenario("id: X\nissue: 1\nticket: KAN-4\n", "X.yaml"), /exactly one of issue/);
+  assert.throws(() => parseScenario("id: X\napprovals: []\n", "X.yaml"), /exactly one of issue/);
+  assert.throws(() => parseScenario("id: X\nticket: kan-4\n", "X.yaml"), /Jira key such as KAN-4/);
+  assert.throws(() => parseScenario("id: X\nticket: 4\n", "X.yaml"), /Jira key such as KAN-4/);
+});
+
 test("script mode: entries are consumed in order", () => {
   const c = new ScriptCursor(parseScenario(TR10, "TR-10.yaml").approvals);
   assert.deepEqual(c.answer("create_pull_request"), {

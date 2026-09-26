@@ -17,6 +17,8 @@ export interface GateContext {
   /** 1-based count of gates in this run. */
   gateNumber: number;
   uiUrl: string;
+  /** Jira runs: the run's ticket and the configured cloudId (display only: warnings on the Jira comment gate). */
+  jira?: { key: string; cloudId: string | null } | null;
 }
 
 export interface Decision {
@@ -76,20 +78,75 @@ export function cardFromBody(body: unknown): string | null {
   return card.join("\n");
 }
 
+/** The Atlassian MCP tool that posts (or, with commentId, edits) a Jira comment. Gated by name. */
+export const JIRA_COMMENT_TOOL = "addOrEditJiraIssueComment";
+/** A ticket reply this long or shorter is shown whole on the gate card. */
+export const REPLY_MAX_WORDS = 120;
+
+function inputObject(input: unknown): Record<string, unknown> {
+  return input !== null && typeof input === "object" && !Array.isArray(input) ? (input as Record<string, unknown>) : {};
+}
+
+/**
+ * Things the human should look at twice on a Jira comment gate. Display only: the orchestrator never decides,
+ * the human still answers the gate.
+ */
+export function gateWarnings(ctx: GateContext): string[] {
+  if (ctx.gate.tool !== JIRA_COMMENT_TOOL) return [];
+  const input = inputObject(ctx.gate.input);
+  const show = (v: unknown) => (v === undefined ? "(missing)" : JSON.stringify(v));
+  const out: string[] = [];
+  if (input.commentId !== undefined && input.commentId !== null) {
+    out.push(`commentId ${show(input.commentId)} is set: this EDITS an existing comment instead of adding a reply`);
+  }
+  if (!ctx.jira) {
+    out.push("this run has no Jira ticket");
+  } else {
+    if (input.issueIdOrKey !== ctx.jira.key) {
+      out.push(`issueIdOrKey ${show(input.issueIdOrKey)} is not this run's ticket ${ctx.jira.key}`);
+    }
+    if (ctx.jira.cloudId !== null && input.cloudId !== ctx.jira.cloudId) {
+      out.push(`cloudId ${show(input.cloudId)} is not the configured cloudId ${ctx.jira.cloudId}`);
+    }
+  }
+  return out.map((w) => `WARNING: ${sanitize(w)}`);
+}
+
+/** The reply text, whole when it is at most REPLY_MAX_WORDS words (else cut after that many words). */
+function replySection(input: Record<string, unknown>): string[] {
+  const body = input.commentBody;
+  if (typeof body !== "string") return [];
+  const words = [...body.matchAll(/\S+/g)];
+  const format = typeof input.contentFormat === "string" ? `, ${input.contentFormat}` : "";
+  let text = body;
+  if (words.length > REPLY_MAX_WORDS) {
+    const last = words[REPLY_MAX_WORDS - 1] as RegExpMatchArray;
+    text = `${body.slice(0, (last.index ?? 0) + last[0].length)} … (+${words.length - REPLY_MAX_WORDS} words, [v] shows all)`;
+  }
+  return [`--- Jira reply (commentBody, ${words.length} words${format}) ---`, sanitize(text)];
+}
+
 export function renderGate(ctx: GateContext, maxString = 600): string {
   const g = ctx.gate;
   const bar = "=".repeat(72);
-  const card = cardFromBody((g.input as Record<string, unknown> | null | undefined)?.["body"]);
+  const input = inputObject(g.input);
+  const card = cardFromBody(input["body"]);
+  const jiraComment = g.tool === JIRA_COMMENT_TOOL;
+  const reply = jiraComment ? replySection(input) : [];
+  // The reply is shown above as text; the JSON dump keeps the other fields readable.
+  const dumped = reply.length > 0 ? { ...input, commentBody: "(shown above)" } : g.input;
   const lines = [
     "",
     bar,
     `GATE ${ctx.gateNumber} · ${toolLabel(g)} · ${g.toolCallId} · args sha256 ${g.argsSha256.slice(0, 12)}`,
     bar,
+    ...gateWarnings(ctx),
     "--- agent's latest message before the gate ---",
     ctx.evidence ? sanitize(ctx.evidence) : "(none)",
     ...(card ? ["--- evidence card (from the PR body) ---", sanitize(card)] : []),
+    ...reply,
     `--- ${toolLabel(g)} input ---`,
-    sanitize(JSON.stringify(shorten(g.input, maxString), null, 2)),
+    sanitize(JSON.stringify(shorten(dumped, maxString), null, 2)),
     bar,
   ];
   return lines.join("\n");
@@ -124,6 +181,7 @@ export class ScriptDecider implements Decider {
     } else {
       this.out.print(`gate ${ctx.gateNumber} ${toolLabel(ctx.gate)}: script -> ${what}`);
     }
+    for (const w of gateWarnings(ctx)) this.out.print(`  ${w}`);
     return { decision: a.decision, reason: a.reason, unexpected: a.unexpected, expectedTool: a.expectedTool };
   }
 }

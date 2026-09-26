@@ -13,6 +13,7 @@ import {
 } from "./events.ts";
 import type { LabelOps } from "./labels.ts";
 import { extractHandoff, parsePrefix, type Prefix } from "./protocol.ts";
+import { ticketId, ticketRunId, type Ticket } from "./ticket.ts";
 import { sleep, type AgentRef, type TrueForgeApi, type TurnInfo, type TurnInput } from "./trueforge.ts";
 
 export type RunStatus = "completed" | "timeout" | "error" | "unexpected_gate" | "no_handoff";
@@ -26,7 +27,12 @@ export const EXIT: Record<RunStatus, number> = {
 };
 
 export interface RunOptions {
-  issue: number;
+  /** GitHub issue number; null for a Jira run. */
+  issue: number | null;
+  /** Jira key (e.g. KAN-4) for a Jira run; absent or null for a GitHub run. Exactly one of issue / ticket. */
+  ticket?: string | null;
+  /** Jira runs: the configured cloudId, shown against the Jira comment gate's input (display only). */
+  jiraCloudId?: string | null;
   mode: Mode;
   scenarioId: string | null;
   /** Saved agent name, or an inline spec (dev only). */
@@ -70,7 +76,11 @@ export interface ApprovalRecord {
 export interface RunMeta {
   run_id: string;
   scenario: string | null;
-  issue: number;
+  /** null for a Jira run. */
+  issue: number | null;
+  /** Jira runs only (GitHub runs have neither key). */
+  ticket?: string;
+  source?: "jira";
   repo: string;
   agent: string;
   session_id: string | null;
@@ -176,11 +186,21 @@ export const NUDGE =
   "with only the handoff JSON block and nothing else. Otherwise continue with the next step of the procedure.";
 export const MAX_NUDGES = 2;
 
+/** The run's ticket from RunOptions: exactly one of issue (GitHub) / ticket (Jira). */
+export function runTicket(opts: Pick<RunOptions, "issue" | "ticket">): Ticket {
+  const key = opts.ticket ?? null;
+  if (key !== null && opts.issue !== null) throw new Error("run options: give issue or ticket, not both");
+  if (key !== null) return { source: "jira", key };
+  if (opts.issue === null) throw new Error("run options: issue or ticket is required");
+  return { source: "github", number: opts.issue };
+}
+
 export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResult> {
   const now = deps.now ?? (() => new Date());
   const { tf, decider, labels, log } = deps;
+  const ticket = runTicket(opts);
   const started = now();
-  const runId = opts.scenarioId ?? `issue-${opts.issue}`;
+  const runId = ticketRunId(ticket, opts.scenarioId);
   const runDir = join(opts.repoRoot, "runs", runId, utcStamp(started));
   mkdirSync(runDir, { recursive: true });
   const approvalsLog = join(opts.repoRoot, "approvals.log");
@@ -236,17 +256,17 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
   };
 
   try {
-    sessionId = await tf.createSession(opts.agent, {
-      shipgate_run_id: runId,
-      issue: String(opts.issue),
-      repo: opts.repo,
-      approve_mode: opts.mode,
-    });
+    sessionId = await tf.createSession(
+      opts.agent,
+      ticket.source === "github"
+        ? { shipgate_run_id: runId, issue: String(ticket.number), repo: opts.repo, approve_mode: opts.mode }
+        : { shipgate_run_id: runId, ticket: ticket.key, source: "jira", repo: opts.repo, approve_mode: opts.mode },
+    );
     log(`session ${sessionId}  (${uiSessionUrl(opts.trueforgeUrl, sessionId)})`);
 
     if (labels) {
       try {
-        labelInfo.start = await labels.onStart(opts.issue);
+        labelInfo.start = await labels.onStart(ticketId(ticket));
         log(`labels: ${labelInfo.start.join(" ") || "no change"}`);
       } catch (e) {
         labelInfo.errors.push(`start: ${(e as Error).message}`);
@@ -290,6 +310,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
           evidence: evidenceBefore(events, gate.sourceEventId),
           gateNumber,
           uiUrl: uiSessionUrl(opts.trueforgeUrl, sessionId),
+          jira: ticket.source === "jira" ? { key: ticket.key, cloudId: opts.jiraCloudId ?? null } : null,
         };
         const d = await decider.decide(ctx, signal);
         const rec = record(turnId, gate, d);
@@ -366,7 +387,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
 
   if (labels && sessionId) {
     try {
-      labelInfo.end = await labels.onEnd(opts.issue, (handoffObj?.outcome as string | undefined) ?? null);
+      labelInfo.end = await labels.onEnd(ticketId(ticket), (handoffObj?.outcome as string | undefined) ?? null);
       log(`labels: ${labelInfo.end.join(" ") || "no change"}`);
     } catch (e) {
       labelInfo.errors.push(`end: ${(e as Error).message}`);
@@ -377,7 +398,8 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
   const meta: RunMeta = {
     run_id: runId,
     scenario: opts.scenarioId,
-    issue: opts.issue,
+    issue: ticket.source === "github" ? ticket.number : null,
+    ...(ticket.source === "jira" ? { ticket: ticket.key, source: "jira" as const } : {}),
     repo: opts.repo,
     agent: opts.agentLabel,
     session_id: sessionId,
