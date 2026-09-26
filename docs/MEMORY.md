@@ -111,6 +111,8 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 - v2 tool names differ from the claude.ai Atlassian connector: comment = `addOrEditJiraIssueComment` (not `addCommentToJiraIssue`); passing `commentId` edits an existing comment. Write tools carry `destructiveHint: false`, so gate them by name. (our run, 2026-09-26)
 - Jira REST: `GET /rest/api/2/issue/{key}` returns `description` as a plain (wiki-markup) string or null — no ADF flattening needed; search is `GET /rest/api/3/search/jql` (v2 search removed; unbounded JQL is refused); transitions `GET/POST /rest/api/3/issue/{key}/transitions`. (our run, 2026-09-26)
 
+- TrueForge 0.2.1: submitting an approval card in the web UI while a script-mode run already answered that gate cancels the running turn (`state.reason: "cancelled-for-next-turn"`) even though the UI request itself fails with 422 "no pending approval for tool_call_id". The orchestrator then exits 1 with no handoff. Never click cards during `score.sh` runs. (TR-J01 run 2, 2026-09-26 11:04Z)
+
 ## Learned facts (hackathon)
 - Sat 26 Sep 2026, Polaris campus Bangalore; build 12:00–19:00 IST; demos 19:30–21:00. (truefoundry.com/truefoundry-hackathon)
 - Rules: TrueForge mandatory; real system; sandbox execution; stop before destructive actions; nothing pre-built; disclose AI use; public repo whose README runs on another laptop.

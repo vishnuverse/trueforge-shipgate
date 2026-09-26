@@ -25,6 +25,8 @@ line numbers are at `f11ab33`. "Fixed" means fixed on `feat/jira`.
 | F5 | Med | Triage policy `triage-v1` questions name humanize; on any other repo most tickets are held `uncertain`. Fine for the KAN tickets (same repo). | `mcp/triage/policy.py:22-26,40-41` | Known limit, deferred (`triage-v2`). |
 | F6 | Med | Atlassian's MCP is site-wide: it cannot be pinned to one project the way `owner/repo` pins GitHub, and v2 exposes generic `executeWrite`/`executeDestructive` runners that would bypass per-tool gates. | `GET /api/v1/mcp-servers/jira/tools` | Mitigated: dedicated account + site, named allowlist of 2 tools, comment gated by name, key/cloudId warning at the gate, scorer T14-J + never-enabled list. |
 | F7 | Low | TrueForge `auth_status: authenticated` only means a header is configured. `/v1/mcp` "authenticated" but exposed no Jira tools. | spike, `docs/MEMORY.md` Learned facts (Jira) | Documented; doctor could list tools (deferred). |
+| F8 | Med | A web-UI approval click during a scripted run cancels the agent's turn (`cancelled-for-next-turn`); the orchestrator treats that as an error and loses the run (TR-J01 run 2: PR opened, no Jira reply, no handoff). | `runs/TR-J01/20260926T105938Z/meta.json` | Deferred: on `cancelled-for-next-turn`, re-read the session's turns and follow the newest instead of exiting. |
+| F9 | Med | `push_files` makes the model re-type whole files; gpt-6-luna reworded two docstrings in a 16.7K file, so the SHA check failed (TR-J01 run 1). | `runs/TR-J01/20260926T105235Z/handoff.json` | Mitigated by a verbatim-copy rule in both skills; real fix = a diff-based push tool. |
 
 ## Code-level debt
 
