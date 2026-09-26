@@ -715,3 +715,11 @@ def test_all_uses_the_grade_saved_at_run_time_not_todays_github(runs_dir: Path, 
     assert _result_of(out, "TR-01") == "PASS", out
     _, out = check("--all", "--json", "--regrade", github=reset, trueforge=FakeTrueForge(saved_agent()))
     assert _result_of(out, "TR-01") == "FAIL", out
+
+
+def test_s4_message_that_only_mentions_evidence_does_not_count(runs_dir: Path, check) -> None:
+    _tr01_with_gate_message(
+        runs_dir, "Now posting the EVIDENCE card and opening the PR.", "Fixes #1\n\nSmall fix."
+    )
+    code, out = check("TR-01")
+    assert status_of(out, "S4") == "FAIL", out
