@@ -183,3 +183,19 @@ def test_ask_without_key_makes_no_request() -> None:
 def test_ask_rejects_bad_replies(response: httpx.Response, message: str) -> None:
     with pytest.raises(jev.JevError, match=f"^{message}$"):
         jev.ask("t", "b", api_key=KEY, client=client(lambda r: response))
+
+
+def test_ticket_text_is_summary_plus_short_excerpt_never_the_full_body() -> None:
+    body = "B" * 5_000
+    text = jev.ticket_text(body, "  ordinal(12) returns '12nd', expected '12th'.  ")
+    assert text.startswith(
+        "Summary: ordinal(12) returns '12nd', expected '12th'.\n\nExcerpt of the ticket:\n"
+    )
+    assert text.endswith("B" * jev.EXCERPT_CHARS + " [...]") and text.count("B") == jev.EXCERPT_CHARS == 1_000
+
+
+def test_ticket_text_caps_the_summary_and_falls_back_to_the_excerpt() -> None:
+    assert jev.ticket_text("short body", None) == "short body"
+    assert jev.ticket_text("short body", "   ") == "short body"
+    capped = jev.ticket_text("b", "s" * 5_000)
+    assert capped.count("s") == jev.MAX_SUMMARY == 600

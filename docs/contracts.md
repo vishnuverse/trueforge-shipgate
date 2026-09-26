@@ -126,7 +126,10 @@ Server `triage` at `http://127.0.0.1:8803/mcp` (`uv run mcp/triage/server.py`), 
 
 - Annotations: `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true`.
   Not gated; it is listed in `enable_tools` only.
-- Input: `{"issue_number": int}`, which must be ≥ 1. The repo is fixed and can't be passed in.
+- Input: `{"issue_number": int, "summary": str}`. `issue_number` must be ≥ 1; `summary` is optional (the agent's own
+  1-2 sentence summary, capped at 600 characters). The repo is fixed and can't be passed in.
+- Jev never gets the full ticket: `state.ticket.body` = `Summary: <summary>` plus the first 1,000 characters of the
+  issue body (`jev.ticket_text`). Without a summary, only the excerpt. The questions and classes are unchanged.
 - Output is always a JSON object; the tool never raises to the agent:
 
 ```json

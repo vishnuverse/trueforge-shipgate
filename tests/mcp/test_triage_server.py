@@ -154,3 +154,32 @@ def test_env_file_parsing_and_precedence(tmp_path: Path) -> None:
     env = server.load_env(dotenv, {"GITHUB_PAT": "from-env"})
     assert env["GITHUB_PAT"] == "from-env" and env["TYPESAFE_API_KEY"] == "from-file"
     assert server.read_dotenv(tmp_path / "missing.env") == {}
+
+
+def test_jev_gets_title_summary_and_excerpt_not_the_full_body(tmp_path: Path) -> None:
+    long_issue = {**ISSUE, "body": "Expected 12th, got 12nd. " + "detail " * 2_000}
+    w = World(issue=long_issue)
+    v = server.triage(
+        1,
+        client=w.client(),
+        env=ENV,
+        audit_log=tmp_path / "t.jsonl",
+        summary="ordinal(12) gives 12nd, not 12th.",
+    )
+    assert v["route"] == "defect"
+    [jev_req] = [r for r in w.requests if r.url.host != "api.github.com"]
+    ticket = json.loads(jev_req.content)["state"]["ticket"]
+    assert ticket["title"] == ISSUE["title"]
+    assert ticket["body"].startswith("Summary: ordinal(12) gives 12nd, not 12th.\n\nExcerpt of the ticket:\n")
+    assert long_issue["body"] not in ticket["body"] and len(ticket["body"]) < 1_200
+
+
+def test_tool_accepts_an_optional_summary(tmp_path: Path) -> None:
+    w = World()
+    app = server.build_app(client=w.client(), env=ENV, audit_log=tmp_path / "t.jsonl")
+    [tool] = asyncio.run(app.list_tools())
+    assert tool.inputSchema["properties"]["summary"]["type"] == "string"
+    _, structured = asyncio.run(app.call_tool("triage_ticket", {"issue_number": 1, "summary": "s"}))
+    assert structured["route"] == "defect"
+    [jev_req] = [r for r in w.requests if r.url.host != "api.github.com"]
+    assert json.loads(jev_req.content)["state"]["ticket"]["body"].startswith("Summary: s\n")
