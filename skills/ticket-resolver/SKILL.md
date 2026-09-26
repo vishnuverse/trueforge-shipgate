@@ -98,8 +98,10 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    (10 times: `for i in 1 2 3 4 5 6 7 8 9 10`). Not reproduced: cannot_reproduce push-back. Else step 6b.
 6b. Contract check, before any fix: read the function's docstring. If your test fails only because it passes input
    the docstring treats differently from the ticket's assumption (hard rule 11), the code works as documented: do
-   not fix; cannot_reproduce push-back whose question asks about the caller's input (e.g. "is created_at a naive
-   UTC value? naturaltime treats naive datetimes as local time; pass an aware datetime"). Else step 7.
+   not fix. Rewrite tests/test_issue_<n>.py to call the function the way the docstring documents, run it 3 times;
+   0/3 failing = cannot_reproduce (repro before "0/3 fail"), and the comment reports that documented-usage result.
+   Mention the other input only in the question (e.g. "is created_at a naive UTC value? naturaltime treats naive
+   datetimes as local time; pass an aware datetime"). Else step 7.
 7. Fix, max 2 attempts. An attempt = the smallest root-cause change in src/humanize/**, in the code's own style,
    followed by the evidence check. Red: `P git checkout -- src/` (keep the test), write one line on why attempt 1
    failed, try a different change. Two red attempts: could_not_fix push-back.
