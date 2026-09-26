@@ -113,6 +113,8 @@ Edit `shipgate.yaml`:
 Then run `scripts/setup.sh` as above. **Limits:** Jev's triage thresholds were tuned on humanize — expect more
 tickets held as `uncertain` on a different codebase, which is the safe direction. The `tests/scenarios/TR-*.yaml`
 scenarios and the scorecard (`check.py`) score the demo fork only; `reset.sh` refuses to run against any other repo.
+The any-repo flow itself (`shipgate.yaml` + `scripts/setup.sh` against a non-default target) is proven on the
+humanize fork only — no second repo has been run live yet.
 
 #### Scored demo (the humanize fork)
 To reproduce the scored demo fork instead of pointing at your own repo:
@@ -152,7 +154,8 @@ day, about 45 runs including the bake-offs, cost **$0.91**. Details: [`docs/mode
 | Known weakness | GitHub's MCP needs whole files in `push_files`; retyping 16–22 KB files sometimes fails, and the agent then reaches for forbidden workarounds (sandbox `mcp_client`, `gh`, `api.github.com`). TrueForge refuses the writes and `check.py` H4 flags every attempt, but the run is lost. Accepted for the event: the demo runs with a human approving in the UI, and a derailed run is re-run |
 | Demo | UI dry run passed on #1 (human `REVISE` at the PR gate → revised title → PR vishnuverse/humanize#24 → reply). Next: the filmed run, on Daytona once its key arrives |
 | Jev triage | Pre-check live since 26 Sep: on #3 (works as documented) Jev said `uncertain` and the patch was held in **4/4** runs with zero branch/push/PR calls (before triage the agent patched #3 about 4 runs in 5; only the human gate stopped it). #1 `defect 0.98`, #5 `docs 0.99` with the AI-instructions flag, #7 `other_project` |
-| Next | Any-repo configuration + one-command setup (`shipgate.yaml`, `scripts/setup.sh`); Runbook Executor on a local kind cluster |
+| Any-repo setup | Live acceptance (26 Sep, Task 10): `scripts/setup.sh --no-start` against the running install reported `kept` for the provider and both connectors (no `created`/`rotated`), doctor all ✓, exit 0; `--check --smoke 1` gave `triage #1 on vishnuverse/humanize: defect · defect 0.97 (margin 0.95) · in_scope 0.88 · patch allowed`, exit 0. A fresh clone on `feat/any-repo` repeated `setup.sh --no-start` clean, then `scripts/score.sh TR-01`: **`# RESULT TR-01 PASS (34 passed, 0 failed, 0 skipped)`**, exit 0 (H4 clean this run too). Not yet run against a second repo |
+| Next | Prove the any-repo flow against a second, real repo when one is offered; Runbook Executor on a local kind cluster |
 
 ## Repository
 

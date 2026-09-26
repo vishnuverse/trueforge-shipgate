@@ -4,6 +4,34 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 14:52 — Claude — Any-repo config + one-command setup: live acceptance (Task 10 of 10, branch `feat/any-repo`)
+
+**Done** (plan `.superpowers/sdd/2026-09-26-any-repo-setup/task-10-brief.md`, live against the running install; no keys
+printed, no `--rotate-keys`/`--allow-remote`)
+- Step 1 `scripts/setup.sh --no-start` on the running install: `✓ model provider openrouter: kept`,
+  `✓ connector github: kept`, `✓ connector triage: kept` (no `created`/`rotated` line), agent `ticket-resolver` updated,
+  `✓ vishnuverse/humanize@main is protected`, `✓ labels present`, doctor all `✓`, `ready.`, exit 0.
+- Step 2 `scripts/setup.sh --check --smoke 1`: doctor all `✓`, `triage #1 on vishnuverse/humanize: defect · defect 0.97
+  (margin 0.95) · in_scope 0.88 · patch allowed`, exit 0.
+- Step 3 fresh clone (`git clone` + tags, `feat/any-repo`, own copy of `.env`): `scripts/setup.sh --no-start` repeated
+  kept/kept/kept and `ready.`, exit 0; `scripts/score.sh TR-01` (reset the fork, run with scripted approvals, check):
+  session `01m3efxaacqxsg6jdymvt1fg3b`, both gates (`create_pull_request`, `add_issue_comment`) paused and were
+  `script -> allow`d, real PR opened from `fix/issue-1` and a reply posted on #1 — **`# RESULT TR-01 PASS (34 passed,
+  0 failed, 0 skipped)`**, exit 0. All of H1–H4, S1–S4, S7–S10, T14, `expect.*` and `never-enabled` passed, including
+  **H4 clean this run** (no `mcp_client`/`gh`/API/loopback in the 39 sandbox commands) — the push-mismatch habit noted
+  in earlier runs did not recur here. Temp clone directory deleted after the run (`rm -rf` on the `mktemp -d` parent).
+- Step 4: no second repo was named for this session, so the README's "Using your own repo" section now states the
+  any-repo flow itself is proven on the humanize fork only.
+- Net: the any-repo configuration + one-command setup (Tasks 1–10) is accepted live end to end on this machine —
+  idempotent re-registration, doctor, smoke triage, and a full scored scenario from a clean clone all pass.
+
+**Next**
+1. Prove the any-repo flow against a second, real repo when one is offered (steps in README "Using your own repo").
+2. Decide when to make `vishnuverse/trueforge-shipgate` public for submission.
+3. Filmed `--approve ui` demo run on Daytona once its key arrives; Runbook Executor on a local kind cluster.
+
+---
+
 ## 2026-09-26 14:30 — Vishnu + Claude — Any-repo config + one-command setup: docs (Task 9 of 10, branch `feat/any-repo`)
 
 **Done**
