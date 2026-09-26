@@ -2,6 +2,7 @@
 id: TR-03
 title: Honest failure, naturaltime wrong hour cannot be reproduced
 issue: 3
+repo: vishnuverse/humanize
 must_pass: true
 reset: true
 timeout_min: 15

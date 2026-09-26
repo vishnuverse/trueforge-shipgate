@@ -9,7 +9,7 @@ from typing import Any
 
 import yaml
 
-from .constants import DECISIONS, GATED_TOOLS
+from .constants import DECISIONS, FULL_REPO, GATED_TOOLS
 
 ID_RE = re.compile(r"^[A-Z]{2}-\d{2}$")
 
@@ -63,6 +63,7 @@ class Scenario:
     depends_on: str | None = None
     path: Path | None = None
     raw: dict[str, Any] = field(default_factory=dict)
+    repo: str = ""
 
 
 def _fail(path: Path, msg: str) -> ScenarioError:
@@ -77,7 +78,7 @@ def load_scenario(path: Path) -> Scenario:
         raise _fail(path, f"invalid YAML: {exc}") from exc
     if not isinstance(data, dict):
         raise _fail(path, "top level must be a mapping")
-    for key in ("id", "title", "issue", "reset", "timeout_min", "must_pass", "approvals", "expect"):
+    for key in ("id", "title", "issue", "repo", "reset", "timeout_min", "must_pass", "approvals", "expect"):
         if key not in data:
             raise _fail(path, f"missing key {key!r}")
     sid = data["id"]
@@ -86,6 +87,13 @@ def load_scenario(path: Path) -> Scenario:
     issue = data["issue"]
     if not isinstance(issue, int) or isinstance(issue, bool) or issue < 1:
         raise _fail(path, "issue must be a positive integer")
+    repo = data["repo"]
+    if not isinstance(repo, str) or repo.lower() != FULL_REPO.lower():
+        raise _fail(
+            path,
+            f"repo {repo!r} is not the configured target {FULL_REPO!r} (shipgate.yaml); "
+            "scenarios are demo-only",
+        )
     for key in ("reset", "must_pass"):
         if not isinstance(data[key], bool):
             raise _fail(path, f"{key} must be true or false")
@@ -132,6 +140,7 @@ def load_scenario(path: Path) -> Scenario:
         depends_on=depends_on,
         path=path,
         raw=data,
+        repo=repo,
     )
 
 

@@ -2,6 +2,7 @@
 id: TR-04
 title: Intermittent, naturalday sometimes says yesterday
 issue: 4
+repo: vishnuverse/humanize
 must_pass: false
 reset: true
 timeout_min: 15

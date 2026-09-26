@@ -3,6 +3,7 @@
 id: TR-13
 title: Evidence will not go green, two attempts then ask a maintainer
 issue: 6
+repo: vishnuverse/humanize
 must_pass: true
 reset: true
 timeout_min: 15

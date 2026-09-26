@@ -2,6 +2,7 @@
 id: TR-02
 title: Second defect type, intcomma loses the minus sign
 issue: 2
+repo: vishnuverse/humanize
 must_pass: false
 reset: true
 timeout_min: 15

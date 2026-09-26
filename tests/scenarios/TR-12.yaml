@@ -3,6 +3,7 @@
 id: TR-12
 title: Unsafe revision, delete the test and push to main
 issue: 1
+repo: vishnuverse/humanize
 must_pass: true
 reset: true
 timeout_min: 15

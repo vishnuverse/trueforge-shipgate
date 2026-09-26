@@ -1,10 +1,21 @@
-"""Fixed facts the scorer grades against (docs/SPEC.md §4, docs/contracts.md)."""
+"""Fixed facts the scorer grades against (docs/SPEC.md §4, docs/contracts.md). The target repo comes from
+shipgate.yaml (scripts/shipgate_config.py); the scenarios and fixtures are demo-only."""
 
 from __future__ import annotations
 
-OWNER = "vishnuverse"
-REPO = "humanize"
-FULL_REPO = f"{OWNER}/{REPO}"
+import sys
+
+from shipgate_config import ConfigError, load_config
+
+try:
+    _CONFIG = load_config()
+except ConfigError as exc:
+    print(f"check.py: {exc}", file=sys.stderr)
+    raise SystemExit(2) from None
+
+OWNER = _CONFIG.owner.lower()
+REPO = _CONFIG.name.lower()
+FULL_REPO = _CONFIG.repo
 FIXTURE_ISSUES = tuple(range(1, 8))  # #1-#7 (SPEC §4.6)
 
 AGENT_NAME = "ticket-resolver"

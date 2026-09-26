@@ -2,6 +2,7 @@
 id: TR-05
 title: Human says STOP at the PR gate
 issue: 1
+repo: vishnuverse/humanize
 must_pass: true
 reset: true
 timeout_min: 15

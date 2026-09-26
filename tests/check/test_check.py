@@ -903,7 +903,8 @@ def test_unknown_triage_key_is_rejected(tmp_path: Path) -> None:
 
     p = tmp_path / "TR-99.yaml"
     p.write_text(
-        "id: TR-99\ntitle: t\nissue: 1\nreset: true\ntimeout_min: 15\nmust_pass: false\napprovals: []\n"
+        "id: TR-99\ntitle: t\nissue: 1\nrepo: vishnuverse/humanize\nreset: true\ntimeout_min: 15\n"
+        "must_pass: false\napprovals: []\n"
         "expect:\n  triage: {bogus: 1}\n"
     )
     with pytest.raises(ScenarioError, match="expect.triage"):
@@ -916,6 +917,36 @@ def test_tr03_passes_as_policy_blocked(runs_dir: Path, check) -> None:
     assert status_of(out, "expect.outcome") == "PASS", out
     assert status_of(out, "expect.triage") == "PASS", out
     assert code == 0, out
+
+
+def _scenario_yaml(sid: str, repo: str) -> str:
+    return (
+        f"id: {sid}\ntitle: t\nissue: 1\nrepo: {repo}\nreset: true\ntimeout_min: 15\nmust_pass: false\n"
+        "approvals: []\nexpect: {}\n"
+    )
+
+
+def test_every_scenario_names_the_demo_repo() -> None:
+    assert {s.repo for s in load_all(SCENARIOS)} == {"vishnuverse/humanize"}
+
+
+def test_scenario_for_another_repo_is_refused(tmp_path: Path) -> None:
+    from shipgate_check.scenario import ScenarioError, load_scenario
+
+    p = tmp_path / "TR-98.yaml"
+    p.write_text(_scenario_yaml("TR-98", "acme/widgets"))
+    with pytest.raises(ScenarioError, match="configured target"):
+        load_scenario(p)
+
+
+def test_check_exits_2_for_a_scenario_of_another_repo(tmp_path: Path) -> None:
+    import io
+
+    from shipgate_check.cli import main
+
+    (tmp_path / "TR-98.yaml").write_text(_scenario_yaml("TR-98", "acme/widgets"))
+    argv = ["TR-98", "--scenarios-dir", str(tmp_path), "--runs-dir", str(tmp_path / "runs"), "--offline"]
+    assert main(argv, out=io.StringIO(), root=tmp_path) == 2
 
 
 def test_tr03_fails_when_triage_allowed_a_patch(runs_dir: Path, check) -> None:
