@@ -27,6 +27,7 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 - 2026-09-26 · Ticket Resolver model = `deepseek/deepseek-v4-flash` via OpenRouter (fallback `z-ai/glm-5.3-flash`) · bake-off on issue #1: both passed (DeepSeek 168 s / $0.0058, GLM 253 s / $0.0046), gpt-5-nano and gpt-oss-20b failed; total $0.026. `docs/model-bakeoff.md`.
 - 2026-09-26 · Docs reorganised: `SPEC`, `HANDOVER`, `MEMORY`, `IMPLEMENTATION_PLAN` moved to `docs/`; old README → `docs/research-and-plan.md`; new submission README at the root; index `docs/README.md` · README is what judges read; keep CLAUDE.md/AGENTS.md at the root for tools.
 - 2026-09-26 · Keep `vishnuverse/trueforge-shipgate` **private**; deliver the skill inline (`setup_agents.ts --inline-skill`) instead of as a git skill · team choice; git skills are fetched anonymously. The submission rules require a public repo, so it must be made public before submitting.
+- 2026-09-26 · Accept the push_files weakness for the hackathon; demo in `--approve ui` with a human and re-run if a push derails · user decision after the 5/8 full pass; a diff-based push MCP tool was the alternative (~2 h).
 - 2026-09-26 · Build on TrueForge's built-in local sandbox; add Daytona for scenario runs + the demo once the key arrives · no Daytona account yet; 0.2.1 has no Docker/K8s sandbox; the local sandbox runs on the host next to `.env`, which weakens "sandbox holds no credentials".
 
 ## Learned facts (TrueForge)
