@@ -1,6 +1,6 @@
 // shipgate CLI (docs/contracts.md §2):
 //   npm --prefix orchestrator run shipgate -- run --issue <n> [--approve ui|terminal|script] [--scenario <ID>]
-//       [--agent ticket-resolver] [--timeout-min 10]
+//       [--agent ticket-resolver] [--timeout-min N]  (default: scenario's, else 60 for ui/terminal)
 // Dev flags: --inline-spec <AgentSpec.json>  --prompt <text>  --no-labels
 // Exit: 0 finished + handoff · 1 error · 2 timeout · 3 unexpected gate (script) · 4 no valid handoff.
 import { readFileSync } from "node:fs";
@@ -15,7 +15,8 @@ import { loadScenario, type Scenario } from "./scenario.ts";
 import { TrueForgeClient, type AgentRef } from "./trueforge.ts";
 
 const USAGE = `usage: shipgate run --issue <n> [--approve ui|terminal|script] [--scenario <ID>]
-                    [--agent ticket-resolver] [--timeout-min 10]
+                    [--agent ticket-resolver] [--timeout-min N]
+  --timeout-min defaults to the scenario's timeout_min, else 60 (a human may deliberate at the gates)
                     [--inline-spec <AgentSpec.json>] [--prompt <text>] [--no-labels]`;
 
 class UsageError extends Error {}
@@ -81,6 +82,14 @@ function localDate(d: Date = new Date()): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Minutes before the run is cancelled. The deadline keeps running while a person reads an approval card,
+ *  so runs a human answers (ui / terminal) without a scenario get a generous default. */
+export function resolveTimeoutMin(flag: number | null, scenario: number | null | undefined, mode: Mode): number {
+  if (flag !== null) return flag;
+  if (scenario !== null && scenario !== undefined) return scenario;
+  return mode === "script" ? 15 : 60;
+}
+
 export function defaultPrompt(issue: number, mode: Mode, today: string = localDate()): string {
   // The skill records this mode in each handoff approval entry. The date lives here, not in the agent's
   // instructions, so the system prompt stays byte-identical across days (prompt-cache hits).
@@ -101,7 +110,7 @@ async function main(argv: string[]): Promise<number> {
   }
   const issue = args.issue ?? scenario?.issue ?? null;
   if (issue === null) throw new UsageError("--issue <n> is required");
-  const timeoutMin = args.timeoutMin ?? scenario?.timeoutMin ?? 10;
+  const timeoutMin = resolveTimeoutMin(args.timeoutMin, scenario?.timeoutMin, args.mode);
 
   let agent: AgentRef;
   let agentLabel: string;

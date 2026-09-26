@@ -19,9 +19,11 @@ Change a contract here first, then in code.
 
 ```bash
 npm --prefix orchestrator run shipgate -- run --issue <n> [--approve ui|terminal|script] [--scenario <ID>] \
-    [--agent ticket-resolver] [--timeout-min 10]
+    [--agent ticket-resolver] [--timeout-min N]
 ```
 - `--approve` defaults to `terminal`. `script` requires `--scenario`.
+- `--timeout-min` defaults to the scenario's `timeout_min`, else 60 in `ui` / `terminal` (the deadline keeps running
+  while a person reads an approval card).
 - Exit codes: `0` finished and handoff parsed · `1` error · `2` timeout · `3` unexpected gate in script mode ·
   `4` finished but no valid handoff block.
 - It resolves paths from the repo root, not from `orchestrator/`.

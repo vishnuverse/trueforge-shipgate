@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { defaultPrompt, parseCli } from "../src/cli.ts";
+import { defaultPrompt, parseCli, resolveTimeoutMin } from "../src/cli.ts";
 import { parseDotenv } from "../src/env.ts";
 import { uiSessionUrl, utcStamp } from "../src/runner.ts";
 
@@ -71,4 +71,12 @@ test(".env parsing", () => {
     ),
     { TRUEFORGE_URL: "http://localhost:8790", GITHUB_PAT: "abc#1", X: "a b", Y: "z" },
   );
+});
+
+test("timeout: explicit flag wins, then the scenario, then a human-friendly default", () => {
+  assert.equal(resolveTimeoutMin(30, 15, "ui"), 30);
+  assert.equal(resolveTimeoutMin(null, 15, "script"), 15);
+  // The deadline keeps running while a person reads the approval card, so human modes get room.
+  assert.equal(resolveTimeoutMin(null, null, "ui"), 60);
+  assert.equal(resolveTimeoutMin(null, null, "terminal"), 60);
 });
