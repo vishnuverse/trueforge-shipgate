@@ -6,6 +6,9 @@
  "dotdot-tests-dir.yaml": "python.tests_dir",
  "empty-install.yaml": "python.install",
  "invalid-yaml.yaml": "(file)",
+ "jira-bad-cloud-id.yaml": "jira.cloud_id",
+ "jira-bad-site.yaml": "jira.site",
+ "jira-missing-project.yaml": "jira.project",
  "long-description.yaml": "target.description",
  "missing-description.yaml": "target.description",
  "missing-section.yaml": "python",
@@ -14,6 +17,7 @@
  "unknown-nested-key.yaml": "python.extra",
  "unknown-top-key.yaml": "targt",
  "valid-dotted-repo.yaml": null,
+ "valid-jira.yaml": null,
  "valid-trailing-slash.yaml": null,
  "valid.yaml": null
 }

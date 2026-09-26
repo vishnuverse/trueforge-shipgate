@@ -1,0 +1,18 @@
+target:
+  repo: vishnuverse/humanize
+  default_branch: main
+  description: humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword, naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize.
+python:
+  install: .venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"
+  test: .venv/bin/python -m pytest -q -p no:cacheprovider --benchmark-disable --color=no
+  source_dir: src/humanize
+  tests_dir: tests
+trueforge:
+  url: http://localhost:8790
+  model: openrouter/deepseek-v4-flash
+jira:
+  site: developertunnel.atlassian.net
+  cloud_id: ce61dd8b-2e04-4815-9b7b-60a570df782b
+  status_start: In Progress
+  status_review: In Review
+  status_open: To Do

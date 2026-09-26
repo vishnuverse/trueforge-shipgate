@@ -9,11 +9,12 @@ from pathlib import Path
 import httpx
 import policy
 import server
+import shipgate_env
 from shipgate_config import Config
 
 ENV = {"TYPESAFE_API_KEY": "test-key-not-real", "GITHUB_PAT": "test-pat-not-real"}
 CFG = Config(
-    repo="drax0945/humanize", default_branch="main", description="humanize is a Python library.",
+    repo="vishnuverse/humanize", default_branch="main", description="humanize is a Python library.",
     install="x", test="y", source_dir="src/humanize", tests_dir="tests",
     trueforge_url="http://localhost:8790", model="m",
 )  # fmt: skip
@@ -167,7 +168,7 @@ def test_env_file_parsing_and_precedence(tmp_path: Path) -> None:
         '# comment\nTYPESAFE_API_KEY="from-file"\nGITHUB_PAT=abc\n\nNOT A LINE\nEMPTY=\n'
         'export EXPORTED_KEY="exp-value"\n'
     )
-    assert server.read_dotenv(dotenv) == {
+    assert shipgate_env.read_dotenv(dotenv) == {
         "TYPESAFE_API_KEY": "from-file",
         "GITHUB_PAT": "abc",
         "EMPTY": "",
@@ -175,7 +176,13 @@ def test_env_file_parsing_and_precedence(tmp_path: Path) -> None:
     }
     env = server.load_env(dotenv, {"GITHUB_PAT": "from-env"})
     assert env["GITHUB_PAT"] == "from-env" and env["TYPESAFE_API_KEY"] == "from-file"
-    assert server.read_dotenv(tmp_path / "missing.env") == {}
+    assert shipgate_env.read_dotenv(tmp_path / "missing.env") == {}
+
+
+def test_env_file_is_shipgate_env_file_when_set_else_the_repo_env(tmp_path: Path) -> None:
+    assert server.env_path({"SHIPGATE_ENV_FILE": str(tmp_path / "other.env")}) == tmp_path / "other.env"
+    assert server.env_path({}) == server.ROOT / ".env"
+    assert server.env_path({"SHIPGATE_ENV_FILE": ""}) == server.ROOT / ".env"
 
 
 def test_verdict_and_audit_carry_the_context_sha(tmp_path: Path) -> None:

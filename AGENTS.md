@@ -41,20 +41,21 @@ Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain
 | `docs/` | SPEC, contracts, HANDOVER, MEMORY, plan, reference notes (index `docs/README.md`) | Markdown | — | Hold secrets |
 | `.claude/rules/` | Path-scoped rules for Claude Code | Markdown | — | Duplicate CLAUDE.md |
 
-External repo: `shipgate.yaml` `target.repo`, demo **`drax0945/humanize`** (public fork of `python-humanize/humanize`)
+External repo: `shipgate.yaml` `target.repo`, demo **`vishnuverse/humanize`** (public fork of `python-humanize/humanize`)
 — the code being fixed. Planted
 fixture issues #1–#7 (docs/SPEC.md §4.6). `main` is protected by a ruleset with no bypass: PR required, no direct or
-force push. Always pass `owner=drax0945, repo=humanize` (the configured owner/repo); PRs on a fork can otherwise
+force push. Always pass `owner=vishnuverse, repo=humanize` (the configured owner/repo); PRs on a fork can otherwise
 default to the upstream.
 
 ## Agents
 | Agent | MCP servers (enable_tools) | Gated by name | Not enabled | Sandbox | Handoff label |
 | --- | --- | --- | --- | --- | --- |
-| **ticket-resolver** (P0) | github: `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment`; triage: `triage_ticket` (ungated, read-only) (Jira optional: `getJiraIssue`, `addCommentToJiraIssue`) | `create_pull_request`, `add_issue_comment` (Jira: `addCommentToJiraIssue`, `transitionJiraIssue`) | `merge_pull_request`, `issue_write`, any delete/close | on | `bug → triaged → fix-proposed / cannot-reproduce` |
+| **ticket-resolver** (P0) | github: `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment`; triage: `triage_ticket` (ungated, read-only) | `create_pull_request`, `add_issue_comment` | `merge_pull_request`, `issue_write`, any delete/close | on | `bug → triaged → fix-proposed / cannot-reproduce` |
+| **ticket-resolver-jira** (P0, `--ticket`) | github: `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`; jira (Atlassian remote MCP v2): `getJiraIssue`, `addOrEditJiraIssueComment`; triage: `triage_jira_ticket` | `create_pull_request`, `addOrEditJiraIssueComment` | GitHub issue tools, `transitionJiraIssue`, `editJiraIssue`, `createJiraIssue`, `execute*`, Confluence writes | on | Jira status `To Do → In Progress → In Review` + the same labels, moved by the orchestrator |
 | runbook-executor (P1) | k8s (all), github (read + comment) | `deploy`, `rollback`, `restart`, `add_issue_comment` | raw `kubectl`, `delete_*` | on (for skills) | manual trigger |
 | release-captain (optional) | github (repos, pull_requests, git, issues-comment), registry | `create_tag`/release tool, `publish_package`, `merge_pull_request` | — | on | `needs-release → ready-to-deploy` |
 
-Ticket Resolver's GitHub tool names are verified against the live server (`docs/MEMORY.md`); model `openrouter/deepseek-v4-flash`. Other rows are planned.
+Ticket Resolver's GitHub tool names are verified against the live server (`docs/MEMORY.md`); model `openai/gpt-6-luna`. Other rows are planned.
 
 ## Data flow — resolve (P0)
 1. `shipgate run --issue <n>` (manual trigger) → sets `triaged` → creates a `ticket-resolver` session.

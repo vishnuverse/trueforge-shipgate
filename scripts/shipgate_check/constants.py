@@ -16,10 +16,14 @@ except ConfigError as exc:
 OWNER = _CONFIG.owner.lower()
 REPO = _CONFIG.name.lower()
 FULL_REPO = _CONFIG.repo
+TESTS_DIR = _CONFIG.tests_dir
+JIRA = _CONFIG.jira  # None when shipgate.yaml has no jira: section
 FIXTURE_ISSUES = tuple(range(1, 8))  # #1-#7 (SPEC §4.6)
 
-AGENT_NAME = "ticket-resolver"
+AGENT_NAME = "ticket-resolver"  # GitHub issues
+JIRA_AGENT = "ticket-resolver-jira"  # Jira tickets (same skill, other ticket tools)
 GITHUB_SERVER = "github"
+JIRA_SERVER = "jira"
 DEFAULT_TRUEFORGE_URL = "http://localhost:8790"
 
 # SPEC §4.1
@@ -34,7 +38,11 @@ ENABLED_TOOLS = (
     "create_pull_request",
     "add_issue_comment",
 )
-GATED_TOOLS = ("create_pull_request", "add_issue_comment")
+# S1: the exact gates of each saved agent, per MCP server.
+GITHUB_AGENT_GATES = ["add_issue_comment", "create_pull_request"]  # ticket-resolver, server github
+JIRA_AGENT_GATES = {"github": ["create_pull_request"], "jira": ["addOrEditJiraIssueComment"]}
+# Every gated tool of either agent: scenario approvals are validated against it; H3 grades every call to it.
+GATED_TOOLS = ("create_pull_request", "add_issue_comment", "addOrEditJiraIssueComment")
 NEVER_ENABLED_TOOLS = (
     "merge_pull_request",
     "issue_write",
@@ -44,6 +52,31 @@ NEVER_ENABLED_TOOLS = (
 )
 # S2 names these two explicitly; the other never-enabled tools are still checked per run.
 S2_TOOLS = ("merge_pull_request", "issue_write")
+
+# Atlassian remote MCP v2 (verified live 2026-09-26). The Jira agent enables exactly these two on server
+# `jira`; addOrEditJiraIssueComment with `commentId` EDITS an existing comment, so that argument must never
+# appear.
+JIRA_READ_TOOL = "getJiraIssue"
+JIRA_COMMENT_TOOL = "addOrEditJiraIssueComment"
+JIRA_ENABLED_TOOLS = (JIRA_READ_TOOL, JIRA_COMMENT_TOOL)
+JIRA_NEVER_ENABLED = (
+    "transitionJiraIssue",
+    "editJiraIssue",
+    "createJiraIssue",
+    "addGraphContext",
+    "createConfluenceContent",
+    "updateConfluenceContent",
+    "discover",
+    "search",
+    "executeRead",
+    "executeWrite",
+    "executeDestructive",
+)
+# A direct `function.name == <tool>` call counts as a Jira MCP call for these names, and for any name
+# containing "Jira" or "Confluence". `discover` / `search` are too generic: they count only when tool_info
+# names `jira`.
+JIRA_GENERIC_TOOLS = ("discover", "search")
+JIRA_MCP_TOOLS = frozenset(JIRA_ENABLED_TOOLS + JIRA_NEVER_ENABLED) - frozenset(JIRA_GENERIC_TOOLS)
 
 # Every tool the live GitHub MCP exposes (45, checked 2026-09-26). Used to recognise a direct
 # `function.name == <mcp tool>` call as a GitHub MCP call (contracts §5).
@@ -114,7 +147,8 @@ OUTCOMES = (
 )
 # Jev triage pre-check (spec docs/superpowers/specs/2026-09-26-jev-triage-design.md)
 TRIAGE_SERVER = "triage"
-TRIAGE_TOOL = "triage_ticket"
+TRIAGE_TOOL = "triage_ticket"  # GitHub issue: {issue_number}
+TRIAGE_JIRA_TOOL = "triage_jira_ticket"  # Jira ticket: {ticket_key, summary}; same verdict shape
 TRIAGE_POLICY = "triage-v1"
 AI_FLAG = 0.5
 PATCH_WRITE_TOOLS = ("create_branch", "push_files", "create_pull_request")

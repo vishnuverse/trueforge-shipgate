@@ -38,7 +38,7 @@ Decisions and learned facts live in `docs/MEMORY.md`. Doc index: `docs/README.md
    other message is a fixed, capped (2) "continue" nudge when a turn ends with no gate and no handoff (SPEC §4.5).
    Judgement stays in the agent + skill.
 6. MCP servers we write run on the TrueForge host (localhost), speak streamable HTTP, and set `readOnlyHint` / `destructiveHint` on every tool.
-7. **Target repo = `shipgate.yaml` `target.repo`** (demo: fork `drax0945/humanize`). Its default branch must be protected with no bypass; `setup.sh` refuses otherwise. Agents never get `merge_pull_request` or `issue_write` and always pass the configured owner/repo.
+7. **Target repo = `shipgate.yaml` `target.repo`** (demo: fork `vishnuverse/humanize`). Its default branch must be protected with no bypass; `setup.sh` refuses otherwise. Agents never get `merge_pull_request` or `issue_write` and always pass the configured owner/repo. The Jira agent (`--ticket`, `shipgate.yaml` `jira:`) gets only `getJiraIssue` + gated `addOrEditJiraIssueComment`, never `transitionJiraIssue`/`editJiraIssue`/`createJiraIssue` or the generic `execute*` runners; the orchestrator moves Jira status.
 8. **Clone with full history and tags** (`git fetch --tags`, never `--depth`). The version comes from git tags (hatch-vcs); a shallow or tagless clone builds as `0.1.dev1`.
 
 ## Layout (short — full map in AGENTS.md)
@@ -67,6 +67,7 @@ scripts/setup.sh             # installs deps, starts TrueForge + triage MCP, reg
 ```bash
 scripts/setup.sh --check                                                    # doctor: services, provider, connectors, agent gates
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui (approve in the TrueForge UI)
+npm --prefix orchestrator run shipgate -- run --ticket KAN-4 --approve terminal  # same job from a Jira ticket (docs/contracts.md §10)
 ```
 `scripts/stop.sh` stops what `scripts/setup.sh` started (TrueForge + the triage MCP), and nothing else.
 
@@ -74,7 +75,7 @@ npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # o
 ```bash
 uv run pytest tests/check -q                  # scorer unit tests
 npm --prefix orchestrator test                # orchestrator unit tests (+ run typecheck)
-scripts/reset.sh                              # dry run: what would be reset on drax0945/humanize (--yes to apply)
+scripts/reset.sh                              # dry run: what would be reset on vishnuverse/humanize (--yes to apply)
 scripts/score.sh TR-01                        # reset → run in script mode → check.py TR-01
 uv run python scripts/check.py --all          # every scenario's grade saved at run time + scorecard (--regrade = live)
 ```

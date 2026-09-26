@@ -1,0 +1,18 @@
+[
+ {
+  "key": "KAN-4",
+  "tests_dir": "tests",
+  "ref": "KAN-4",
+  "slug": "kan-4",
+  "branch": "fix/kan-4",
+  "test_file": "tests/test_kan_4.py"
+ },
+ {
+  "key": "AB2-117",
+  "tests_dir": "test/unit",
+  "ref": "AB2-117",
+  "slug": "ab2-117",
+  "branch": "fix/ab2-117",
+  "test_file": "test/unit/test_ab2_117.py"
+ }
+]

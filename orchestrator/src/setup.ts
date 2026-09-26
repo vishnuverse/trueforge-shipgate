@@ -1,11 +1,17 @@
 // Register what Ticket Resolver needs in TrueForge 0.2.1, and check it (spec any-repo §4 steps 4 and 6).
 // REST bodies are snake_case; PUT on settings/* creates or replaces one entry by name. Keys are sent only to a
 // loopback TrueForge (unless allowRemote), only when an entry is missing or rotateKeys is set, and never logged.
+// With a jira: section in shipgate.yaml, the same holds for the `jira` connector and the ticket-resolver-jira agent.
+import type { JiraConfig } from "./config.ts";
+
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 export class SetupError extends Error {}
 export interface Secrets {
   openrouterKey?: string;
+  openaiKey?: string;
   githubPat?: string;
+  jiraEmail?: string; // JIRA_EMAIL: Atlassian account email
+  jiraToken?: string; // JIRA_API_KEY: API token of that account
 }
 export interface SetupOptions {
   rotateKeys: boolean;
@@ -13,7 +19,7 @@ export interface SetupOptions {
 }
 export interface Step {
   item: string;
-  action: "created" | "kept" | "rotated";
+  action: "created" | "kept" | "rotated" | "updated";
 }
 export interface Check {
   name: string;
@@ -34,9 +40,28 @@ export const OPENROUTER_MODELS = [
     properties: { context_length: 1310720, max_output_tokens: 128000, reasoning_efforts: ["low", "high", "max"] },
   },
 ];
+// OpenAI is a well-known TrueForge provider type: its manifest has no name (the provider is named "openai") and
+// base_url defaults to api.openai.com. Facts: docs/reference/gpt-6-luna-prompting-and-caching.md §1.
+export const OPENAI_MODELS = [
+  {
+    name: "gpt-6-luna",
+    model_id: "gpt-6-luna",
+    properties: { context_length: 1050000, max_output_tokens: 128000, reasoning_efforts: ["none", "low", "medium", "high", "xhigh"] },
+  },
+];
+export const DEFAULT_MODEL = "openrouter/deepseek-v4-flash";
 export const GITHUB_MCP_URL = "https://api.githubcopilot.com/mcp/";
 export const TRIAGE_MCP_URL = "http://127.0.0.1:8803/mcp";
+// Atlassian remote MCP; /v1 exposes no Jira tools with API-token auth, /v2 does (verified live).
+export const JIRA_MCP_URL = "https://mcp.atlassian.com/v2/mcp";
+export const JIRA_AGENT = "ticket-resolver-jira";
 const GATES = ["add_issue_comment", "create_pull_request"];
+// ticket-resolver-jira: every write is gated by name (addOrEditJiraIssueComment carries no destructive hint).
+const JIRA_AGENT_GITHUB_GATES = ["create_pull_request"];
+const JIRA_AGENT_JIRA_GATES = ["addOrEditJiraIssueComment"];
+const JIRA_AGENT_JIRA_TOOLS = new Set(["getJiraIssue", "addOrEditJiraIssueComment"]);
+const JIRA_AGENT_NO_GITHUB_TOOLS = ["issue_read", "list_issues", "add_issue_comment"];
+const JIRA_AGENT_TRIAGE_TOOLS = ["triage_jira_ticket"];
 
 type Json = Record<string, unknown>;
 const isObj = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -80,8 +105,46 @@ class Api {
 
 const nameOf = (row: Json): string => {
   const m = isObj(row.manifest) ? row.manifest : {};
-  return String(row.name ?? m.name ?? "");
+  return String(row.name ?? m.name ?? m.type ?? "");
 };
+
+interface ProviderPlan {
+  name: string;
+  keyName: string;
+  key: string | undefined;
+  /** The configured model's entry when setup knows it (OPENAI_MODELS / OPENROUTER_MODELS). */
+  entry: Json | undefined;
+  manifest: (key: string) => Json;
+}
+
+/** Model names the provider row serves (TrueForge manifest.models[].name). */
+const modelsOf = (row: Json | undefined): Json[] =>
+  row && isObj(row.manifest) && Array.isArray(row.manifest.models) ? row.manifest.models.filter(isObj) : [];
+const modelName = (model: string): string => model.slice(model.indexOf("/") + 1);
+
+/** The TrueForge model provider behind shipgate.yaml's trueforge.model ("<provider>/<model>"). */
+function providerFor(model: string, secrets: Secrets): ProviderPlan {
+  const prefix = model.split("/")[0];
+  if (prefix === "openrouter") {
+    return {
+      name: "openrouter",
+      keyName: "OPENROUTER_API_KEY",
+      key: secrets.openrouterKey,
+      entry: OPENROUTER_MODELS.find((m) => m.name === modelName(model)),
+      manifest: (key) => ({ type: "custom", name: "openrouter", base_url: OPENROUTER_BASE_URL, models: OPENROUTER_MODELS, auth: { api_key: key } }),
+    };
+  }
+  if (prefix === "openai") {
+    return {
+      name: "openai",
+      keyName: "OPENAI_API_KEY",
+      key: secrets.openaiKey,
+      entry: OPENAI_MODELS.find((m) => m.name === modelName(model)),
+      manifest: (key) => ({ type: "openai", models: OPENAI_MODELS, auth: { api_key: key } }),
+    };
+  }
+  throw new SetupError(`unsupported model provider "${prefix}" in trueforge.model (use openrouter/... or openai/...)`);
+}
 
 export async function registerAll(
   base: string,
@@ -89,24 +152,39 @@ export async function registerAll(
   opts: SetupOptions,
   fetchFn: FetchLike = fetch,
   log: (s: string) => void = console.log,
+  model: string = DEFAULT_MODEL,
+  jira: JiraConfig | null = null,
 ): Promise<Step[]> {
+  const plan = providerFor(model, secrets);
   if (!isLoopback(base) && !opts.allowRemote) {
     throw new SetupError(`refusing to send keys to ${new URL(base).host}: TrueForge is not local (--allow-remote overrides)`);
   }
   const api = new Api(base.replace(/\/+$/, ""), fetchFn);
   const steps: Step[] = [];
 
-  const provider = (await api.list("/settings/model-providers")).find((p) => nameOf(p) === "openrouter");
-  if (provider === undefined || opts.rotateKeys) {
-    if (!secrets.openrouterKey) throw new SetupError("OPENROUTER_API_KEY is not set in .env");
-    const existing = provider && isObj(provider.manifest) ? provider.manifest : undefined;
-    const manifest = existing
-      ? { ...existing, auth: { api_key: secrets.openrouterKey } }
-      : { type: "custom", name: "openrouter", base_url: OPENROUTER_BASE_URL, models: OPENROUTER_MODELS, auth: { api_key: secrets.openrouterKey } };
+  // The provider must serve the configured model, or registering the agent fails (HTTP 422). An existing provider
+  // keeps its models; a missing configured one is appended. Without a rotation the masked key from GET goes back
+  // unchanged, which TrueForge treats as "keep the stored key", so adding a model sends no secret.
+  const provider = (await api.list("/settings/model-providers")).find((p) => nameOf(p) === plan.name);
+  const existing = provider && isObj(provider.manifest) ? provider.manifest : undefined;
+  const served = modelsOf(provider);
+  const hasModel = served.some((m) => m.name === modelName(model));
+  if (!hasModel && plan.entry === undefined) {
+    throw new SetupError(
+      `model ${model} is not in the ${plan.name} provider and setup does not know it: add it in TrueForge Settings → Models`,
+    );
+  }
+  const models = hasModel ? served : [...served, plan.entry];
+  if (existing === undefined || opts.rotateKeys) {
+    if (!plan.key) throw new SetupError(`${plan.keyName} is not set in .env`);
+    const manifest = existing ? { ...existing, models, auth: { api_key: plan.key } } : plan.manifest(plan.key);
     await api.call("PUT", "/settings/model-providers", { manifest });
-    steps.push({ item: "model provider openrouter", action: provider ? "rotated" : "created" });
+    steps.push({ item: `model provider ${plan.name}`, action: existing ? "rotated" : "created" });
+  } else if (!hasModel) {
+    await api.call("PUT", "/settings/model-providers", { manifest: { ...existing, models } });
+    steps.push({ item: `model provider ${plan.name}`, action: "updated" });
   } else {
-    steps.push({ item: "model provider openrouter", action: "kept" });
+    steps.push({ item: `model provider ${plan.name}`, action: "kept" });
   }
 
   const servers = await api.list("/settings/mcp-servers");
@@ -134,27 +212,72 @@ export async function registerAll(
     });
     steps.push({ item: "connector triage", action: "created" });
   }
+  if (jira !== null) {
+    // Written only when missing or on rotateKeys, so a connector someone connected another way is kept.
+    const existing = servers.find((s) => nameOf(s) === "jira");
+    if (existing === undefined || opts.rotateKeys) {
+      if (!secrets.jiraEmail || !secrets.jiraToken) {
+        throw new SetupError("JIRA_EMAIL and JIRA_API_KEY must both be set in .env (shipgate.yaml has a jira: section)");
+      }
+      const basic = Buffer.from(`${secrets.jiraEmail}:${secrets.jiraToken}`, "utf8").toString("base64");
+      await api.call("PUT", "/settings/mcp-servers", {
+        manifest: {
+          type: "remote",
+          name: "jira",
+          url: JIRA_MCP_URL,
+          description: "Atlassian remote MCP (Jira tickets: read, comment)",
+          auth: { type: "header", headers: { Authorization: `Basic ${basic}` } },
+        },
+      });
+      steps.push({ item: "connector jira", action: existing ? "rotated" : "created" });
+    } else {
+      steps.push({ item: "connector jira", action: "kept" });
+    }
+  }
   for (const s of steps) log(`✓ ${s.item}: ${s.action}`);
   return steps;
 }
 
-export async function doctor(base: string, fetchFn: FetchLike = fetch): Promise<Check[]> {
+/** The saved manifest of the agent with exactly this name, or {} when it is not registered. */
+async function savedManifest(api: Api, name: string): Promise<Json> {
+  const agents = await api.list(`/agents?agent_name=${encodeURIComponent(name)}&limit=100`);
+  const id = agents.find((a) => a.name === name)?.id;
+  const agent = typeof id === "string" ? (await api.call("GET", `/agents/${encodeURIComponent(id)}`)).data : undefined;
+  return isObj(agent) && isObj(agent.manifest) ? agent.manifest : {};
+}
+
+/** A tool list from a saved manifest; null when absent (TrueForge then enables every tool of the server). */
+const toolList = (v: unknown): string[] | null => (Array.isArray(v) ? v.map(String).sort() : null);
+const sameSet = (a: string[] | null, want: string[]): boolean =>
+  a !== null && JSON.stringify(a) === JSON.stringify([...want].sort());
+const show = (a: string[] | null): string => (a === null ? "absent" : `[${a.join(", ")}]`);
+
+export async function doctor(
+  base: string,
+  fetchFn: FetchLike = fetch,
+  model: string = DEFAULT_MODEL,
+  jira: JiraConfig | null = null,
+): Promise<Check[]> {
+  const providerName = providerFor(model, {}).name;
   const api = new Api(base.replace(/\/+$/, ""), fetchFn);
   const checks: Check[] = [];
   const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
 
   const providers = await api.list("/settings/model-providers");
-  add("provider openrouter", providers.some((p) => nameOf(p) === "openrouter"), "model provider registered");
+  const row = providers.find((p) => nameOf(p) === providerName);
+  const serves = modelsOf(row).some((m) => m.name === modelName(model));
+  add(
+    `provider ${providerName}`,
+    serves,
+    row === undefined ? `no ${providerName} model provider` : serves ? `serves ${model}` : `does not list ${modelName(model)} (setup.sh adds it)`,
+  );
   const servers = await api.list("/settings/mcp-servers");
-  for (const want of ["github", "triage"]) {
+  for (const want of jira === null ? ["github", "triage"] : ["github", "triage", "jira"]) {
     const row = servers.find((s) => nameOf(s) === want);
     const status = row && isObj(row.auth_status) ? String(row.auth_status.status) : "missing";
     add(`connector ${want}`, status === "authenticated" || status === "not_required", `auth ${status}`);
   }
-  const agents = await api.list("/agents?agent_name=ticket-resolver&limit=100");
-  const id = agents.find((a) => a.name === "ticket-resolver")?.id;
-  const agent = typeof id === "string" ? (await api.call("GET", `/agents/${encodeURIComponent(id)}`)).data : undefined;
-  const manifest = isObj(agent) && isObj(agent.manifest) ? agent.manifest : {};
+  const manifest = await savedManifest(api, "ticket-resolver");
   const mcp = Array.isArray(manifest.mcp_servers) ? manifest.mcp_servers.filter(isObj) : [];
   const gates = mcp.find((s) => s.name === "github")?.require_approval_for_tools;
   const sorted = Array.isArray(gates) ? gates.map(String).sort() : [];
@@ -163,5 +286,38 @@ export async function doctor(base: string, fetchFn: FetchLike = fetch): Promise<
   const config = isObj(manifest.config) ? manifest.config : {};
   const web = isObj(config.web_search) ? config.web_search.enabled : undefined;
   add("agent web_search", web === false, `web_search.enabled = ${String(web)}`);
+  if (jira !== null) checks.push(...(await doctorJiraAgent(api)));
+  return checks;
+}
+
+/** ticket-resolver-jira: writes gated by name, only the two Jira tools, no GitHub issue tools, Jira triage only. */
+async function doctorJiraAgent(api: Api): Promise<Check[]> {
+  const checks: Check[] = [];
+  const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
+  const manifest = await savedManifest(api, JIRA_AGENT);
+  const mcp = Array.isArray(manifest.mcp_servers) ? manifest.mcp_servers.filter(isObj) : [];
+  const server = (name: string) => mcp.find((s) => s.name === name);
+  const ghGates = toolList(server("github")?.require_approval_for_tools);
+  const jiraGates = toolList(server("jira")?.require_approval_for_tools);
+  add(
+    "jira agent gates",
+    sameSet(ghGates, JIRA_AGENT_GITHUB_GATES) && sameSet(jiraGates, JIRA_AGENT_JIRA_GATES),
+    `github gates ${show(ghGates)} · jira gates ${show(jiraGates)}`,
+  );
+  const jiraTools = toolList(server("jira")?.enable_tools);
+  const ghTools = toolList(server("github")?.enable_tools);
+  const jiraOk = jiraTools !== null && jiraTools.length > 0 && jiraTools.every((t) => JIRA_AGENT_JIRA_TOOLS.has(t));
+  const ghIssueTools = ghTools === null ? null : ghTools.filter((t) => JIRA_AGENT_NO_GITHUB_TOOLS.includes(t));
+  const ghOk = ghTools !== null && ghTools.length > 0 && ghIssueTools !== null && ghIssueTools.length === 0;
+  add(
+    "jira agent tools",
+    jiraOk && ghOk,
+    `jira tools ${show(jiraTools)} · github issue tools ${ghTools === null ? "all (enable_tools absent)" : show(ghIssueTools)}`,
+  );
+  const triageTools = toolList(server("triage")?.enable_tools);
+  add("jira agent triage", sameSet(triageTools, JIRA_AGENT_TRIAGE_TOOLS), `triage tools ${show(triageTools)}`);
+  const config = isObj(manifest.config) ? manifest.config : {};
+  const web = isObj(config.web_search) ? config.web_search.enabled : undefined;
+  add("jira agent web_search", web === false, `web_search.enabled = ${String(web)}`);
   return checks;
 }

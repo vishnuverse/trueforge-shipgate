@@ -57,7 +57,8 @@ def _prob(value: Any, what: str) -> float:
     return float(value)
 
 
-def decide(issue: int, answers: dict[str, Any], model: str | None = None) -> dict[str, Any]:
+def decide(issue: int | str, answers: dict[str, Any], model: str | None = None) -> dict[str, Any]:
+    """`issue` is a GitHub issue number or a Jira key (KAN-4); the verdict key stays `issue` either way."""
     try:
         raw = answers["route"]["probabilities"]
         if not isinstance(raw, dict) or set(raw) != set(ROUTE_CRITERIA):
@@ -106,7 +107,7 @@ def decide(issue: int, answers: dict[str, Any], model: str | None = None) -> dic
     return verdict
 
 
-def error_verdict(issue: int, reason: str, model: str | None = None) -> dict[str, Any]:
+def error_verdict(issue: int | str, reason: str, model: str | None = None) -> dict[str, Any]:
     verdict: dict[str, Any] = {
         "policy": POLICY,
         "issue": issue,

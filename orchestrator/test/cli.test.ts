@@ -1,15 +1,26 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { defaultPrompt, parseCli, resolveTimeoutMin, resolveTrueforgeUrl } from "../src/cli.ts";
+import {
+  defaultPrompt,
+  kickoff,
+  parseCli,
+  resolveTarget,
+  resolveTimeoutMin,
+  resolveTrueforgeUrl,
+  UsageError,
+} from "../src/cli.ts";
+import { ConfigError, loadConfig } from "../src/config.ts";
 import { parseDotenv } from "../src/env.ts";
 import { uiSessionUrl, utcStamp } from "../src/runner.ts";
+import type { Scenario } from "../src/scenario.ts";
 
 test("cli: defaults", () => {
   assert.deepEqual(parseCli(["run", "--issue", "1"]), {
     issue: 1,
+    ticket: null,
     mode: "terminal",
     scenario: null,
-    agent: "ticket-resolver",
+    agent: null, // not given: resolveTarget picks the source's agent (ticket-resolver for --issue)
     timeoutMin: null,
     inlineSpec: null,
     prompt: null,
@@ -56,7 +67,7 @@ test("cli: refusals", () => {
 test("first message and UI link", () => {
   assert.equal(
     defaultPrompt(7, "script", "2026-09-26"),
-    "Resolve GitHub issue #7 in drax0945/humanize. Approval mode: script. Today is 2026-09-26.",
+    "Resolve GitHub issue #7 in vishnuverse/humanize. Approval mode: script. Today is 2026-09-26.",
   );
   assert.equal(uiSessionUrl("http://localhost:8790/", "01abc"), "http://localhost:8790/sessions/01abc");
   assert.equal(utcStamp(new Date("2026-09-26T07:04:05.678Z")), "20260926T070405Z");
@@ -91,5 +102,97 @@ test("the kickoff prompt names the configured repo", () => {
   assert.equal(
     defaultPrompt(7, "script", "2026-09-26", "acme/widgets"),
     "Resolve GitHub issue #7 in acme/widgets. Approval mode: script. Today is 2026-09-26.",
+  );
+});
+
+// ---------- --ticket (Jira) ----------
+
+const config = loadConfig(); // committed shipgate.yaml: vishnuverse/humanize + jira KAN
+const scenario = (over: Partial<Scenario>): Scenario => ({
+  id: "TR-X",
+  issue: null,
+  ticket: null,
+  timeoutMin: null,
+  approvals: [],
+  path: "TR-X.yaml",
+  ...over,
+});
+
+test("cli: --ticket parses; the agent stays unset until the source is known", () => {
+  const a = parseCli(["run", "--ticket", "KAN-4"]);
+  assert.equal(a.ticket, "KAN-4");
+  assert.equal(a.issue, null);
+  assert.equal(a.agent, null);
+  assert.equal(parseCli(["run", "--ticket", "KAN-4", "--agent", "mine"]).agent, "mine");
+});
+
+test("cli: exactly one of --issue / --ticket (neither only with a scenario that names one)", () => {
+  assert.throws(() => parseCli(["run", "--issue", "1", "--ticket", "KAN-4"]), /not both/);
+  assert.throws(() => parseCli(["run"]), /--issue <n> or --ticket <KEY> is required/);
+  assert.throws(() => parseCli(["run", "--approve", "ui"]), /--issue <n> or --ticket <KEY> is required/);
+  assert.throws(() => parseCli(["run", "--ticket", ""]), /Jira key such as KAN-4/);
+  assert.throws(() => parseCli(["run", "--issue", "1", "--agent", ""]), /--agent must not be empty/);
+  const s = parseCli(["run", "--approve", "script", "--scenario", "TR-J01"]);
+  assert.equal(s.issue, null);
+  assert.equal(s.ticket, null);
+});
+
+test("agent default per source; --agent wins", () => {
+  assert.deepEqual(resolveTarget(parseCli(["run", "--issue", "1"]), null, config), {
+    ticket: { source: "github", number: 1 },
+    agent: "ticket-resolver",
+  });
+  assert.deepEqual(resolveTarget(parseCli(["run", "--ticket", "KAN-4"]), null, config), {
+    ticket: { source: "jira", key: "KAN-4" },
+    agent: "ticket-resolver-jira",
+  });
+  assert.equal(resolveTarget(parseCli(["run", "--ticket", "KAN-4", "--agent", "other"]), null, config).agent, "other");
+  assert.equal(resolveTarget(parseCli(["run", "--issue", "2", "--agent", "other"]), null, config).agent, "other");
+});
+
+test("--ticket: bad keys are usage errors; no jira section is a config error (exit 2)", () => {
+  assert.throws(
+    () => resolveTarget(parseCli(["run", "--ticket", "kan-4"]), null, config),
+    (e: unknown) => e instanceof UsageError && /upper case: KAN-4/.test(e.message),
+  );
+  assert.throws(() => resolveTarget(parseCli(["run", "--ticket", "SAM-4"]), null, config), /only project KAN/);
+  assert.throws(
+    () => resolveTarget(parseCli(["run", "--ticket", "KAN-4"]), null, { ...config, jira: null }),
+    (e: unknown) => e instanceof ConfigError && /jira: not configured/.test(e.message),
+  );
+  // a GitHub run never needs the jira section
+  assert.equal(resolveTarget(parseCli(["run", "--issue", "1"]), null, { ...config, jira: null }).agent, "ticket-resolver");
+});
+
+test("a scenario names its ticket; the flag must match it", () => {
+  const j01 = scenario({ id: "TR-J01", ticket: "KAN-4" });
+  const tr01 = scenario({ id: "TR-01", issue: 1 });
+  const script = (...more: string[]) => parseCli(["run", "--approve", "script", "--scenario", "TR-X", ...more]);
+  assert.deepEqual(resolveTarget(script(), j01, config), {
+    ticket: { source: "jira", key: "KAN-4" },
+    agent: "ticket-resolver-jira",
+  });
+  assert.deepEqual(resolveTarget(script("--ticket", "KAN-4"), j01, config).ticket, { source: "jira", key: "KAN-4" });
+  assert.throws(
+    () => resolveTarget(script("--ticket", "KAN-5"), j01, config),
+    /--ticket KAN-5 does not match scenario TR-J01 \(ticket KAN-4\)/,
+  );
+  assert.throws(() => resolveTarget(script("--issue", "4"), j01, config), /--issue 4 does not match scenario TR-J01 \(ticket KAN-4\)/);
+  assert.throws(() => resolveTarget(script("--ticket", "KAN-1"), tr01, config), /--ticket KAN-1 does not match scenario TR-01 \(issue 1\)/);
+  // the GitHub checks behave as before
+  assert.throws(() => resolveTarget(script("--issue", "2"), tr01, config), /--issue 2 does not match scenario TR-01 \(issue 1\)/);
+  assert.deepEqual(resolveTarget(script(), tr01, config), { ticket: { source: "github", number: 1 }, agent: "ticket-resolver" });
+});
+
+test("kickoff: GitHub prompt unchanged, Jira the exact kickoff", () => {
+  assert.equal(
+    kickoff({ source: "github", number: 7 }, "script", "2026-09-26", config),
+    defaultPrompt(7, "script", "2026-09-26", "vishnuverse/humanize"),
+  );
+  assert.equal(
+    kickoff({ source: "jira", key: "KAN-4" }, "terminal", "2026-09-26", config),
+    "Resolve Jira ticket KAN-4 (https://developertunnel.atlassian.net/browse/KAN-4) for the GitHub repo " +
+      "vishnuverse/humanize. cloudId: ce61dd8b-2e04-4815-9b7b-60a570df782b. Branch: fix/kan-4. " +
+      "Test file: tests/test_kan_4.py. Approval mode: terminal. Today is 2026-09-26.",
   );
 });

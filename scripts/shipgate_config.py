@@ -28,10 +28,44 @@ SCHEMA: dict[str, tuple[str, ...]] = {
     "python": ("install", "test", "source_dir", "tests_dir"),
     "trueforge": ("url", "model"),
 }
+# Optional sections: absent is fine; present means every key is required.
+OPTIONAL: dict[str, tuple[str, ...]] = {
+    "jira": ("site", "cloud_id", "project", "status_start", "status_review", "status_open"),
+}
+JIRA_SITE_RE = re.compile(r"^[a-z0-9][a-z0-9-]*\.atlassian\.net$")
+UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+PROJECT_RE = re.compile(r"^[A-Z][A-Z0-9]+$")
 
 
 class ConfigError(ValueError):
     """shipgate.yaml is missing or invalid; the message names the file and the key."""
+
+
+@dataclass(frozen=True)
+class JiraConfig:
+    site: str  # e.g. developertunnel.atlassian.net
+    cloud_id: str
+    project: str  # project key, e.g. KAN
+    status_start: str  # status names the orchestrator moves a ticket to
+    status_review: str
+    status_open: str
+
+    def key_re(self) -> re.Pattern[str]:
+        return re.compile(rf"^{self.project}-[1-9][0-9]*$")
+
+    def ticket_url(self, key: str) -> str:
+        return f"https://{self.site}/browse/{key}"
+
+
+def ticket_names(key: str, tests_dir: str) -> dict[str, str]:
+    """The one naming rule for a Jira ticket (same as ticketNames() in orchestrator/src/config.ts)."""
+    slug = key.lower()
+    return {
+        "ref": key,
+        "slug": slug,
+        "branch": f"fix/{slug}",
+        "test_file": f"{tests_dir}/test_{slug.replace('-', '_')}.py",
+    }
 
 
 @dataclass(frozen=True)
@@ -45,6 +79,7 @@ class Config:
     tests_dir: str
     trueforge_url: str
     model: str
+    jira: JiraConfig | None = None
 
     @property
     def owner(self) -> str:
@@ -83,11 +118,13 @@ def load_config(path: Path | str | None = None) -> Config:
     if not isinstance(data, dict):
         raise err("(root)", "must be a mapping")
     for key in data:
-        if key not in SCHEMA:
+        if key not in SCHEMA and key not in OPTIONAL:
             raise err(str(key), "unknown key")
     v: dict[str, str] = {}
-    for section, keys in SCHEMA.items():
+    for section, keys in {**SCHEMA, **OPTIONAL}.items():
         block = data.get(section)
+        if section in OPTIONAL and block is None:
+            continue
         if not isinstance(block, dict):
             raise err(section, "missing or not a mapping")
         for key in block:
@@ -111,6 +148,22 @@ def load_config(path: Path | str | None = None) -> Config:
         v[key] = v[key].rstrip("/")
     if not URL_RE.match(v["trueforge.url"]):
         raise err("trueforge.url", "must be an http(s) URL")
+    jira = None
+    if "jira.site" in v:
+        if not JIRA_SITE_RE.match(v["jira.site"]):
+            raise err("jira.site", "must be <name>.atlassian.net")
+        if not UUID_RE.match(v["jira.cloud_id"]):
+            raise err("jira.cloud_id", "must be the site's cloudId (a UUID)")
+        if not PROJECT_RE.match(v["jira.project"]):
+            raise err("jira.project", "must be a project key such as KAN")
+        jira = JiraConfig(
+            site=v["jira.site"],
+            cloud_id=v["jira.cloud_id"],
+            project=v["jira.project"],
+            status_start=v["jira.status_start"],
+            status_review=v["jira.status_review"],
+            status_open=v["jira.status_open"],
+        )
     return Config(
         repo=v["target.repo"],
         default_branch=v["target.default_branch"],
@@ -121,6 +174,7 @@ def load_config(path: Path | str | None = None) -> Config:
         tests_dir=v["python.tests_dir"],
         trueforge_url=v["trueforge.url"],
         model=v["trueforge.model"],
+        jira=jira,
     )
 
 
@@ -131,6 +185,9 @@ GETTERS: dict[str, Callable[[Config], str]] = {
     "target.default_branch": lambda c: c.default_branch,
     "trueforge.url": lambda c: c.trueforge_url,
     "trueforge.model": lambda c: c.model,
+    # empty when shipgate.yaml has no jira: section
+    "jira.site": lambda c: c.jira.site if c.jira else "",
+    "jira.project": lambda c: c.jira.project if c.jira else "",
 }
 
 

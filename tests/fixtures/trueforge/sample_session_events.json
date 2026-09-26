@@ -9,7 +9,7 @@
    "input": [
     {
      "type": "user.message",
-     "content": "Step 1: in the sandbox run exactly this and show the raw output:\ngit ls-remote https://github.com/drax0945/humanize HEAD; echo git-exit=$?; curl -sS -o /dev/null -w \"pypi=%{http_code}\\n\" https://pypi.org/simple/pip/; head -c 60 /Users/dev/Documents/GitHub/trueforge-shipgate/README.md; echo; echo read-exit=$?\nStep 2: call the github get_me tool."
+     "content": "Step 1: in the sandbox run exactly this and show the raw output:\ngit ls-remote https://github.com/vishnuverse/humanize HEAD; echo git-exit=$?; curl -sS -o /dev/null -w \"pypi=%{http_code}\\n\" https://pypi.org/simple/pip/; head -c 60 /Users/dev/Documents/GitHub/trueforge-shipgate/README.md; echo; echo read-exit=$?\nStep 2: call the github get_me tool."
     }
    ],
    "state": {
@@ -28,7 +28,7 @@
      "type": "function",
      "function": {
       "name": "exec",
-      "arguments": "{\"intent\":\"Execute Step 1 setup smoke test bash command\",\"command\":\"git ls-remote https://github.com/drax0945/humanize HEAD; echo git-exit=$?; curl -sS -o /dev/null -w \\\"pypi=%{http_code}\\\\n\\\" https://pypi.org/simple/pip/; head -c 60 /Users/dev/Documents/GitHub/trueforge-shipgate/README.md; echo; echo read-exit=$?\"}"
+      "arguments": "{\"intent\":\"Execute Step 1 setup smoke test bash command\",\"command\":\"git ls-remote https://github.com/vishnuverse/humanize HEAD; echo git-exit=$?; curl -sS -o /dev/null -w \\\"pypi=%{http_code}\\\\n\\\" https://pypi.org/simple/pip/; head -c 60 /Users/dev/Documents/GitHub/trueforge-shipgate/README.md; echo; echo read-exit=$?\"}"
      },
      "provider_specific_fields": {
       "thought_signature": "EscJCsQJAWkUfRNYtK079Bdyp3xJVyNKhwhZDMZIY6G/LvCuaKeCKnlbKNFB3FzquZN4wCoTnoppgqDpU7O4HXoMggncnpNkF9Kb9TxIv2A8dtWtCuC5Fj+HJJbosP4FIUGsM8C30qp7P0iXqTyp80IPH6VxHUlg166yiiypSQsSj7V0ULRAQ+rLSOSMBlbG5097fPU/4tqTWjKrXIkcjZaJy/B7b8Y2NwUVwm+KBHMyCVe6MM5qogjk7W56QaMdEkvFxAQ+jYsEYEAGdvOYPvPenyBdII1RhBs2U/WVZN0/Muq3wQ+NMS740XkVRiF2QjbE458bCBCVrbmZ8qERlgaVussFjSP1l/f7diQv0Q6cROjpXpj/TEd9/2Wa35ElBvOE9ddFycNVdcW/mogcNJZ+QQ6v0LyeiBm+sKVXW6DgapZCWeMlxmA1IR+v5yQsd+j67D55q3l88Odf0r9xLlMjFPjMUfHh0a3fJgQnY5wYshigYcDeVA/5sY+pYzgK1CWc9hojjx1ugrZo7U7LmJoUMnPavOWH8QzhmBa7LNEEntdV5LlU0u3gakubu1R4YTIb9wFfQr6m18wAbV7xOJxTGOOZHT5raOq0AFXVmbeRj9mepKj9nPIKlo1qQxCkSwjK6ni3lQdMmd2kJeX1ujR0+Aonkv5H6p0Si9LVp41yC9r0iYWv03plLIDQE6pePUf9qqQgJd47NtTyN+C9u0BVD94fcFu/6gxUFN3GszHWb0F4FDI7JssNG8kmt2uyOapNGZeJppeVVP3L6013Q82+TUrMTvSPbnucgAGFjXxqm+5Rcerg3wlgrTouCNUU84WEUja6tqYPFDjqpHAYt3oEWFj781rph6CEroqbk82qK8r+DqiS7DEbLMnyltg5aIWEyR9hqmBm9e1nPiTjJGE0H++trry3CRkNq0jrowUSrKRxIrjEtCITGO63wAPICz0VgOygg1lKWAz3LXXICXDc0jUI9LIM/hBqwHDaMMuUOtttY8i99G+2kJ7p2Ke8bWOChSxyZbKCdBBThskHmKBrnRcSUXIGUig0ddbOUhf4R9vkMZ9WUTOrxte7NVOR5oel1yA0dI/UkThkTPbEbYPvHZqcGvulbN11b4qftmf4H3EKRAhvs7yR9MLeZLIQ+vFRQtZtDqn4s0IRqkUdopqTJBKPN9GD2Vrzir4H7S7hnuxq95gK9JlM7PjaJfVvOdNPWpwlvHB5xTUlnZDOB51ixD0ubhGAV6x+kh/AbH3Cgf2tCGbruPNTh4RW24OFiUc3LYkhWaXsu6p6pO03ApVWnapMR8ig8cDNtIgNYPl6jB9rSk0MEZ8NQz52CnyK/DAFZBP+X2qd2PmmlO8SIMfksiO9k9/t1ITJLo1RuVD+j3P44pF+eB4d2gXMjeLBUCElxI+8obUC16MObUmwP2sQTHUAEitrpesYp4Mu8WX2ejoqwb62GmPWiIPS3S2eO6g0eZrgzEBSzBs4Dg03dxQ1RHEekUcd04QHbLbs422YZWaynl/gDVIA50+Bc2eZDAb3LP7/PYtDByNXGlOFjUx1j41A3rDCIUfnJNdha3iZjFC5HD8baiaeBQ1NGzoYM0yN+0c/h55qSqrWIo5ojSVjRWub+iXLP1Y="

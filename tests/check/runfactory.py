@@ -1,21 +1,33 @@
 """Builds synthetic run directories that mirror real TrueForge 0.2.1 event shapes
-(tests/fixtures/trueforge/sample_session_events.json): `{turn_id, event}` items, oldest first."""
+(tests/fixtures/trueforge/sample_session_events.json): `{turn_id, event}` items, oldest first.
+
+`RunBuilder(scenario, issue)` builds a GitHub run (agent ticket-resolver);
+`RunBuilder(scenario, ticket="KAN-4")` builds a Jira run (agent ticket-resolver-jira: getJiraIssue,
+triage_jira_ticket, addOrEditJiraIssueComment)."""
 
 from __future__ import annotations
 
 import itertools
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from shipgate_check.canonical import args_sha256
 from shipgate_check.events import decision_prefix
+from shipgate_config import ticket_names
 
 SHA = "392aef707c0e74341ab4a51420984e9ea6b566c5"
-REPO_ARGS = {"owner": "drax0945", "repo": "humanize"}
+REPO_ARGS = {"owner": "vishnuverse", "repo": "humanize"}
 REPO_DIR = "/home/daytona/humanize"
-PR_URL = "https://github.com/drax0945/humanize/pull/12"
+PR_URL = "https://github.com/vishnuverse/humanize/pull/12"
+
+# Jira (shipgate.yaml jira: section)
+JIRA_KEY = "KAN-4"
+CLOUD_ID = "ce61dd8b-2e04-4815-9b7b-60a570df782b"
+JIRA_SITE_URL = "https://developertunnel.atlassian.net"
+JIRA_COMMENT = "addOrEditJiraIssueComment"
 
 TRIAGE_LINES = {
     "defect": "defect 0.96 (margin 0.93) · in_scope 0.93 · patch allowed",
@@ -25,8 +37,16 @@ TRIAGE_LINES = {
 }
 
 
-def verdict(n: int = 1, route: str = "defect", ai: float = 0.02) -> dict[str, Any]:
-    """A triage-v1 verdict as mcp/triage returns it (the fields the scorer reads)."""
+def names(n: int | str) -> dict[str, str]:
+    """ref / branch / test_file for a GitHub issue number or a Jira key (shipgate_config.ticket_names)."""
+    if isinstance(n, str):
+        return ticket_names(n, "tests")
+    return {"ref": f"gh#{n}", "branch": f"fix/issue-{n}", "test_file": f"tests/test_issue_{n}.py"}
+
+
+def verdict(n: int | str = 1, route: str = "defect", ai: float = 0.02) -> dict[str, Any]:
+    """A triage-v1 verdict as mcp/triage returns it (the fields the scorer reads); `issue` is the Jira key for
+    triage_jira_ticket."""
     return {
         "policy": "triage-v1",
         "issue": n,
@@ -37,30 +57,40 @@ def verdict(n: int = 1, route: str = "defect", ai: float = 0.02) -> dict[str, An
     }
 
 
-def evidence_card(n: int = 1, triage: str | None = "defect", flagged: str = "none") -> str:
+def evidence_card(n: int | str = 1, triage: str | None = "defect", flagged: str = "none") -> str:
+    nm = names(n)
     triage_line = f"Triage (triage-v1) : {TRIAGE_LINES[triage]}\n" if triage else ""
     return (
-        f"EVIDENCE · gh#{n} · drax0945/humanize @ {SHA[:7]}\n"
+        f"EVIDENCE · {nm['ref']} · vishnuverse/humanize @ {SHA[:7]}\n"
         + triage_line
         + "Repro before patch : 3/3 fail  (assert ordinal(12) == '12th')\n"
         "Attempts           : 1\n"
         "After patch        : issue test 3/3 pass · full suite 746 passed, 0 failed\n"
-        f"Files              : src/humanize/number.py (+2 -1), tests/test_issue_{n}.py (new, +14)\n"
+        f"Files              : src/humanize/number.py (+2 -1), {nm['test_file']} (new, +14)\n"
         f"Ticket text flagged: {flagged}\n"
-        f"Next action        : create_pull_request fix/issue-{n} -> main  (reply follows, gated separately)"
+        f"Next action        : create_pull_request {nm['branch']} -> main  (reply follows, gated separately)"
     )
 
 
 class RunBuilder:
-    def __init__(self, scenario: str, issue: int = 1) -> None:
+    def __init__(self, scenario: str, issue: int = 1, ticket: str | None = None) -> None:
         self.scenario = scenario
-        self.issue = issue
+        self.ticket = ticket
+        self.issue: int | None = None if ticket else issue
+        nm = names(ticket if ticket else issue)
+        self.ref, self.branch, self.test_file = nm["ref"], nm["branch"], nm["test_file"]
         self.items: list[dict[str, Any]] = []
         self.records: list[dict[str, Any]] = []
         self._ids = itertools.count(1)
         self._calls: dict[str, dict[str, Any]] = {}  # call id -> {tool, input, server}
         self.turn_ids: list[str] = []
-        self._new_turn([{"type": "user.message", "content": f"Resolve gh#{issue} on drax0945/humanize"}])
+        if ticket:
+            kickoff = (
+                f"Resolve Jira ticket {ticket} ({JIRA_SITE_URL}/browse/{ticket}) on vishnuverse/humanize"
+            )
+        else:
+            kickoff = f"Resolve gh#{issue} on vishnuverse/humanize"
+        self._new_turn([{"type": "user.message", "content": kickoff}])
 
     # --- raw events ---------------------------------------------------------------------------------
     def _id(self, prefix: str = "01m3") -> str:
@@ -153,30 +183,25 @@ class RunBuilder:
         self.respond(cid, json.dumps({"content": [{"type": "text", "text": text}]}))
         return cid
 
-    def triage(self, v: dict[str, Any], raw: bool = False) -> str:
-        """Step 3.0: call_tool triage/triage_ticket. raw=True is TrueForge's plain-text shape (FastMCP's
-        indented JSON); otherwise the MCP content wrapper."""
-        [cid] = self.model(
-            calls=[
-                (
-                    "call_tool",
-                    {
-                        "mcp_server": "triage",
-                        "tool_name": "triage_ticket",
-                        "input": {"issue_number": self.issue},
-                    },
-                )
-            ]
-        )
+    def triage(self, v: dict[str, Any], raw: bool = False, key: str | None = None) -> str:
+        """Step 3.0: call_tool triage/triage_ticket (triage_jira_ticket for a Jira run, `key` overrides the
+        ticket_key). raw=True is TrueForge's plain-text shape (FastMCP's indented JSON); otherwise the MCP
+        content wrapper."""
+        if self.ticket:
+            tool = "triage_jira_ticket"
+            inp: dict[str, Any] = {"ticket_key": key or self.ticket, "summary": "ordinal(12) returns 12nd"}
+        else:
+            tool, inp = "triage_ticket", {"issue_number": self.issue}
+        [cid] = self.model(calls=[("call_tool", {"mcp_server": "triage", "tool_name": tool, "input": inp})])
         text = json.dumps(v, indent=2, ensure_ascii=False)
         self.respond(cid, text if raw else json.dumps({"content": [{"type": "text", "text": text}]}))
         return cid
 
-    def gated(self, tool: str, inp: dict[str, Any], content: str | None = None) -> str:
+    def gated(
+        self, tool: str, inp: dict[str, Any], content: str | None = None, server: str = "github"
+    ) -> str:
         """The model calls a gated tool: TrueForge pauses (tool.approval_required) and ends the turn."""
-        [cid] = self.model(
-            content, [("call_tool", {"mcp_server": "github", "tool_name": tool, "input": inp})]
-        )
+        [cid] = self.model(content, [("call_tool", {"mcp_server": server, "tool_name": tool, "input": inp})])
         source = self.items[-1]["event"]["id"]
         req = self._add(
             {
@@ -281,7 +306,7 @@ class RunBuilder:
             "run_id": self.scenario,
             "scenario": self.scenario,
             "issue": self.issue,
-            "repo": "drax0945/humanize",
+            "repo": "vishnuverse/humanize",
             "agent": "ticket-resolver",
             "session_id": "01session",
             "mode": "script",
@@ -292,6 +317,8 @@ class RunBuilder:
             "turn_ids": self.turn_ids,
             "unexpected_gate": None,
         }
+        if self.ticket:  # orchestrator meta for a Jira run
+            m.update(issue=None, ticket=self.ticket, source="jira", agent="ticket-resolver-jira")
         m.update(meta or {})
         (path / "meta.json").write_text(json.dumps(m, indent=1))
         (path / "events.json").write_text(json.dumps(self.items, indent=1, ensure_ascii=False))
@@ -307,15 +334,17 @@ class RunBuilder:
 # --- canned flows -----------------------------------------------------------------------------------
 
 
-def handoff(n: int = 1, outcome: str = "fixed", status: str = "ok", **over: Any) -> dict[str, Any]:
+def handoff(n: int | str = 1, outcome: str = "fixed", status: str = "ok", **over: Any) -> dict[str, Any]:
+    """The agent's handoff for GitHub issue `n`, or for Jira ticket `n` when it is a key (ticket "KAN-4")."""
+    nm = names(n)
     h: dict[str, Any] = {
         "stage": "resolve",
         "status": status,
         "outcome": outcome,
-        "repo": "drax0945/humanize",
+        "repo": "vishnuverse/humanize",
         "sha": SHA,
-        "ticket": f"gh#{n}",
-        "branch": f"fix/issue-{n}" if outcome == "fixed" else None,
+        "ticket": nm["ref"],
+        "branch": nm["branch"] if outcome == "fixed" else None,
         "pr_url": PR_URL if outcome == "fixed" else None,
         "repro": {"before": "3/3 fail", "after": "3/3 pass", "suite": "green", "hit_rate": None},
         "attempts": [
@@ -345,24 +374,20 @@ def prechecks(b: RunBuilder, route: str | None = "defect", ai: float = 0.02, raw
     b.mcp("list_commits", {**REPO_ARGS, "sha": "main", "perPage": 1}, [{"sha": SHA}])
     if route is not None:
         b.triage(verdict(n, route, ai), raw=raw)
-    b.mcp("list_pull_requests", {**REPO_ARGS, "head": f"drax0945:fix/issue-{n}", "state": "open"}, [])
+    b.mcp("list_pull_requests", {**REPO_ARGS, "head": f"vishnuverse:fix/issue-{n}", "state": "open"}, [])
 
 
 def sandbox_setup(b: RunBuilder) -> None:
-    b.exec(f"git clone https://github.com/drax0945/humanize {REPO_DIR}", 0, "Cloning into 'humanize'...")
+    b.exec(f"git clone https://github.com/vishnuverse/humanize {REPO_DIR}", 0, "Cloning into 'humanize'...")
     b.exec(f"cd {REPO_DIR} && git fetch --tags && git checkout {SHA[:7]}", 0, "HEAD is now at 392aef7")
     b.exec(f'cd {REPO_DIR} && pip install -q -e ".[tests]"', 0, "")
 
 
 def pytest_issue(b: RunBuilder, outcome: str) -> None:
-    n = b.issue
-    pytest = f"python -m pytest -q -p no:cacheprovider tests/test_issue_{n}.py"
+    pytest = f"python -m pytest -q -p no:cacheprovider {b.test_file}"
     cmd = f"cd {REPO_DIR} && for i in 1 2 3; do {pytest}; done"
     if outcome == "fail":
-        out = (
-            f"F..\nFAILED tests/test_issue_{n}.py::test_issue - AssertionError\n1 failed, 2 passed in 0.05s\n"
-            * 3
-        )
+        out = f"F..\nFAILED {b.test_file}::test_issue - AssertionError\n1 failed, 2 passed in 0.05s\n" * 3
         b.exec(cmd, 1, out)
     else:
         b.exec(cmd, 0, "...\n3 passed in 0.04s\n" * 3)
@@ -382,7 +407,6 @@ def full_suite(b: RunBuilder, green: bool = True) -> None:
 
 
 def repro_and_fix(b: RunBuilder) -> None:
-    n = b.issue
     sandbox_setup(b)
     pytest_issue(b, "fail")
     b.exec(f"cd {REPO_DIR} && python3 /tmp/edit.py && python3 -m py_compile src/humanize/number.py", 0, "")
@@ -391,19 +415,18 @@ def repro_and_fix(b: RunBuilder) -> None:
     b.exec(
         f"cd {REPO_DIR} && git status --porcelain",
         0,
-        f" M src/humanize/number.py\n?? tests/test_issue_{n}.py\n",
+        f" M src/humanize/number.py\n?? {b.test_file}\n",
     )
 
 
-def push(b: RunBuilder) -> None:
-    n = b.issue
+def push(b: RunBuilder, extra_files: tuple[str, ...] = ()) -> None:
     b.mcp("list_commits", {**REPO_ARGS, "sha": "main", "perPage": 1}, [{"sha": SHA}])
-    b.mcp("create_branch", {**REPO_ARGS, "branch": f"fix/issue-{n}", "from_branch": "main"})
+    b.mcp("create_branch", {**REPO_ARGS, "branch": b.branch, "from_branch": "main"})
     files = [
         {"path": "src/humanize/number.py", "content": "..."},
-        {"path": f"tests/test_issue_{n}.py", "content": "..."},
-    ]
-    b.mcp("push_files", {**REPO_ARGS, "branch": f"fix/issue-{n}", "files": files, "message": f"fix: gh#{n}"})
+        {"path": b.test_file, "content": "..."},
+    ] + [{"path": p, "content": "..."} for p in extra_files]
+    b.mcp("push_files", {**REPO_ARGS, "branch": b.branch, "files": files, "message": f"fix: {b.ref}"})
 
 
 def pr_input(n: int = 1, title: str = "fix: ordinal(12) returns 12th") -> dict[str, Any]:
@@ -618,6 +641,86 @@ def policy_blocked_run(body: str | None = None) -> RunBuilder:
     return b
 
 
+# --- Jira runs (TR-J01: ticket KAN-4, agent ticket-resolver-jira) -----------------------------------
+
+
+def jira_prechecks(b: RunBuilder, route: str | None = "defect", read: bool = True) -> None:
+    """Read the ticket on the jira server, pin main, triage_jira_ticket, look for an open PR from
+    fix/kan-4."""
+    if read:
+        b.mcp(
+            "getJiraIssue",
+            {"cloudId": CLOUD_ID, "issueIdOrKey": b.ticket, "responseContentFormat": "markdown"},
+            {
+                "key": b.ticket,
+                "fields": {"summary": "ordinal(12) returns 12nd", "status": {"name": "In Progress"}},
+            },
+            server="jira",
+        )
+    b.mcp("list_commits", {**REPO_ARGS, "sha": "main", "perPage": 1}, [{"sha": SHA}])
+    if route is not None:
+        b.triage(verdict(b.ticket, route))
+    b.mcp("list_pull_requests", {**REPO_ARGS, "head": f"vishnuverse:{b.branch}", "state": "open"}, [])
+
+
+def jira_pr_input(key: str = JIRA_KEY) -> dict[str, Any]:
+    return {
+        **REPO_ARGS,
+        "title": f"fix: ordinal(12) returns 12th ({key})",
+        "body": f"Fixes {key} ({JIRA_SITE_URL}/browse/{key})\n\n" + evidence_card(key),
+        "head": names(key)["branch"],
+        "base": "main",
+    }
+
+
+def jira_comment_input(key: str = JIRA_KEY, body: str | None = None, **over: Any) -> dict[str, Any]:
+    body = body if body is not None else f"Fixed: ordinal(12) returns 12th again. Pull request: {PR_URL}"
+    return {
+        "cloudId": CLOUD_ID,
+        "issueIdOrKey": key,
+        "commentBody": body,
+        "contentFormat": "markdown",
+        **over,
+    }
+
+
+def jira_fixed_run(
+    scenario: str = "TR-J01",
+    key: str = JIRA_KEY,
+    comment: dict[str, Any] | None = None,
+    gate_comment: bool = True,
+    read: bool = True,
+    hook: Callable[[RunBuilder], Any] | None = None,
+    extra_files: tuple[str, ...] = (),
+) -> RunBuilder:
+    """TR-J01: read KAN-4 (jira), triage_jira_ticket, repro + fix in the sandbox, push fix/kan-4, PR gate
+    (allow), Jira reply gate (allow), handoff. gate_comment=False posts the reply without a gate (a harness
+    failure the scorer must catch); `hook(b)` adds steps after the fix, before the push."""
+    b = RunBuilder(scenario, ticket=key)
+    jira_prechecks(b, read=read)
+    repro_and_fix(b)
+    if hook is not None:
+        hook(b)
+    push(b, extra_files)
+    cid = b.gated("create_pull_request", jira_pr_input(key), content=evidence_card(key))
+    b.answer(cid, "allow", result={"html_url": PR_URL})
+    inp = comment if comment is not None else jira_comment_input(key)
+    if gate_comment:
+        cid = b.gated(JIRA_COMMENT, inp, server="jira")
+        b.answer(cid, "allow", result={"id": "10001"})
+    else:
+        b.mcp(JIRA_COMMENT, inp, {"id": "10001"}, server="jira")
+    h = handoff(
+        key,
+        approvals=[
+            {"tool": "create_pull_request", "decision": "allow", "mode": "script"},
+            {"tool": JIRA_COMMENT, "decision": "allow", "mode": "script"},
+        ],
+    )
+    b.final(final_text(h, f"Opened {PR_URL} and replied on {key}."))
+    return b
+
+
 # --- fakes and output helpers -----------------------------------------------------------------------
 
 
@@ -626,7 +729,7 @@ class FakeGitHub:
 
     def __init__(
         self,
-        login: str = "drax0945",
+        login: str = "vishnuverse",
         pulls: list[dict[str, Any]] | None = None,
         files: dict[int, list[dict[str, Any]]] | None = None,
         issues: dict[int, dict[str, Any]] | None = None,
@@ -664,12 +767,37 @@ class FakeGitHub:
         return self.main
 
 
+class FakeJira:
+    """In-memory stand-in for JiraClient (same read-only interface, bodies already flattened to text)."""
+
+    def __init__(
+        self,
+        account_id: str = "acc-shipgate",
+        issues: dict[str, dict[str, Any]] | None = None,
+        comments: dict[str, list[dict[str, Any]]] | None = None,
+    ) -> None:
+        self.account_id = account_id
+        self.issues = issues or {}
+        self.comment_map = comments or {}
+
+    def myself(self) -> str:
+        return self.account_id
+
+    def issue(self, key: str) -> dict[str, Any]:
+        return self.issues.get(key, {"key": key, "status": "To Do", "labels": ["bug"]})
+
+    def comments(self, key: str) -> list[dict[str, Any]]:
+        return self.comment_map.get(key, [])
+
+
 class FakeTrueForge:
-    def __init__(self, agent: dict[str, Any] | None) -> None:
-        self._agent = agent
+    """Saved agents by name: one agent (as before) or a list of them."""
+
+    def __init__(self, agent: dict[str, Any] | list[dict[str, Any]] | None) -> None:
+        self._agents = agent if isinstance(agent, list) else [agent] if agent else []
 
     def agent(self, name: str = "ticket-resolver") -> dict[str, Any] | None:
-        return self._agent if self._agent and self._agent.get("name") == name else None
+        return next((a for a in self._agents if a.get("name") == name), None)
 
 
 def saved_agent(gates: list[str] | None = None, enable: list[str] | None = None) -> dict[str, Any]:
@@ -696,6 +824,41 @@ def saved_agent(gates: list[str] | None = None, enable: list[str] | None = None)
         "name": "ticket-resolver",
         "description": "Ticket Resolver",
         "manifest": {"model": {"name": "google-gemini/gemini-3-6-flash"}, "mcp_servers": [github]},
+    }
+
+
+def saved_jira_agent(
+    github_gates: list[str] | None = None,
+    jira_gates: list[str] | None = None,
+    jira_enable: list[str] | None = None,
+) -> dict[str, Any]:
+    """ticket-resolver-jira as setup_agents.ts saves it (the shared contract)."""
+    github = {
+        "name": "github",
+        "enable_tools": [
+            "get_file_contents",
+            "list_pull_requests",
+            "list_commits",
+            "create_branch",
+            "push_files",
+            "create_pull_request",
+        ],
+        "require_approval_for_tools": github_gates if github_gates is not None else ["create_pull_request"],
+    }
+    jira = {
+        "name": "jira",
+        "enable_tools": jira_enable if jira_enable is not None else ["getJiraIssue", JIRA_COMMENT],
+        "require_approval_for_tools": jira_gates if jira_gates is not None else [JIRA_COMMENT],
+    }
+    triage = {"name": "triage", "enable_tools": ["triage_jira_ticket"], "require_approval_for_tools": []}
+    return {
+        "id": "agt_2",
+        "name": "ticket-resolver-jira",
+        "description": "Ticket Resolver (Jira)",
+        "manifest": {
+            "model": {"name": "openrouter/deepseek-v4-flash"},
+            "mcp_servers": [github, jira, triage],
+        },
     }
 
 

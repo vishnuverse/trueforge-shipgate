@@ -4,6 +4,73 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 17:00 — Claude — submission docs pass (branch `feat/jira`)
+
+**Done**
+- README: stranger-proof quick start (own humanize fork, OpenRouter + TypeSafe keys, demo-forks.txt), optional Jira
+  setup (own site/cloud_id, OAuth fallback), `## Demo (5 min)`, status dated 17:00 on deepseek-v4-flash (TR-01 PASS
+  34/34 at 15:40), gpt-6-luna tried and reverted (F9); Daytona claims removed (README, SPEC). `.env.example`: OpenRouter
+  is the default key; Jira OAuth note.
+
+**Blocked / Next**
+- TR-J01 **PASS 36/36** live at 16:55 on deepseek-v4-flash (PR #30, Jira reply, KAN-4 In Review); `must_pass: true`. Still to fill: `Video: <link>` (README Demo).
+- `drax0945/humanize` is still in `tests/scenarios/demo-forks.txt`: `tests/check/test_check.py:937` asserts both forks,
+  so drop the line and the test together. That exact-set assert also fails once a stranger appends their fork.
+
+---
+
+## 2026-09-26 16:35 — Claude — Jira as a second ticket source, built and merged (branch `feat/jira`)
+
+**Done**
+- Run-through of the current flow first: `score.sh TR-01` **PASS 34/34** on `vishnuverse/humanize`. The 15:25 switch to
+  `drax0945/humanize` was reverted (`f11ab33`): the demo PAT reads it but every write 403s. Critique + debt:
+  `docs/tech-debt.md`.
+- `shipgate run --ticket KAN-4` (Jira) next to `--issue N` (GitHub, unchanged). Built in 4 parallel slices, merged:
+  config `jira:` + naming rule (`754831a`); orchestrator `--ticket`, `JiraStatus`, gate warnings (T5); `triage_jira_ticket`,
+  `scripts/shipgate_env.py`, `seed_jira.py`, `score.sh --ticket`, `setup.sh` Jira preflight (T3/T7); agent
+  `ticket-resolver-jira` + copied skill + `requires: jira` skip rule + git-mode refusal + jira connector + doctor
+  checks (T4); scorer Jira grading, H3 on every server, T14-J, `expect.ticket_status`, `TR-J01` (T6).
+- Tests: 300 pytest, 176 node, typecheck + ruff clean. Contract: `docs/contracts.md` §10.
+- Live so far: Jira REST token OK; `triage_jira_ticket` KAN-4 → `defect 0.89 · patch allowed`; KAN-4 seeded (twin of
+  #1); both agents registered on `openai/gpt-6-luna` (added `gpt-6-luna` to the existing TrueForge `openai`
+  provider, which lacked it; `setup.ts` keeps an existing provider without adding a missing model — gap).
+
+**Blocked**
+- Atlassian MCP refuses API-token calls on this org ("You don't have permission to connect via API token"), so the
+  `jira` connector was switched to OAuth (`auth: {type: "dcr"}`); it needs one consent click as
+  the dedicated hackathon Atlassian account (`GET /api/v1/mcp-servers/jira/authorize` gives the URL). `setup.sh` keeps it.
+
+**Next**
+1. After OAuth: `npm --prefix orchestrator run shipgate -- run --ticket KAN-4 --approve terminal` (film it), then
+   `scripts/score.sh TR-J01`; set `must_pass: true` once green. `scripts/score.sh TR-01` again on gpt-6-luna.
+2. Port any future GitHub-skill prompt change into `skills/ticket-resolver-jira/SKILL.md` (parity test guards shape only).
+
+---
+
+## 2026-09-26 16:20 — Claude — Model switched to OpenAI `gpt-6-luna` (branch `feat/jira`)
+
+**Done**
+- `shipgate.yaml` (and this Mac's `shipgate.local.yaml`) `trueforge.model: openai/gpt-6-luna`. `setup.ts` picks the
+  TrueForge provider from the model prefix: `openai/` → well-known `openai` provider (no `name` in the manifest,
+  `OPENAI_API_KEY`), `openrouter/` → the old `custom` provider. The doctor checks the matching provider; `setup.sh`
+  requires only that provider's key.
+- Agent params: `reasoning_effort: high`, `max_tokens: 32768`, `prompt_cache_key: shipgate-ticket-resolver-v1`;
+  `temperature`/`top_p` dropped (unconfirmed for Luna). Golden `tests/fixtures/skill/ticket-resolver.humanize.json`
+  regenerated.
+- New reference `docs/reference/gpt-6-luna-prompting-and-caching.md` (model card, caching rules applied to
+  TrueForge's `store:false` Responses path); the DeepSeek reference is marked superseded.
+- Tests: orchestrator 151/151, typecheck clean, `pytest tests/check` 155 passed, ruff clean. Not yet run live.
+- Fix (16:40): an existing provider that lacks the configured model now gets it appended (`updated`; the masked key
+  is sent back, so TrueForge keeps the stored one), and the doctor fails when the provider doesn't list the model.
+  Found by the Jira session: the UI-made `openai` provider had no `gpt-6-luna`, so agent registration returned 422.
+  First live run (KAN-4): 76% of input tokens from cache, about $0.06; no PR, because a concurrent reset deleted the branch.
+
+**Next**
+- User: `scripts/setup.sh --no-start` (sends `OPENAI_API_KEY` to the local TrueForge, creates the `openai`
+  provider, re-registers the agent), then one scored TR-01 on `gpt-6-luna`; check `cached_tokens` on turn 2+.
+- If OpenAI rejects a param, drop it from `agents/ticket-resolver.json` and regenerate the golden.
+- Retry `openai.com/index/better-prompt-caching-for-gpt-6/` (403 during research).
+
 ## 2026-09-26 15:25 — Claude — Merged main (summarize-before-Jev) into `feat/any-repo`; demo target `drax0945/humanize`
 
 **Done**
@@ -25,7 +92,7 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
   connector must be able to write there.
 - Re-register the agent (`scripts/setup.sh --no-start` or `setup_agents.ts --inline-skill`) and restart the triage
   MCP so both pick up the new target and the summary parameter.
-- `.claude/launch.json` now carries Ansh's machine-specific `PATH=/Users/anshmahapatra/...` entry for the
+- `.claude/launch.json` now carries Ansh's machine-specific `PATH=<home>/...` entry for the
   `trueforge` config (merged without conflict); drop it if it breaks the preview on other machines.
 
 ---

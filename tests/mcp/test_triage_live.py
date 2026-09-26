@@ -15,7 +15,7 @@ import server
 from shipgate_config import load_config
 
 pytestmark = pytest.mark.live
-ENV = server.load_env(server.ROOT / ".env", os.environ)
+ENV = server.load_env(server.env_path(), os.environ)
 needs_key = pytest.mark.skipif(not ENV.get("TYPESAFE_API_KEY"), reason="TYPESAFE_API_KEY not set")
 
 

@@ -1,6 +1,9 @@
-"""Read-only clients for GitHub (REST) and TrueForge. Injectable so unit tests can fake them.
+"""Read-only clients for GitHub (REST), Jira Cloud (REST) and TrueForge. Injectable so unit tests can fake
+them.
 
-The GitHub client only ever issues GET requests and refuses any repo other than the shipgate.yaml target.
+The GitHub client only ever issues GET requests and refuses any repo other than the shipgate.yaml target; the
+Jira client only ever issues GET requests to the shipgate.yaml jira: site and refuses keys outside its
+project.
 """
 
 from __future__ import annotations
@@ -12,15 +15,19 @@ from typing import Any, Protocol
 
 import httpx
 
-from .constants import AGENT_NAME, DEFAULT_TRUEFORGE_URL, OWNER, REPO
+from .constants import AGENT_NAME, DEFAULT_TRUEFORGE_URL, JIRA, OWNER, REPO
 
 
 class SourceError(RuntimeError):
-    """A read from GitHub or TrueForge failed."""
+    """A read from GitHub, Jira or TrueForge failed."""
 
 
 class RefusedRepo(ValueError):
     pass
+
+
+class RefusedTicket(RefusedRepo):
+    """A Jira site or ticket key outside the shipgate.yaml jira: section."""
 
 
 class GitHubReader(Protocol):
@@ -31,6 +38,14 @@ class GitHubReader(Protocol):
     def issue_comments(self, number: int) -> list[dict[str, Any]]: ...
     def branch_exists(self, name: str) -> bool: ...
     def main_head(self) -> dict[str, Any]: ...  # {"sha": str, "date": iso str}
+
+
+class JiraReader(Protocol):
+    def myself(self) -> str: ...  # the API token's accountId
+    def issue(self, key: str) -> dict[str, Any]: ...  # {"key", "status": name, "labels": [str]}
+    def comments(
+        self, key: str
+    ) -> list[dict[str, Any]]: ...  # [{"id", "author": accountId, "created", "body"}]
 
 
 class TrueForgeReader(Protocol):
@@ -129,6 +144,133 @@ class GitHubClient:
         commit = (data or {}).get("commit") or {}
         date = (commit.get("committer") or {}).get("date") or (commit.get("author") or {}).get("date")
         return {"sha": (data or {}).get("sha", ""), "date": date}
+
+
+def adf_text(node: Any) -> str:
+    """Plain text of an Atlassian Document Format body (the REST v3 comment body).
+
+    Text nodes are kept; a link mark's href is appended in <> unless the text already shows it (the agent's
+    markdown `[PR](https://github.com/...)` becomes text "PR" with a link mark); inline/block cards give their
+    URL; mentions their text; hard breaks and block nodes a newline."""
+    if isinstance(node, list):
+        return "".join(adf_text(n) for n in node)
+    if not isinstance(node, dict):
+        return ""
+    kind = node.get("type")
+    attrs = node.get("attrs") if isinstance(node.get("attrs"), dict) else {}
+    if kind == "text":
+        text = str(node.get("text") or "")
+        for mark in node.get("marks") or []:
+            if not isinstance(mark, dict) or mark.get("type") != "link":
+                continue
+            href = (mark.get("attrs") or {}).get("href")
+            if isinstance(href, str) and href and href not in text:
+                text += f" <{href}>"
+        return text
+    if kind == "hardBreak":
+        return "\n"
+    if kind in ("inlineCard", "blockCard", "embedCard"):
+        return str(attrs.get("url") or "")
+    if kind in ("mention", "emoji", "status"):
+        return str(attrs.get("text") or "")
+    inner = adf_text(node.get("content") or [])
+    if kind in ("paragraph", "heading", "listItem", "codeBlock", "blockquote", "rule", "tableRow"):
+        return inner + "\n"
+    return inner
+
+
+class JiraClient:
+    """GET-only Jira Cloud REST client pinned to the shipgate.yaml jira: site and project.
+
+    Basic auth with JIRA_EMAIL + JIRA_API_KEY (from .env via load_dotenv). Endpoints:
+      GET /rest/api/3/myself                                 -> accountId (whose comments are this run's)
+      GET /rest/api/2/issue/{key}?fields=status,labels       -> status.name, labels
+      GET /rest/api/3/issue/{key}/comment (startAt paging)   -> author.accountId, created, body (ADF,
+                                                                flattened with adf_text)
+    """
+
+    PAGE = 100
+
+    def __init__(
+        self,
+        email: str,
+        token: str,
+        site: str | None = None,
+        project: str | None = None,
+        transport: httpx.BaseTransport | None = None,
+    ) -> None:
+        if JIRA is None:
+            raise SourceError("shipgate.yaml has no jira: section")
+        site, project = (site or JIRA.site).lower(), project or JIRA.project
+        if (site, project) != (JIRA.site, JIRA.project):
+            raise RefusedTicket(f"refusing {site} {project}: check.py only reads {JIRA.site} {JIRA.project}")
+        if not email or not token:
+            raise SourceError("JIRA_EMAIL / JIRA_API_KEY are not set (use --offline to skip Jira checks)")
+        self._key_re = JIRA.key_re()
+        self._http = httpx.Client(
+            base_url=f"https://{JIRA.site}",
+            auth=httpx.BasicAuth(email, token),
+            headers={"Accept": "application/json", "User-Agent": "shipgate-check"},
+            timeout=20.0,
+            transport=transport,
+        )
+
+    def _key(self, key: str) -> str:
+        if not isinstance(key, str) or not self._key_re.match(key):
+            raise RefusedTicket(f"refusing {key!r}: check.py only reads {JIRA.project}-<n> tickets")
+        return key
+
+    def _get(self, path: str, params: dict[str, Any] | None = None) -> Any:
+        """The only way this client talks to Jira: a GET."""
+        try:
+            resp = self._http.get(path, params=params)
+        except httpx.HTTPError as exc:
+            raise SourceError(f"Jira GET {path}: {exc}") from exc
+        if resp.status_code >= 400:
+            raise SourceError(f"Jira GET {path}: HTTP {resp.status_code}")
+        try:
+            return resp.json()
+        except ValueError as exc:
+            raise SourceError(f"Jira GET {path}: response is not JSON") from exc
+
+    def myself(self) -> str:
+        account = (self._get("/rest/api/3/myself") or {}).get("accountId")
+        if not isinstance(account, str) or not account:
+            raise SourceError("Jira GET /rest/api/3/myself: no accountId")
+        return account
+
+    def issue(self, key: str) -> dict[str, Any]:
+        data = self._get(f"/rest/api/2/issue/{self._key(key)}", {"fields": "status,labels"}) or {}
+        fields = data.get("fields") or {}
+        labels = [lb for lb in fields.get("labels") or [] if isinstance(lb, str)]
+        return {
+            "key": data.get("key", key),
+            "status": (fields.get("status") or {}).get("name"),
+            "labels": labels,
+        }
+
+    def comments(self, key: str) -> list[dict[str, Any]]:
+        path = f"/rest/api/3/issue/{self._key(key)}/comment"
+        out: list[dict[str, Any]] = []
+        start = 0
+        for _ in range(50):
+            page = self._get(path, {"startAt": start, "maxResults": self.PAGE, "orderBy": "created"}) or {}
+            items = [c for c in page.get("comments") or [] if isinstance(c, dict)]
+            for c in items:
+                body = c.get("body")
+                out.append(
+                    {
+                        "id": c.get("id"),
+                        "author": (c.get("author") or {}).get("accountId"),
+                        "created": c.get("created"),
+                        "body": body if isinstance(body, str) else adf_text(body).strip(),
+                    }
+                )
+            start += len(items)
+            total = page.get("total")
+            if not items or not isinstance(total, int) or start >= total:
+                break
+        return out
 
 
 class TrueForgeClient:
