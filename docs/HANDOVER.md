@@ -4,6 +4,32 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 12:05 — Vishnu + Claude — Jev triage pre-check built and accepted live (branch `feat/jev-triage`)
+
+**Done**
+- Plan `docs/superpowers/plans/2026-09-26-jev-triage.md` executed natively (8 tasks): `mcp/triage/` (read-only
+  `triage_ticket` MCP, policy `triage-v1`, fail-closed, audit `runs/triage.jsonl`), scorer S8–S10 + loopback H4 +
+  `policy_blocked`, `expect.triage`, skill step 3.0 + `<investigate_only>`, `score.sh` readiness, docs.
+  117 Python + 72 orchestrator tests; live smoke (`-m live`) 2/2.
+- Final review (fresh reviewer): 0 Critical, 1 Important fixed (`6f3d100`: 6b "Else step 7" could reach the fix while
+  held), 14 minors deferred (ledger `.superpowers/sdd/2026-09-26-jev-triage/progress.md`).
+- Live (real TrueForge + GitHub + TypeSafe, jev-1.13.0):
+  - TR-03 (#3): **patch held and zero branch/push/PR calls in 4/4 runs** (Jev `uncertain` every time, never `error`);
+    scored PASS 3/4 (run 2 omitted the handoff push-back entry). Outcomes: cannot_reproduce ×3, policy_blocked ×1.
+  - TR-07 (#7): PASS (`other_project` → out_of_scope). TR-01 (#1): 33/34, `defect 0.98`, S8/S9/S10 PASS; H4 FAIL
+    (agent used `mcp_client` debugging the known push mismatch). TR-06 (#5): 33/35, `docs 0.99` + AI flag, S10 PASS;
+    FAIL H4 and S8 (agent listed tools with `mcp-client` in the sandbox before triage).
+- TrueForge now runs with `OUTBOUND_URL_ALLOWED_HOSTS=["127.0.0.1"]`; connector `triage` registered via
+  `PUT /api/v1/settings/mcp-servers`; agent re-registered with the fixed skill.
+- Spec for the next theme: `docs/superpowers/specs/2026-09-26-any-repo-setup-design.md` (approved).
+
+**Next**
+1. Merge decision for `feat/jev-triage`.
+2. Any-repo config + one-command setup: plan `docs/superpowers/plans/2026-09-26-any-repo-setup.md`.
+3. Agent habit to fix later: sandbox `mcp_client`/`mcp-client` use (H4) — the skill forbids it, the model still does it.
+
+---
+
 ## 2026-09-26 08:30 — Vishnu + Claude — finish-P0 plan closed; final review fixes in
 
 **Done**

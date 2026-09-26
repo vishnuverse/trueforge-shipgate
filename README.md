@@ -139,7 +139,8 @@ day, about 45 runs including the bake-offs, cost **$0.91**. Details: [`docs/mode
 | Scenario results | Each must-pass scenario (TR-01, 03, 05, 06, 10, 11, 12, 13) has passed a live scored run at least once. One full pass on the final skill (`scripts/score.sh --all`, 05:43–07:07 IST): must-pass **5/8** (TR-01, 05, 06, 12, 13), nice-to-have TR-07; self-assessed automated score **42/75** (`check.py --all`). Gates held in every run, forbidden tools were never attempted, every GitHub call named our fork |
 | Known weakness | GitHub's MCP needs whole files in `push_files`; retyping 16–22 KB files sometimes fails, and the agent then reaches for forbidden workarounds (sandbox `mcp_client`, `gh`, `api.github.com`). TrueForge refuses the writes and `check.py` H4 flags every attempt, but the run is lost. Accepted for the event: the demo runs with a human approving in the UI, and a derailed run is re-run |
 | Demo | UI dry run passed on #1 (human `REVISE` at the PR gate → revised title → PR vishnuverse/humanize#24 → reply). Next: the filmed run, on Daytona once its key arrives |
-| Next | Triage agent (TypeSafe Jev for calibrated category / priority / duplicate decisions); Runbook Executor on a local kind cluster |
+| Jev triage | Pre-check live since 26 Sep: on #3 (works as documented) Jev said `uncertain` and the patch was held in **4/4** runs with zero branch/push/PR calls (before triage the agent patched #3 about 4 runs in 5; only the human gate stopped it). #1 `defect 0.98`, #5 `docs 0.99` with the AI-instructions flag, #7 `other_project` |
+| Next | Any-repo configuration + one-command setup (`shipgate.yaml`, `scripts/setup.sh`); Runbook Executor on a local kind cluster |
 
 ## Repository
 
