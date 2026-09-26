@@ -104,7 +104,7 @@ Edit `shipgate.yaml`:
 | `target.default_branch` | must already be protected (`setup.sh` checks and refuses otherwise) |
 | `target.description` | 1–500 chars of context for Jev triage: what the package is (and isn't) |
 | `python.install` | run after `python3 -m venv .venv` to prepare it |
-| `python.test` | the pytest command the agent (and `setup.sh --smoke`) runs |
+| `python.test` | the pytest command the agent runs in the sandbox (`setup.sh` never runs it; `--smoke` is one triage call) |
 | `python.source_dir` | fixes may only touch files under here |
 | `python.tests_dir` | the regression test lands at `<tests_dir>/test_issue_<n>.py` |
 | `trueforge.url` | your TrueForge instance (default `http://localhost:8790`) |
@@ -112,10 +112,11 @@ Edit `shipgate.yaml`:
 
 Then run `scripts/setup.sh` as above. **Limits:** the triage questions (policy `triage-v1`) name humanize, and its
 thresholds were tuned on it, so on another repo most tickets will likely be held as `uncertain` (investigate-only,
-no patch) until a retuned policy exists; that is the safe direction. The `tests/scenarios/TR-*.yaml`
-scenarios and the scorecard (`check.py`) score the demo fork only; `reset.sh` refuses to run against any other repo.
-The any-repo flow itself (`shipgate.yaml` + `scripts/setup.sh` against a non-default target) is proven on the
-humanize fork only — no second repo has been run live yet.
+no patch) until a retuned policy exists; that is the safe direction. `setup.sh` cannot check the install/test
+commands; the first ticket run does. The `tests/scenarios/TR-*.yaml` scenarios and the scorecard (`check.py`) score
+the demo fork only; `reset.sh` refuses to run against any other repo. The any-repo flow itself (`shipgate.yaml` +
+`scripts/setup.sh` against a non-default target) is proven on the humanize fork only — no second repo has been run
+live yet.
 
 #### Scored demo (the humanize fork)
 To reproduce the scored demo fork instead of pointing at your own repo:
@@ -165,7 +166,7 @@ day, about 45 runs including the bake-offs, cost **$0.91**. Details: [`docs/mode
 | `skills/ticket-resolver/SKILL.md` | The agent's procedure |
 | `agents/ticket-resolver.json` | Agent spec: model, tools, gates, sandbox, limits |
 | `orchestrator/` | `shipgate run`: sessions, approvals, run records, labels |
-| `scripts/` | `setup_agents.ts`, `check.py` (oracle + scorecard), `reset.sh`, `score.sh`, `bakeoff.py` |
+| `scripts/` | `setup.sh` / `stop.sh` (one-command setup, doctor, teardown), `setup_trueforge.ts` (provider + connectors), `setup_agents.ts`, `shipgate_config.py` (config loader), `check.py` (oracle + scorecard), `reset.sh`, `score.sh`, `bakeoff.py` |
 | `tests/` | Scenarios, scorer tests, fixtures |
 | `docs/` | Design, contracts, work log, decisions, research ([index](docs/README.md)) |
 

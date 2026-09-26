@@ -16,6 +16,9 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 - I4: the orchestrator's TrueForge URL falls back to `shipgate.yaml` `trueforge.url` (env `TRUEFORGE_URL` still
   wins); `.env.example` now has `TRUEFORGE_URL` commented out, so an existing `.env` copied from the old example
   still pins `http://localhost:8790` for the orchestrator until that line is removed.
+- I5: README no longer claims `setup.sh --smoke` runs the tests (it is one triage call); Limits says setup cannot
+  check the install/test commands (the first ticket run does); the `scripts/` repository-map row names `setup.sh`,
+  `stop.sh`, `setup_trueforge.ts` and `shipgate_config.py`.
 
 **Known limit (ruling, not fixed):** the triage questions (policy `triage-v1`, `mcp/triage/policy.py`) name humanize.
 On another repo most tickets will likely be held as `uncertain` (investigate-only, no patch) until a retuned policy
