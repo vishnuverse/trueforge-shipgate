@@ -23,6 +23,17 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
   `PUT /api/v1/settings/mcp-servers`; agent re-registered with the fixed skill.
 - Spec for the next theme: `docs/superpowers/specs/2026-09-26-any-repo-setup-design.md` (approved).
 
+**Deferred minors** (Jev review): S9/x_triage trust the first verdict without checking its issue, and S8 allows a
+second call after a verdict · triage server's .env reader drops `export KEY=` lines (every ticket held) · the sync
+tool blocks FastMCP's event loop during a call · S10 collapses whitespace only (`Triage (triage-v1):` without the space
+is a false FAIL) · `_audit` catches OSError only · model pin sent, not enforced · TR-03 `patch_allowed: false` also
+passes on a TypeSafe outage (check route `uncertain` in `runs/triage.jsonl`) · TR-03 outcome/label/repro lists not
+cross-checked · scorer doesn't check the saved agent's triage server / web_search · S8 edge cases (same-message exec,
+non-inline skill) · skill promises card_line in every push-back comment · score.sh readiness doesn't check connector or
+allow-list; `server.py &` logs into the demo terminal · README own-fork section, rule 5 accounts, .env.example comment,
+live smoke not in test docs · nits: "0.50 < 0.50" rounding, loopback regex misses [::1]/127.x, AnswerError repr
+unbounded, generic flat module names.
+
 **Next**
 1. Merge decision for `feat/jev-triage`.
 2. Any-repo config + one-command setup: plan `docs/superpowers/plans/2026-09-26-any-repo-setup.md`.
