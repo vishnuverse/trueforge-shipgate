@@ -4,6 +4,7 @@
 #   scripts/score.sh TR-01   # reset.sh --yes (if the scenario says reset: true) -> orchestrator in script mode
 #                            #   -> check.py TR-01; exits with check.py's code
 #   scripts/score.sh --all   # every scenario in run order (TR-09 right after TR-01), then check.py --all
+#   A Jira scenario (plan field 2 is a key such as KAN-4) also runs seed_jira.py reset and passes --ticket.
 #
 # The orchestrator's exit code (0 ok, 1 error, 2 timeout, 3 unexpected gate, 4 no handoff) is reported,
 # and check.py still runs: it grades whatever the run left behind. Works with macOS bash 3.2.
@@ -24,16 +25,29 @@ orchestrator_meaning() {
 }
 
 # run_scenario ID ISSUE RESET TIMEOUT: reset -> orchestrator -> check.py; returns check.py's exit code.
+# ISSUE is a GitHub issue number, or a Jira ticket key (KAN-4) for a Jira scenario.
 run_scenario() {
-  local id="$1" issue="$2" reset="$3" timeout="$4" code
-  echo "=== $id: issue #$issue, reset $reset, timeout ${timeout} min"
+  local id="$1" issue="$2" reset="$3" timeout="$4" code source="--issue"
+  case "$issue" in
+    '' | *[!0-9]*) source="--ticket" ;;
+  esac
+  if [ "$source" = "--ticket" ]; then
+    echo "=== $id: ticket $issue, reset $reset, timeout ${timeout} min"
+  else
+    echo "=== $id: issue #$issue, reset $reset, timeout ${timeout} min"
+  fi
   if [ "$reset" = "true" ]; then
+    # reset.sh closes fix/* PRs and deletes fix/* branches on GitHub, which a Jira run uses too.
     if ! bash scripts/reset.sh --yes; then
       echo "score.sh: reset failed; not running $id" >&2
       return 1
     fi
+    if [ "$source" = "--ticket" ] && ! uv run python scripts/seed_jira.py reset "$issue" --yes < /dev/null; then
+      echo "score.sh: Jira reset of $issue failed; not running $id" >&2
+      return 1
+    fi
   fi
-  npm --prefix orchestrator run shipgate -- run --issue "$issue" --approve script --scenario "$id" \
+  npm --prefix orchestrator run shipgate -- run "$source" "$issue" --approve script --scenario "$id" \
     --timeout-min "$timeout" < /dev/null
   code=$?
   echo "score.sh: orchestrator exit $code ($(orchestrator_meaning "$code"))"
@@ -41,7 +55,7 @@ run_scenario() {
 }
 
 if [ $# -ne 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
-  sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'
+  sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
   [ $# -eq 1 ] && exit 0
   exit 2
 fi

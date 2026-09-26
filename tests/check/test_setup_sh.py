@@ -6,13 +6,18 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
 from shipgate_config import ROOT
 
 FAKE = {
     "GITHUB_PAT": "ghp_fake_value_1234",
     "OPENROUTER_API_KEY": "sk-or-fake-5678",
     "TYPESAFE_API_KEY": "ts-fake-9012",
+    "JIRA_EMAIL": "dev-fake@example.test",
+    "JIRA_API_KEY": "jira-fake-3456",
 }
+GITHUB_ONLY = {k: v for k, v in FAKE.items() if not k.startswith("JIRA_")}
+NO_JIRA = ROOT / "tests" / "fixtures" / "config" / "valid.yaml"  # shipgate.yaml carries a jira: section
 
 
 def run(
@@ -57,6 +62,8 @@ def test_export_and_quoted_env_lines_count(tmp_path: Path) -> None:
         'export GITHUB_PAT="ghp_fake_value_1234"',
         "OPENROUTER_API_KEY='sk-or-fake-5678'",
         "TYPESAFE_API_KEY=ts-fake-9012",
+        'export JIRA_EMAIL="dev-fake@example.test"',
+        "JIRA_API_KEY='jira-fake-3456'",
     ]
     r = run("scripts/setup.sh", "--dry-run", env_file=env_file(tmp_path, lines))
     assert r.returncode == 0, r.stderr
@@ -83,6 +90,58 @@ def test_config_error_exits_2(tmp_path: Path) -> None:
 
 def test_unknown_flag_exits_2() -> None:
     assert run("scripts/setup.sh", "--nope").returncode == 2
+
+
+def all_keys(tmp_path: Path, keys: dict[str, str] = FAKE) -> Path:
+    return env_file(tmp_path, [f"{k}={v}" for k, v in keys.items()])
+
+
+def test_jira_section_checks_its_keys_and_plans_the_token_check(tmp_path: Path) -> None:
+    r = run("scripts/setup.sh", "--dry-run", env_file=all_keys(tmp_path))
+    assert r.returncode == 0, r.stderr
+    out = r.stdout + r.stderr
+    assert "JIRA_EMAIL, JIRA_API_KEY (values not shown)" in out and "project KAN" in out
+    assert "would check that the Jira token reads developertunnel.atlassian.net" in out
+    assert all(v not in out for v in FAKE.values())
+
+
+def test_jira_section_with_an_empty_jira_key_is_a_usage_error(tmp_path: Path) -> None:
+    r = run("scripts/setup.sh", "--dry-run", env_file=all_keys(tmp_path, {**FAKE, "JIRA_API_KEY": ""}))
+    assert r.returncode == 2 and "JIRA_API_KEY is empty" in r.stderr and "jira: section" in r.stderr
+    r = run("scripts/setup.sh", "--dry-run", env_file=all_keys(tmp_path, GITHUB_ONLY))
+    assert r.returncode == 2 and "JIRA_EMAIL is empty" in r.stderr
+
+
+def test_no_jira_section_needs_no_jira_keys(tmp_path: Path) -> None:
+    r = run(
+        "scripts/setup.sh", "--dry-run",
+        env_file=all_keys(tmp_path, GITHUB_ONLY), extra={"SHIPGATE_CONFIG": str(NO_JIRA)},
+    )  # fmt: skip
+    assert r.returncode == 0, r.stderr
+    assert "Jira" not in r.stdout + r.stderr
+
+
+@pytest.mark.parametrize(("arg", "label"), [("KAN-4", "on KAN-4"), ("1", "on #1")])
+def test_smoke_takes_an_issue_number_or_a_jira_key(tmp_path: Path, arg: str, label: str) -> None:
+    r = run("scripts/setup.sh", "--dry-run", "--smoke", arg, env_file=all_keys(tmp_path))
+    assert r.returncode == 0, r.stderr
+    assert f"a triage smoke call {label}" in r.stdout
+
+
+@pytest.mark.parametrize("arg", ["kan-4", "KAN4", "1a", "", "KAN-4 x", "K-4"])
+def test_smoke_rejects_anything_else(tmp_path: Path, arg: str) -> None:
+    r = run("scripts/setup.sh", "--dry-run", "--smoke", arg, env_file=all_keys(tmp_path))
+    assert r.returncode == 2 and "--smoke needs an issue number or a Jira key" in r.stderr
+
+
+def test_smoke_jira_key_needs_the_jira_section_and_its_project(tmp_path: Path) -> None:
+    r = run(
+        "scripts/setup.sh", "--dry-run", "--smoke", "KAN-4",
+        env_file=all_keys(tmp_path, GITHUB_ONLY), extra={"SHIPGATE_CONFIG": str(NO_JIRA)},
+    )  # fmt: skip
+    assert r.returncode == 2 and "needs a jira: section" in r.stderr
+    r = run("scripts/setup.sh", "--dry-run", "--smoke", "OPS-4", env_file=all_keys(tmp_path))
+    assert r.returncode == 2 and "not a ticket of the configured Jira project KAN" in r.stderr
 
 
 def test_stop_with_nothing_started(tmp_path: Path) -> None:

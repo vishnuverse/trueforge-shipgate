@@ -5,13 +5,14 @@
 #   scripts/setup.sh                 preflight, install, start services, register in TrueForge, check the repo, doctor
 #   scripts/setup.sh --dry-run       print the plan: no network, no writes, no keys sent, nothing started
 #   scripts/setup.sh --check         doctor only (services must be running)
-#   options: --no-start --rotate-keys --allow-remote --allow-unprotected --smoke <issue>
+#   options: --no-start --rotate-keys --allow-remote --allow-unprotected --smoke <issue | JIRA-KEY>
 # Exit 0 ok, 1 a step failed, 2 usage/config error. Never prints key values. Works with macOS bash 3.2.
 set -o pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT" || exit 1
 
 DRY=0 CHECK=0 NOSTART=0 ROTATE=0 REMOTE=0 UNPROT=0 SMOKE=""
+JIRA_KEY_RE='^[A-Z][A-Z0-9]+-[0-9]+$'
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) DRY=1 ;;
@@ -22,7 +23,11 @@ while [ $# -gt 0 ]; do
     --allow-unprotected) UNPROT=1 ;;
     --smoke)
       shift
-      case "$1" in '' | *[!0-9]*) echo "setup.sh: --smoke needs an issue number" >&2; exit 2 ;; esac
+      case "$1" in
+        '' | *[!0-9]*)
+          [[ $1 =~ $JIRA_KEY_RE ]] || { echo "setup.sh: --smoke needs an issue number or a Jira key (KAN-4)" >&2; exit 2; }
+          ;;
+      esac
       SMOKE="$1"
       ;;
     -h | --help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
@@ -57,6 +62,14 @@ gh_api() {
   printf 'Authorization: Bearer %s\n' "$GITHUB_PAT_VALUE" |
     curl -sS -m 20 -X "$method" -H @- -H 'Accept: application/vnd.github+json' \
       -H 'X-GitHub-Api-Version: 2022-11-28' "https://api.github.com$path" "$@"
+}
+# Jira REST on the configured site, Basic auth (JIRA_EMAIL:JIRA_API_KEY) on stdin, never on the command line.
+jira_api() {
+  local method="$1" path="$2" basic
+  shift 2
+  basic="$(printf '%s:%s' "$(env_value JIRA_EMAIL)" "$(env_value JIRA_API_KEY)" | base64 | tr -d '\n')"
+  printf 'Authorization: Basic %s\n' "$basic" |
+    curl -sS -m 20 -X "$method" -H @- -H 'Accept: application/json' "https://$JIRA_SITE$path" "$@"
 }
 answers() { [ "$(curl -s -o /dev/null -m 3 -w '%{http_code}' "$1")" != "000" ]; }
 # The program listening on a port (empty if free), so a busy port is named instead of timing out.
@@ -94,13 +107,37 @@ TF_URL="${TF_URL%/}"
 ok "shipgate.yaml: target $TARGET (default branch $BRANCH), TrueForge $TF_URL"
 LABELS="bug:d73a4a triaged:fbca04 fix-proposed:0e8a16 cannot-reproduce:cfd3d7 needs-human:b60205"
 
+# Optional Jira ticket source: both values are empty when shipgate.yaml has no jira: section.
+JIRA_PROJECT="$(cfg jira.project)" || exit 2
+JIRA_SITE="$(cfg jira.site)" || exit 2
+if [ -n "$JIRA_PROJECT" ]; then
+  for key in JIRA_EMAIL JIRA_API_KEY; do
+    [ -n "$(env_value "$key")" ] || die "$ENV_FILE: $key is empty (shipgate.yaml has a jira: section)" 2
+  done
+  ok ".env has JIRA_EMAIL, JIRA_API_KEY (values not shown); Jira $JIRA_SITE, project $JIRA_PROJECT"
+fi
+case "$SMOKE" in
+  '' | *[!0-9]*)
+    if [ -n "$SMOKE" ]; then
+      [ -n "$JIRA_PROJECT" ] || die "--smoke $SMOKE needs a jira: section in shipgate.yaml" 2
+      case "$SMOKE" in
+        "$JIRA_PROJECT"-*) ;;
+        *) die "--smoke $SMOKE is not a ticket of the configured Jira project $JIRA_PROJECT" 2 ;;
+      esac
+    fi
+    ;;
+esac
+SMOKE_LABEL="#$SMOKE"
+case "$SMOKE" in *-*) SMOKE_LABEL="$SMOKE" ;; esac
+
 if [ "$DRY" = 1 ]; then
   plan "install dependencies: uv sync; npm --prefix orchestrator ci"
   [ "$NOSTART" = 1 ] || plan "start TrueForge 0.2.1 at $TF_URL (20-min turns, loopback allow-list) and the triage MCP on 127.0.0.1:8803, unless already running"
   plan "register in TrueForge: model provider openrouter, connectors github and triage (keys from .env, sent only to a local TrueForge$([ "$ROTATE" = 1 ] && echo ', rotated')), then the ticket-resolver agent rendered from shipgate.yaml"
   plan "require branch protection on $TARGET@$BRANCH$([ "$UNPROT" = 1 ] && echo ' (override given)')"
   plan "create missing labels on $TARGET: $(printf '%s ' $LABELS | sed 's/:[0-9a-f]*//g')"
-  plan "run the doctor$([ -n "$SMOKE" ] && echo " and a triage smoke call on #$SMOKE")"
+  [ -z "$JIRA_PROJECT" ] || plan "check that the Jira token reads $JIRA_SITE (GET /rest/api/3/myself)"
+  plan "run the doctor$([ -n "$SMOKE" ] && echo " and a triage smoke call on $SMOKE_LABEL")"
   exit 0
 fi
 
@@ -108,6 +145,12 @@ GITHUB_PAT_VALUE="$(env_value GITHUB_PAT)"
 code="$(gh_api GET "/repos/$TARGET" -o /dev/null -w '%{http_code}')"
 [ "$code" = 200 ] || die "the GitHub token cannot read $TARGET (HTTP $code)" 1
 ok "GitHub token reads $TARGET"
+if [ -n "$JIRA_PROJECT" ]; then
+  code="$(jira_api GET /rest/api/3/myself -o /dev/null -w '%{http_code}')"
+  [ "$code" = 200 ] || die "the Jira token cannot read $JIRA_SITE (HTTP $code): check JIRA_EMAIL and JIRA_API_KEY \
+in $ENV_FILE (an Atlassian API token for that email; the REST API takes it as is, no setting to enable)" 1
+  ok "Jira token reads $JIRA_SITE"
+fi
 
 if [ "$CHECK" = 0 ]; then
   # 2. Install
@@ -133,7 +176,7 @@ if [ "$CHECK" = 0 ]; then
     else
       owner="$(port_owner 8803)"
       [ -z "$owner" ] || die "port 8803 is used by '$owner' but the triage MCP does not answer" 1
-      start_bg triage uv run mcp/triage/server.py
+      start_bg triage env SHIPGATE_ENV_FILE="$ENV_FILE" uv run mcp/triage/server.py
       wait_for "http://127.0.0.1:8803/mcp" triage
       ok "triage MCP started (log runs/logs/triage.log)"
     fi
@@ -179,6 +222,10 @@ fi
 answers "http://127.0.0.1:8803/mcp" || die "triage MCP not answering on 127.0.0.1:8803 (uv run mcp/triage/server.py)" 1
 TRUEFORGE_URL="$TF_URL" npx --yes tsx scripts/setup_trueforge.ts --check || die "doctor found problems (above)" 1
 if [ -n "$SMOKE" ]; then
-  uv run mcp/triage/server.py --smoke "$SMOKE" || die "triage smoke call failed (above)" 1
+  SHIPGATE_ENV_FILE="$ENV_FILE" uv run mcp/triage/server.py --smoke "$SMOKE" || die "triage smoke call failed (above)" 1
 fi
 ok "ready. Next: npm --prefix orchestrator run shipgate -- run --issue <n> --approve terminal"
+if [ -n "$JIRA_PROJECT" ]; then
+  printf '  or, from Jira: npm --prefix orchestrator run shipgate -- run --ticket %s-<n> --approve terminal\n' \
+    "$JIRA_PROJECT"
+fi
