@@ -4,6 +4,34 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 16:35 — Claude — Jira as a second ticket source, built and merged (branch `feat/jira`)
+
+**Done**
+- Run-through of the current flow first: `score.sh TR-01` **PASS 34/34** on `vishnuverse/humanize`. The 15:25 switch to
+  `drax0945/humanize` was reverted (`f11ab33`): the demo PAT reads it but every write 403s. Critique + debt:
+  `docs/tech-debt.md`.
+- `shipgate run --ticket KAN-4` (Jira) next to `--issue N` (GitHub, unchanged). Built in 4 parallel slices, merged:
+  config `jira:` + naming rule (`754831a`); orchestrator `--ticket`, `JiraStatus`, gate warnings (T5); `triage_jira_ticket`,
+  `scripts/shipgate_env.py`, `seed_jira.py`, `score.sh --ticket`, `setup.sh` Jira preflight (T3/T7); agent
+  `ticket-resolver-jira` + copied skill + `requires: jira` skip rule + git-mode refusal + jira connector + doctor
+  checks (T4); scorer Jira grading, H3 on every server, T14-J, `expect.ticket_status`, `TR-J01` (T6).
+- Tests: 300 pytest, 176 node, typecheck + ruff clean. Contract: `docs/contracts.md` §10.
+- Live so far: Jira REST token OK; `triage_jira_ticket` KAN-4 → `defect 0.89 · patch allowed`; KAN-4 seeded (twin of
+  #1); both agents registered on `openai/gpt-6-luna` (added `gpt-6-luna` to the existing TrueForge `openai`
+  provider, which lacked it; `setup.ts` keeps an existing provider without adding a missing model — gap).
+
+**Blocked**
+- Atlassian MCP refuses API-token calls on this org ("You don't have permission to connect via API token"), so the
+  `jira` connector was switched to OAuth (`auth: {type: "dcr"}`); it needs one consent click as
+  developer.tunnel@gmail.com (`GET /api/v1/mcp-servers/jira/authorize` gives the URL). `setup.sh` keeps it.
+
+**Next**
+1. After OAuth: `npm --prefix orchestrator run shipgate -- run --ticket KAN-4 --approve terminal` (film it), then
+   `scripts/score.sh TR-J01`; set `must_pass: true` once green. `scripts/score.sh TR-01` again on gpt-6-luna.
+2. Port any future GitHub-skill prompt change into `skills/ticket-resolver-jira/SKILL.md` (parity test guards shape only).
+
+---
+
 ## 2026-09-26 16:20 — Claude — Model switched to OpenAI `gpt-6-luna` (branch `feat/jira`)
 
 **Done**
