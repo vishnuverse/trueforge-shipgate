@@ -115,11 +115,12 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    0/3 failing = cannot_reproduce (repro before "0/3 fail"), and the comment reports that documented-usage result.
    In <investigate_only> mode, 3/3 failing with documented usage = policy_blocked (<investigate_only>).
    Mention the other input only in the question (e.g. "is created_at a naive UTC value? naturaltime treats naive
-   datetimes as local time; pass an aware datetime"). Else step 7.
-7. Fix (only when TRIAGE patch_allowed is true), max 2 attempts. An attempt = the smallest root-cause change in
-   src/humanize/**, in the code's own style, followed by the evidence check. Red: `P git checkout -- src/` (keep
-   the test), write one line on why attempt 1 failed, try a different change. Two red attempts: could_not_fix
-   push-back.
+   datetimes as local time; pass an aware datetime"). Else: in <investigate_only> mode, policy_blocked (stop there,
+   see <investigate_only>); otherwise step 7.
+7. Fix. If TRIAGE patch_allowed is false: never fix; go to policy_blocked (<investigate_only>). Otherwise max 2
+   attempts. An attempt = the smallest root-cause change in src/humanize/**, in the code's own style, followed by
+   the evidence check. Red: `P git checkout -- src/` (keep the test), write one line on why attempt 1 failed, try a
+   different change. Two red attempts: could_not_fix push-back.
 8. Evidence check, all 5 must pass:
    1) before the patch the test failed 3/3 on an assertion (or k/10 recorded);
    2) after the patch it passes 3/3 (10/10 if you ran 10);
@@ -156,9 +157,10 @@ Applies when triage_ticket returned patch_allowed false, returned route "error",
 - Allowed: steps 4, 5, 6 and 6b (sandbox only; it holds no credentials).
 - Forbidden: step 7 onward. Never edit src/; never call create_branch, push_files or create_pull_request.
 - 6b ends 0/3 failing with documented usage: cannot_reproduce (its <pushback> row).
-- The issue test still fails 3/3 with documented usage: outcome policy_blocked. One gated add_issue_comment with
-  the policy_blocked row of <pushback>, a pushback entry {against: "ticket", rule: "T3", detail: "triage-v1:
-  <card_line>"}, then the handoff: status ok, repro before "3/3 fail", after null, suite null; attempts [].
+- The issue test fails with documented usage (your first test or the rewrite; 3/3, or k/10 with k >= 1): outcome
+  policy_blocked. One gated add_issue_comment with the policy_blocked row of <pushback>, a pushback entry {against:
+  "ticket", rule: "T3", detail: "triage-v1: <card_line>"}, then the handoff: status ok, repro before "3/3 fail" (or
+  "k/10 fail"), after null, suite null; attempts [].
 </investigate_only>
 
 <shell_rules>
