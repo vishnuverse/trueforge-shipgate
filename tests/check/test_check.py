@@ -180,13 +180,13 @@ def test_tr01_passing_run_online_with_fakes(runs_dir: Path, check) -> None:
         comments={
             1: [
                 {
-                    "user": {"login": "vishnuverse"},
+                    "user": {"login": "drax0945"},
                     "created_at": "2026-09-25T10:00:00Z",
                     "body": "old, before run",
                 },
                 {"user": {"login": "someone"}, "created_at": "2026-09-26T12:02:00Z", "body": "me too"},
                 {
-                    "user": {"login": "vishnuverse"},
+                    "user": {"login": "drax0945"},
                     "created_at": "2026-09-26T12:03:00Z",
                     "body": f"Fixed in {rf.PR_URL}",
                 },
@@ -376,7 +376,7 @@ def test_tr09_pr_checks_skip_offline_but_use_github_online(runs_dir: Path, check
         pulls=[pr],
         issues={1: {"number": 1, "state": "open", "labels": [{"name": "fix-proposed"}]}},
         comments={
-            1: [{"user": {"login": "vishnuverse"}, "created_at": "2026-09-26T12:01:00Z", "body": rf.PR_URL}]
+            1: [{"user": {"login": "drax0945"}, "created_at": "2026-09-26T12:01:00Z", "body": rf.PR_URL}]
         },
     )
     code, out = check("TR-09", github=gh, trueforge=FakeTrueForge(saved_agent()))
@@ -511,7 +511,7 @@ def test_github_client_only_gets_our_repo() -> None:
     assert gh.branch_exists("fix/issue-1") is False
     assert gh.main_head()["sha"] == rf.SHA
     assert all(m == "GET" for m, _ in seen)
-    assert all(p.startswith("/repos/vishnuverse/humanize/") for _, p in seen)
+    assert all(p.startswith("/repos/drax0945/humanize/") for _, p in seen)
 
 
 def test_handoff_fence_matches_orchestrator_rules() -> None:
@@ -673,12 +673,12 @@ def test_comment_posted_just_before_the_run_is_not_counted(runs_dir: Path, check
         comments={
             1: [
                 {
-                    "user": {"login": "vishnuverse"},
+                    "user": {"login": "drax0945"},
                     "created_at": "2026-09-26T11:59:50Z",
                     "body": "previous run",
                 },
                 {
-                    "user": {"login": "vishnuverse"},
+                    "user": {"login": "drax0945"},
                     "created_at": "2026-09-26T12:03:00Z",
                     "body": f"Fixed in {rf.PR_URL}",
                 },
@@ -703,7 +703,7 @@ def _github_right_after_tr01() -> FakeGitHub:
         files={12: [{"filename": "src/humanize/number.py"}, {"filename": "tests/test_issue_1.py"}]},
         issues={1: {"number": 1, "state": "open", "labels": [{"name": "fix-proposed"}]}},
         comments={
-            1: [{"user": {"login": "vishnuverse"}, "created_at": "2026-09-26T12:03:00Z", "body": rf.PR_URL}]
+            1: [{"user": {"login": "drax0945"}, "created_at": "2026-09-26T12:03:00Z", "body": rf.PR_URL}]
         },
     )
 
@@ -903,7 +903,7 @@ def test_unknown_triage_key_is_rejected(tmp_path: Path) -> None:
 
     p = tmp_path / "TR-99.yaml"
     p.write_text(
-        "id: TR-99\ntitle: t\nissue: 1\nrepo: vishnuverse/humanize\nreset: true\ntimeout_min: 15\n"
+        "id: TR-99\ntitle: t\nissue: 1\nrepo: drax0945/humanize\nreset: true\ntimeout_min: 15\n"
         "must_pass: false\napprovals: []\n"
         "expect:\n  triage: {bogus: 1}\n"
     )
@@ -927,7 +927,7 @@ def _scenario_yaml(sid: str, repo: str) -> str:
 
 
 def test_every_scenario_names_the_demo_repo() -> None:
-    assert {s.repo for s in load_all(SCENARIOS)} == {"vishnuverse/humanize"}
+    assert {s.repo for s in load_all(SCENARIOS)} == {"drax0945/humanize"}
 
 
 def test_scenario_for_another_repo_is_refused(tmp_path: Path) -> None:
@@ -963,7 +963,7 @@ def test_tr03_label_may_be_needs_human_when_policy_blocked(runs_dir: Path, check
         comments={
             3: [
                 {
-                    "user": {"login": "vishnuverse"},
+                    "user": {"login": "drax0945"},
                     "created_at": "2026-09-26T12:03:00Z",
                     "body": rf.POLICY_BLOCKED_REPLY,
                 }

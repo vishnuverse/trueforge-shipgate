@@ -45,7 +45,7 @@ test("humanize config renders the golden skill and agent", () => {
 
 test("another repo leaves no demo names outside the labelled examples", () => {
   const skill = outsideExamples(renderText(SKILL, acme, "SKILL.md"));
-  for (const bad of ["vishnuverse", "src/humanize", "python-humanize", "benchmark-disable"]) {
+  for (const bad of ["vishnuverse", "drax0945", "src/humanize", "python-humanize", "benchmark-disable"]) {
     assert.ok(!skill.includes(bad), bad);
   }
   for (const bad of ["humanize", "naturaltime", "freezegun", "ordinal", "django"]) {
@@ -56,7 +56,7 @@ test("another repo leaves no demo names outside the labelled examples", () => {
   assert.ok(skill.includes("fix/issue-<n> → trunk"));
   assert.ok(!/(^|[\s`"'(])src\//m.test(skill), "bare src/ left in the skill");
   const agent = JSON.stringify(renderDeep(AGENT, acme, "agent"));
-  assert.ok(!agent.includes("vishnuverse") && agent.includes("openrouter/glm-5-3-flash"));
+  assert.ok(!agent.includes("vishnuverse") && !agent.includes("drax0945") && agent.includes("openrouter/glm-5-3-flash"));
 });
 
 test("exampleMask covers fenced and unfenced examples", () => {

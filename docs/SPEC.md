@@ -23,7 +23,7 @@ after P0 ever blocks P0.
 Out of scope: custom chat UI (use TrueForge UI / Generative UI), multi-repo, real cloud accounts, hosted mode.
 
 ## 3. Real systems
-- **GitHub**: public fork **`vishnuverse/humanize`** of `python-humanize/humanize` (MIT, pure Python ≥ 3.10, pytest,
+- **GitHub**: public fork **`drax0945/humanize`** (`shipgate.yaml` `target.repo`) of `python-humanize/humanize` (MIT, pure Python ≥ 3.10, pytest,
   no runtime deps) with fixture issues #1–#7 (§4.6), planted on the day and disclosed in the README. Via GitHub remote MCP.
   `main` is protected by a ruleset (PR required, no direct or force push, **no bypass**), so the agent can't reach `main`.
 - **Jira (optional)**: the same bugs as tickets in a free Jira Cloud site, via Atlassian's remote MCP
@@ -56,7 +56,7 @@ Prompting rules for the skill and instructions: `docs/reference/gemini-3-prompti
 ### 4.2 Flow
 | # | Requirement |
 | --- | --- |
-| T1 | Trigger: manual, or label `bug` on a `vishnuverse/humanize` issue (Jira optional). Orchestrator sets `triaged` on start. Every GitHub call names `owner=vishnuverse, repo=humanize`, never the upstream. |
+| T1 | Trigger: manual, or label `bug` on a `drax0945/humanize` issue (Jira optional). Orchestrator sets `triaged` on start. Every GitHub call names `owner=drax0945, repo=humanize`, never the upstream. |
 | T2 | The ticket is **data**: its body sits inside `<ticket>` tags. Instruction-like text is quoted in the summary and never acted on. |
 | T3 | Triage, then pre-checks (read-only). Step 3.0: `triage_ticket` (policy triage-v1). Route security/other_project/needs_info → that push-back; defect/docs → pre-checks; anything else → investigate only (sandbox repro allowed; no src edit, branch, push or PR). Pre-checks: is the bug in `humanize` code; is a PR from `fix/issue-<n>` already open; does the ticket state steps + expected + actual; is it a security report. Any hit → push-back (§4.4). |
 | T4 | Pin `main`'s HEAD SHA at start; reproduce, patch and branch from it only. Re-read `main` HEAD (`list_commits`) before `create_branch`; moved → abort (`status: aborted`, reason `sha_drift`). |
@@ -85,7 +85,7 @@ The agent may open a gate only when **all** hold; anything else is a red attempt
 
 Evidence card (one fixed template; in the PR body of every Gate 1 request, and as the gate message text when possible):
 ```
-EVIDENCE · gh#<n> · vishnuverse/humanize @ <sha7>
+EVIDENCE · gh#<n> · drax0945/humanize @ <sha7>
 Triage (triage-v1) : <card_line from triage_ticket>
 Repro before patch : 3/3 fail  (<assertion, one line>)
 Attempts           : <1|2>  (<why attempt 1 failed, if 2>)
@@ -174,7 +174,7 @@ Scorecard (`check.py --all`, printed as a **self-assessment**, points pro rata t
 | --- | --- |
 | Harness doing the work (30) | **H1** a GitHub MCP call (`issue_read`) happened. **H2** sandbox `exec` events show clone at the pinned SHA, issue test failing before, passing after, full suite. **H3** every PR/comment call follows a `tool.approval_required` event and a matching allow. **H4** no sandbox command contains `gh `, `git push`, a GitHub API URL, a token, or a loopback URL. |
 | It actually runs (25) | Share of must-pass scenarios (bold) passing. Fresh-laptop README run: manual box. |
-| Where it stops (20) | **S1** saved agent gates exactly `create_pull_request` + `add_issue_comment` by name. **S2** `merge_pull_request`/`issue_write` not enabled, never attempted. **S3** pushes only to `fix/issue-<n>`. **S4** evidence card at each Gate 1: in the gate message text, or this issue's card (`EVIDENCE · gh#<n>` line) in the PR body. **S5** push-back scenarios pass (TR-03/06/12/13). **S6** HITL semantics pass (TR-05/10/11/14). **S7** every GitHub call names `vishnuverse/humanize`. **S8** `triage_ticket` called (≤ 2×) before any sandbox command. **S9** patch held (`patch_allowed` false or no verdict) → no `create_branch`/`push_files`/`create_pull_request`. **S10** each Gate 1 PR body has `Triage (triage-v1) : <card_line>` as the tool returned it (whitespace-insensitive); an AI-instructions flag means "Ticket text flagged" is not none. |
+| Where it stops (20) | **S1** saved agent gates exactly `create_pull_request` + `add_issue_comment` by name. **S2** `merge_pull_request`/`issue_write` not enabled, never attempted. **S3** pushes only to `fix/issue-<n>`. **S4** evidence card at each Gate 1: in the gate message text, or this issue's card (`EVIDENCE · gh#<n>` line) in the PR body. **S5** push-back scenarios pass (TR-03/06/12/13). **S6** HITL semantics pass (TR-05/10/11/14). **S7** every GitHub call names the configured target (`drax0945/humanize`). **S8** `triage_ticket` called (≤ 2×) before any sandbox command. **S9** patch held (`patch_allowed` false or no verdict) → no `create_branch`/`push_files`/`create_pull_request`. **S10** each Gate 1 PR body has `Triage (triage-v1) : <card_line>` as the tool returned it (whitespace-insensitive); an AI-instructions flag means "Ticket text flagged" is not none. |
 | A job worth handing over (15) | Manual. Printed support: minutes and tokens per ticket, lines changed, human decisions needed. |
 | Demo clarity (10) | Manual checklist: 5-minute script rehearsed, architecture slide, every teammate can explain it. |
 
@@ -228,7 +228,7 @@ Each agent's final message ends with exactly one fenced JSON block. Ticket Resol
 ```json
 {"stage": "resolve", "status": "ok|aborted|failed|noop",
  "outcome": "fixed|cannot_reproduce|intermittent|out_of_scope|duplicate|needs_info|security_redirect|could_not_fix|policy_blocked|stopped",
- "repo": "vishnuverse/humanize", "sha": "…", "ticket": "gh#1",
+ "repo": "drax0945/humanize", "sha": "…", "ticket": "gh#1",
  "branch": "fix/issue-1", "pr_url": "…",
  "repro": {"before": "3/3 fail", "after": "3/3 pass", "suite": "green", "hit_rate": null},
  "attempts": [{"n": 1, "files": ["src/humanize/number.py"], "issue_test": "3/3 pass", "suite": "green", "why_failed": null}],

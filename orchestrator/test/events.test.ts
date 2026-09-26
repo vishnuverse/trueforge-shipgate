@@ -65,7 +65,7 @@ test("direct MCP function names use tool_info and hash the whole argument object
       event: {
         type: "model.message",
         id: "ev1",
-        content: "EVIDENCE · gh#1 · vishnuverse/humanize @ 392aef7",
+        content: "EVIDENCE · gh#1 · drax0945/humanize @ 392aef7",
         tool_calls: [
           {
             id: "call_9",
@@ -82,7 +82,7 @@ test("direct MCP function names use tool_info and hash the whole argument object
   // 1.0 stays a float, as Python would keep it: {"draft":false,"n":1.0,"owner":"vishnuverse","repo":"humanize"}
   assert.equal(g.argsSha256, "e0553f586988e45a7826803e6647456e59fb5b199849bb11b4e56de6ee3fbd86");
   assert.notEqual(g.argsSha256, argsSha256({ owner: "vishnuverse", repo: "humanize", draft: false, n: 1 }));
-  assert.equal(evidenceBefore(events, "ev1"), "EVIDENCE · gh#1 · vishnuverse/humanize @ 392aef7");
+  assert.equal(evidenceBefore(events, "ev1"), "EVIDENCE · gh#1 · drax0945/humanize @ 392aef7");
 });
 
 test("fixture: no evidence text before the gate (tool-call-only messages)", () => {

@@ -222,3 +222,6 @@ runs/
 approvals.log
 node_modules/
 .claude/worktrees/
+
+# JetBrains IDE
+.idea/

@@ -4,6 +4,32 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 15:25 — Claude — Merged main (summarize-before-Jev) into `feat/any-repo`; demo target `drax0945/humanize`
+
+**Done**
+- Merged `main` @ 8187924 (Ansh: "agent summarizes the issue before the Jev pre-check") into `feat/any-repo`. Kept
+  the branch's config-driven code everywhere and ported the feature onto it: `jev.ticket_text(body, summary)`
+  (summary capped at 600 chars + first 1,000 chars of the body; never the full ticket),
+  `triage(n, *, client, env, audit_log, config, summary=None)`, tool `triage_ticket(issue_number, summary="")`
+  (config-derived title kept), SKILL.md step 3.0 SUMMARY in template form. All of Ansh's triage tests survive,
+  adapted to `config=CFG`.
+- Demo target switched to **`drax0945/humanize`** through `shipgate.yaml` only (`target.repo` + `description`);
+  scenarios `TR-*.yaml` `repo:`, `reset.sh`'s demo constant, SKILL.md example labels, demo-repo tests and the
+  golden fixtures follow. README / CLAUDE.md / AGENTS.md / SPEC / contracts name the new fork; the README still
+  fetches the planted-bug commits from `vishnuverse/humanize`, where they were made.
+- Tests: `uv run pytest -q` 157 passed; orchestrator 109/109 + typecheck clean; ruff clean.
+
+**Not done / check before the demo (nothing was run live)**
+- `drax0945/humanize` must have the tags, fixture issues #1–#7, the five labels and a no-bypass ruleset on `main`
+  (`scripts/setup.sh --check` verifies protection and labels). The GitHub PAT in `.env` and the TrueForge `github`
+  connector must be able to write there.
+- Re-register the agent (`scripts/setup.sh --no-start` or `setup_agents.ts --inline-skill`) and restart the triage
+  MCP so both pick up the new target and the summary parameter.
+- `.claude/launch.json` now carries Ansh's machine-specific `PATH=/Users/anshmahapatra/...` entry for the
+  `trueforge` config (merged without conflict); drop it if it breaks the preview on other machines.
+
+---
+
 ## 2026-09-26 15:01 — Claude — Any-repo final-review fix wave (branch `feat/any-repo`)
 
 **Done** (whole-branch review: 5 Important, fixed per the controller's rulings)

@@ -10,6 +10,21 @@ import policy
 URL = "https://api.typesafe.ai/v1/systemone"
 TIMEOUT_S = 45.0
 MAX_BODY = 20_000
+MAX_SUMMARY = 600
+EXCERPT_CHARS = 1_000
+
+
+def ticket_text(body: str, summary: str | None) -> str:
+    """What Jev reads instead of the full body: the agent's short summary plus the start of the ticket body.
+
+    The excerpt keeps some raw ticket text in front of the ai_instructions question, so the agent's summary
+    can't hide instructions planted at the top of a ticket. No summary: the excerpt alone.
+    """
+    excerpt = body[:EXCERPT_CHARS] + (" [...]" if len(body) > EXCERPT_CHARS else "")
+    summary = (summary or "").strip()[:MAX_SUMMARY]
+    if not summary:
+        return excerpt
+    return f"Summary: {summary}\n\nExcerpt of the ticket:\n{excerpt}"
 
 
 class JevError(RuntimeError):

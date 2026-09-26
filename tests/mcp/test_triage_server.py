@@ -13,7 +13,7 @@ from shipgate_config import Config
 
 ENV = {"TYPESAFE_API_KEY": "test-key-not-real", "GITHUB_PAT": "test-pat-not-real"}
 CFG = Config(
-    repo="vishnuverse/humanize", default_branch="main", description="humanize is a Python library.",
+    repo="drax0945/humanize", default_branch="main", description="humanize is a Python library.",
     install="x", test="y", source_dir="src/humanize", tests_dir="tests",
     trueforge_url="http://localhost:8790", model="m",
 )  # fmt: skip
@@ -197,3 +197,33 @@ def test_issue_and_context_come_from_the_config(tmp_path: Path) -> None:
 
 def test_app_logs_at_warning_level() -> None:
     assert server.build_app(client=World().client(), env=ENV, config=CFG).settings.log_level == "WARNING"
+
+
+def test_jev_gets_title_summary_and_excerpt_not_the_full_body(tmp_path: Path) -> None:
+    long_issue = {**ISSUE, "body": "Expected 12th, got 12nd. " + "detail " * 2_000}
+    w = World(issue=long_issue)
+    v = server.triage(
+        1,
+        client=w.client(),
+        env=ENV,
+        audit_log=tmp_path / "t.jsonl",
+        config=CFG,
+        summary="ordinal(12) gives 12nd, not 12th.",
+    )
+    assert v["route"] == "defect"
+    [jev_req] = [r for r in w.requests if r.url.host != "api.github.com"]
+    ticket = json.loads(jev_req.content)["state"]["ticket"]
+    assert ticket["title"] == ISSUE["title"]
+    assert ticket["body"].startswith("Summary: ordinal(12) gives 12nd, not 12th.\n\nExcerpt of the ticket:\n")
+    assert long_issue["body"] not in ticket["body"] and len(ticket["body"]) < 1_200
+
+
+def test_tool_accepts_an_optional_summary(tmp_path: Path) -> None:
+    w = World()
+    app = server.build_app(client=w.client(), env=ENV, audit_log=tmp_path / "t.jsonl", config=CFG)
+    [tool] = asyncio.run(app.list_tools())
+    assert tool.inputSchema["properties"]["summary"]["type"] == "string"
+    _, structured = asyncio.run(app.call_tool("triage_ticket", {"issue_number": 1, "summary": "s"}))
+    assert structured["route"] == "defect"
+    [jev_req] = [r for r in w.requests if r.url.host != "api.github.com"]
+    assert json.loads(jev_req.content)["state"]["ticket"]["body"].startswith("Summary: s\n")

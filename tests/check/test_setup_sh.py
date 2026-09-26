@@ -43,7 +43,7 @@ def test_dry_run_prints_the_plan_and_no_secret(tmp_path: Path) -> None:
     for phrase in (
         "would start TrueForge",
         "would register",
-        "vishnuverse/humanize",
+        "drax0945/humanize",
         "would create missing labels",
     ):
         assert phrase in out, phrase

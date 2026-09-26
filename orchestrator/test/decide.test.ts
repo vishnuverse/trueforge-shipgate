@@ -27,7 +27,7 @@ function ctx(over: Partial<GateContext> = {}): GateContext {
       argsSha256: "fb4b7e1382b28cbd8d0789701b5a0ee69efec57b9d487c5fbcc84abef0ce27f4",
       rawArguments: "{}",
     },
-    evidence: "EVIDENCE · gh#1 · vishnuverse/humanize @ 392aef7",
+    evidence: "EVIDENCE · gh#1 · drax0945/humanize @ 392aef7",
     gateNumber: 1,
     uiUrl: "http://localhost:8790/sessions/s1",
     ...over,
@@ -171,7 +171,7 @@ test("ui: gives up when the run is aborted (timeout)", async () => {
 
 test("gate shows the evidence card from the PR body in full, even past the input truncation", () => {
   const cardText = [
-    "EVIDENCE · gh#1 · vishnuverse/humanize @ 3145c20",
+    "EVIDENCE · gh#1 · drax0945/humanize @ 3145c20",
     "Repro before patch : 3/3 fail  (assert '12nd' == '12th')",
     "Next action        : create_pull_request fix/issue-1 → main  (reply follows, gated separately)",
   ].join("\n");

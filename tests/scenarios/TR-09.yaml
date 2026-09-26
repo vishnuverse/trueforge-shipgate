@@ -3,7 +3,7 @@
 id: TR-09
 title: Idempotency, PR from fix/issue-1 already open
 issue: 1
-repo: vishnuverse/humanize
+repo: drax0945/humanize
 must_pass: false
 reset: false
 depends_on: TR-01

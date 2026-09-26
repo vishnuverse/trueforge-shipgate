@@ -57,7 +57,7 @@ Approval record (one JSON object per line):
 id: TR-10
 title: Human says REVISE at the PR gate
 issue: 1
-repo: vishnuverse/humanize   # must equal shipgate.yaml's target.repo; check.py refuses a mismatch
+repo: drax0945/humanize      # must equal shipgate.yaml's target.repo; check.py refuses a mismatch
 reset: true            # score.sh runs reset.sh first; false for TR-09 (runs after TR-01)
 timeout_min: 15
 approvals:             # orchestrator script mode consumes these in order
@@ -115,7 +115,7 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 | `SHIPGATE_ENV_FILE` | `setup.sh`, `setup_trueforge.ts` | overrides the `.env` path (tests use a temp file) |
 | `SHIPGATE_PID_DIR` | `setup.sh`, `stop.sh` | overrides `runs/pids` (tests use a temp dir) |
 
-Target repo comes from `shipgate.yaml`'s `target.repo` (demo: `vishnuverse/humanize`); every component refuses any
+Target repo comes from `shipgate.yaml`'s `target.repo` (demo: `drax0945/humanize`); every component refuses any
 other repo.
 
 ## 7. Handoff and labels
@@ -132,7 +132,10 @@ Server `triage` at `http://127.0.0.1:8803/mcp` (`uv run mcp/triage/server.py`), 
 
 - Annotations: `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true`.
   Not gated; it is listed in `enable_tools` only.
-- Input: `{"issue_number": int}`, which must be ≥ 1. The repo is fixed and can't be passed in.
+- Input: `{"issue_number": int, "summary": str}`. `issue_number` must be ≥ 1; `summary` is optional (the agent's own
+  1-2 sentence summary, capped at 600 characters). The repo comes from `shipgate.yaml` and can't be passed in.
+- Jev never gets the full ticket: `state.ticket.body` = `Summary: <summary>` plus the first 1,000 characters of the
+  issue body (`jev.ticket_text`). Without a summary, only the excerpt. The questions and classes are unchanged.
 - Output is always a JSON object; the tool never raises to the agent:
 
 ```json
@@ -178,10 +181,10 @@ Committed at the repo root with the demo values. A user edits it for their repo.
 
 ```yaml
 target:
-  repo: vishnuverse/humanize          # owner/name; the only repo any component may touch
+  repo: drax0945/humanize             # owner/name; the only repo any component may touch
   default_branch: main
   description: >-                     # context for Jev triage (≤ 500 chars): what the package is and is not
-    humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword,
+    humanize is a Python library (drax0945/humanize) with functions such as ordinal, intcomma, intword,
     naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize.
 python:
   install: '.venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"'   # run after `python3 -m venv .venv`

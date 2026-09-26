@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Reset the Ticket Resolver fixtures on vishnuverse/humanize, and nothing else.
+# Reset the Ticket Resolver fixtures on drax0945/humanize, and nothing else.
 #
 #   scripts/reset.sh          # dry run (default): print the plan, change nothing
 #   scripts/reset.sh --yes    # apply the plan
@@ -10,7 +10,7 @@
 # Works with macOS bash 3.2.
 set -o pipefail
 
-REPO="vishnuverse/humanize" # hard-coded on purpose: this script refuses to touch any other repo
+REPO="drax0945/humanize" # hard-coded on purpose: this script refuses to touch any other repo
 ISSUES="1 2 3 4 5 6 7"
 APPLY=0
 

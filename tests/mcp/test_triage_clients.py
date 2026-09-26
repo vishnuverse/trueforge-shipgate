@@ -39,13 +39,11 @@ def test_fetch_issue_reads_only_our_repo_with_the_token() -> None:
         seen.append(request)
         return httpx.Response(200, json=ISSUE)
 
-    got = github.fetch_issue(
-        1, repo="vishnuverse/humanize", token="test-pat-not-real", client=client(handler)
-    )
+    got = github.fetch_issue(1, repo="drax0945/humanize", token="test-pat-not-real", client=client(handler))
     assert got == {"title": ISSUE["title"], "body": ISSUE["body"]}
     [req] = seen
     assert req.method == "GET"
-    assert str(req.url) == "https://api.github.com/repos/vishnuverse/humanize/issues/1"
+    assert str(req.url) == "https://api.github.com/repos/drax0945/humanize/issues/1"
     assert req.headers["Authorization"] == "Bearer test-pat-not-real"
 
 
@@ -67,14 +65,14 @@ def test_fetch_issue_without_token_sends_no_auth() -> None:
         seen.append(request)
         return httpx.Response(200, json=ISSUE)
 
-    github.fetch_issue(1, repo="vishnuverse/humanize", token=None, client=client(handler))
+    github.fetch_issue(1, repo="drax0945/humanize", token=None, client=client(handler))
     assert "Authorization" not in seen[0].headers
 
 
 def test_fetch_issue_null_body_becomes_empty() -> None:
     got = github.fetch_issue(
         1,
-        repo="vishnuverse/humanize",
+        repo="drax0945/humanize",
         token=None,
         client=client(lambda r: httpx.Response(200, json={**ISSUE, "body": None})),
     )
@@ -84,7 +82,7 @@ def test_fetch_issue_null_body_becomes_empty() -> None:
 def test_fetch_issue_404() -> None:
     with pytest.raises(github.IssueError, match=r"issue #99 not found"):
         github.fetch_issue(
-            99, repo="vishnuverse/humanize", token=None, client=client(lambda r: httpx.Response(404, json={}))
+            99, repo="drax0945/humanize", token=None, client=client(lambda r: httpx.Response(404, json={}))
         )
 
 
@@ -92,7 +90,7 @@ def test_fetch_issue_rejects_pull_requests() -> None:
     pr = {**ISSUE, "pull_request": {"url": "x"}}
     with pytest.raises(github.IssueError, match=r"#1 is a pull request"):
         github.fetch_issue(
-            1, repo="vishnuverse/humanize", token=None, client=client(lambda r: httpx.Response(200, json=pr))
+            1, repo="drax0945/humanize", token=None, client=client(lambda r: httpx.Response(200, json=pr))
         )
 
 
@@ -101,7 +99,7 @@ def test_fetch_issue_transport_error() -> None:
         raise httpx.ConnectError("refused", request=request)
 
     with pytest.raises(github.IssueError, match=r"GitHub transport error \(ConnectError\)"):
-        github.fetch_issue(1, repo="vishnuverse/humanize", token=None, client=client(handler))
+        github.fetch_issue(1, repo="drax0945/humanize", token=None, client=client(handler))
 
 
 # --- TypeSafe ---------------------------------------------------------------------------------------
@@ -203,3 +201,19 @@ def test_ask_without_key_makes_no_request() -> None:
 def test_ask_rejects_bad_replies(response: httpx.Response, message: str) -> None:
     with pytest.raises(jev.JevError, match=f"^{message}$"):
         jev.ask("t", "b", context="ctx", api_key=KEY, client=client(lambda r: response))
+
+
+def test_ticket_text_is_summary_plus_short_excerpt_never_the_full_body() -> None:
+    body = "B" * 5_000
+    text = jev.ticket_text(body, "  ordinal(12) returns '12nd', expected '12th'.  ")
+    assert text.startswith(
+        "Summary: ordinal(12) returns '12nd', expected '12th'.\n\nExcerpt of the ticket:\n"
+    )
+    assert text.endswith("B" * jev.EXCERPT_CHARS + " [...]") and text.count("B") == jev.EXCERPT_CHARS == 1_000
+
+
+def test_ticket_text_caps_the_summary_and_falls_back_to_the_excerpt() -> None:
+    assert jev.ticket_text("short body", None) == "short body"
+    assert jev.ticket_text("short body", "   ") == "short body"
+    capped = jev.ticket_text("b", "s" * 5_000)
+    assert capped.count("s") == jev.MAX_SUMMARY == 600

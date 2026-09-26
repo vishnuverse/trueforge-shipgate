@@ -88,7 +88,7 @@ function options(root: string, over: Partial<RunOptions> = {}): RunOptions {
     timeoutMin: 1,
     repoRoot: root,
     trueforgeUrl: "http://localhost:8790",
-    repo: "vishnuverse/humanize",
+    repo: "drax0945/humanize",
     ...over,
   };
 }
@@ -151,7 +151,7 @@ test("script run on the fixture: STOP relayed, files written, no handoff -> exit
   for (const k of ["run_id", "scenario", "issue", "repo", "agent", "mode", "started_at", "finished_at"]) {
     assert.ok(k in run.meta, k);
   }
-  assert.equal(run.meta.repo, "vishnuverse/humanize");
+  assert.equal(run.meta.repo, "drax0945/humanize");
 
   const lines = run.approvals.trim().split("\n");
   assert.equal(lines.length, 1);

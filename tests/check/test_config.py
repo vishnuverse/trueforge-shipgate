@@ -34,7 +34,7 @@ def test_dotted_repo_splits_owner_and_name() -> None:
 
 def test_committed_config_is_the_demo() -> None:
     cfg = load_config(ROOT / "shipgate.yaml")
-    assert cfg.repo == "vishnuverse/humanize" and cfg.default_branch == "main"
+    assert cfg.repo == "drax0945/humanize" and cfg.default_branch == "main"
     assert cfg.test == ".venv/bin/python -m pytest -q -p no:cacheprovider --benchmark-disable --color=no"
     assert cfg.install == '.venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"'
     assert cfg.description.startswith("humanize is a Python library") and "\n" not in cfg.description
@@ -49,7 +49,7 @@ def test_cli_prints_one_value_and_exits_2_on_a_config_error() -> None:
     cmd = [sys.executable, str(ROOT / "scripts" / "shipgate_config.py"), "target.repo"]
     env = {k: v for k, v in os.environ.items() if k != "SHIPGATE_CONFIG"}
     ok = subprocess.run(cmd, capture_output=True, text=True, env=env)
-    assert ok.returncode == 0 and ok.stdout == "vishnuverse/humanize\n"
+    assert ok.returncode == 0 and ok.stdout == "drax0945/humanize\n"
     bad = subprocess.run(
         cmd, capture_output=True, text=True, env={**env, "SHIPGATE_CONFIG": str(FIXTURES / "bad-repo.yaml")}
     )
