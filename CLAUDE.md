@@ -70,7 +70,7 @@ Configure in TrueForge UI (Settings), keys pasted by a human:
 
 ## Run
 ```bash
-uv run mcp/triage/server.py                                              # triage MCP :8803 (Jev pre-check); register once via PUT /settings/mcp-servers (README)
+uv run mcp/triage/server.py                                              # triage MCP :8803 (Jev pre-check); register once via PUT /api/v1/settings/mcp-servers (README)
 npx --yes tsx scripts/setup_agents.ts --inline-skill                     # upsert agents/*.json with SKILL.md inlined
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui (approve in the TrueForge UI)
 ```

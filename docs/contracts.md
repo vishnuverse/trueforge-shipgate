@@ -162,6 +162,6 @@ Server `triage` at `http://127.0.0.1:8803/mcp` (`uv run mcp/triage/server.py`), 
   `in_scope`, `ai_instructions`, `route`, `patch_allowed`, `reasons`, `error` and `latency_ms`. It never holds ticket
   text or keys. The session events are the primary record; this log survives resets.
 
-Registered with: `PUT /settings/mcp-servers` `{"manifest": {"type": "remote", "name": "triage", "url":
+Registered with: `PUT /api/v1/settings/mcp-servers` `{"manifest": {"type": "remote", "name": "triage", "url":
 "http://127.0.0.1:8803/mcp", "description": "Jev triage pre-check (triage-v1), read-only"}}`. TrueForge must run with
 `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (its SSRF guard blocks loopback by default).

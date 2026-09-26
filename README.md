@@ -93,7 +93,7 @@ In the TrueForge UI, **Settings**:
 Then, in a second terminal:
 ```bash
 uv run mcp/triage/server.py &                                                  # triage MCP on 127.0.0.1:8803
-curl -s -X PUT http://localhost:8790/settings/mcp-servers -H 'Content-Type: application/json' \
+curl -s -X PUT http://localhost:8790/api/v1/settings/mcp-servers -H 'Content-Type: application/json' \
   -d '{"manifest":{"type":"remote","name":"triage","url":"http://127.0.0.1:8803/mcp","description":"Jev triage pre-check (triage-v1), read-only"}}'
 npx --yes tsx scripts/setup_agents.ts --inline-skill                         # registers the ticket-resolver agent
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui
