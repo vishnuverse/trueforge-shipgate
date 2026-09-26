@@ -121,6 +121,12 @@ printing the evidence card and tool arguments), `script` (decisions from the sce
 arguments, decision, prefix, reason, mode. It ignores GitHub comments posted by our own account (no self-triggering) and
 strips zero-width/control characters from ticket text it logs.
 
+Nudge (relay, not a decision): when a turn ends with no pending gate and no handoff (e.g. the model returned an
+empty completion), the orchestrator sends one fixed `user.message`, at most twice per run: *"Your last turn ended
+without the handoff JSON. If the procedure is finished or was stopped by a human, reply with only the handoff JSON
+block and nothing else. Otherwise continue with the next step of the procedure."* The text never varies, can't
+answer a gate (only `user.tool_approval` can), and is counted in `meta.json` (`nudges`).
+
 ### 4.6 Fixtures on the fork (planted at 12:00, disclosed in commits and README)
 | Issue | Planted | Expected outcome |
 | --- | --- | --- |

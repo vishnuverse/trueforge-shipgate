@@ -32,11 +32,12 @@ npm --prefix orchestrator run shipgate -- run --issue <n> [--approve ui|terminal
 
 | File | Content |
 | --- | --- |
-| `meta.json` | `{run_id, scenario, issue, repo, agent, session_id, mode, started_at, finished_at, status, exit_code, turn_ids, unexpected_gate}`; `status` ∈ `completed`, `timeout`, `error`, `unexpected_gate`, `no_handoff` |
+| `meta.json` | `{run_id, scenario, issue, repo, agent, session_id, mode, started_at, finished_at, status, exit_code, turn_ids, unexpected_gate, nudges, ...}`; `status` ∈ `completed`, `timeout`, `error`, `unexpected_gate`, `no_handoff`; `nudges` = fixed "continue" messages sent (0–2, SPEC §4.5) |
 | `events.json` | All session events, **oldest first**, as returned by the API (each item `{turn_id, event}`), all pages merged |
 | `handoff.json` | The parsed handoff object (SPEC §7), or `null` |
 | `final_message.md` | Content of the last `model.message` of the last turn |
 | `approvals.jsonl` | This run's approval records (same lines are appended to `approvals.log`) |
+| `check.json` | Written by `check.py <ID>` when it grades online: the grade at run time. `check.py --all` reuses it because later scenarios reset the fork; `--all --regrade` grades live instead. Re-running `check.py <ID>` after a reset overwrites it |
 
 Approval record (one JSON object per line):
 ```json

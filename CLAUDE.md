@@ -34,7 +34,9 @@ Decisions and learned facts live in `docs/MEMORY.md`. Doc index: `docs/README.md
 2. **Only MCP tools touch real systems.** Branch, PR and comment = GitHub MCP (Jira replies = Jira MCP). Infra = `k8s` MCP. Publish = our `registry` MCP (optional). Never shell out from the sandbox to mutate anything.
 3. **Gated tools are listed by name** in `require_approval_for_tools`. Never rely on `@destructive` alone — unannotated tools run ungated.
 4. **Pinned SHA.** Ticket Resolver reproduces, patches and branches from one pinned `main` SHA; Release Captain tests, tags and publishes the same commit. SHA drift = abort.
-5. **Orchestrator never decides.** It starts sessions, relays approvals and parses the final JSON handoff block. Judgement stays in the agent + skill.
+5. **Orchestrator never decides.** It starts sessions, relays approvals and parses the final JSON handoff block. Its only
+   other message is a fixed, capped (2) "continue" nudge when a turn ends with no gate and no handoff (SPEC §4.5).
+   Judgement stays in the agent + skill.
 6. MCP servers we write run on the TrueForge host (localhost), speak streamable HTTP, and set `readOnlyHint` / `destructiveHint` on every tool.
 7. **Target repo = fork `vishnuverse/humanize`; its `main` is protected by a ruleset with no bypass** (PR required, no direct or force push). Agents never get `merge_pull_request` or `issue_write`, and always pass `owner=vishnuverse, repo=humanize` (never the upstream `python-humanize`).
 8. **Clone with full history and tags** (`git fetch --tags`, never `--depth`). The version comes from git tags (hatch-vcs); a shallow or tagless clone builds as `0.1.dev1`.
