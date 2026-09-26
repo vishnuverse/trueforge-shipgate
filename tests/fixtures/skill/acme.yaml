@@ -1,0 +1,12 @@
+target:
+  repo: acme/widgets
+  default_branch: trunk
+  description: widgets is a Python package.
+python:
+  install: .venv/bin/pip install -q -e .[dev]
+  test: .venv/bin/python -m pytest -q
+  source_dir: src/widgets/
+  tests_dir: test
+trueforge:
+  url: http://localhost:8790
+  model: openrouter/glm-5-3-flash

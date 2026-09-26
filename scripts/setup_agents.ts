@@ -11,7 +11,8 @@
  *   --no-skill      register the agents without skills; no skill is registered.
  *   --skip-skill-check  register a git skill even if raw.githubusercontent.com cannot serve its SKILL.md.
  *
- * TRUEFORGE_URL (env or .env) defaults to http://localhost:8790. No npm dependencies (Node >= 22 fetch).
+ * TRUEFORGE_URL (env or .env) defaults to http://localhost:8790. Uses orchestrator/src/config.ts and render.ts
+ * (run `npm --prefix orchestrator ci` first).
  * Notes (TrueForge 0.2.1, verified): git skills cannot be preloaded (the server answers 422). The server stores a git
  * skill without checking it; the sandbox downloads it at its first exec, and if the repo is private, the ref is not
  * pushed or the path is missing, the downloader exits 1 and sandbox init fails, so every exec in that session fails.
@@ -20,6 +21,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { ConfigError, loadConfig } from "../orchestrator/src/config.ts";
+import { RenderError, renderDeep, renderText, templateValues } from "../orchestrator/src/render.ts";
 
 const SKILL_REPO_URL = "https://github.com/vishnuverse/trueforge-shipgate";
 const RAW_BASE = "https://raw.githubusercontent.com/vishnuverse/trueforge-shipgate";
@@ -122,7 +125,7 @@ function isObject(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function readAgents(root: string): AgentFile[] {
+function readAgents(root: string, values: Record<string, string>): AgentFile[] {
   const dir = join(root, "agents");
   if (!existsSync(dir)) fail("agents/ directory not found");
   const files = readdirSync(dir)
@@ -142,7 +145,11 @@ function readAgents(root: string): AgentFile[] {
     if (typeof name !== "string" || typeof description !== "string" || !isObject(manifest)) {
       fail(`${file}: needs string "name", string "description" and object "manifest"`);
     }
-    return { file, name, description, manifest };
+    try {
+      return renderDeep({ file, name, description, manifest }, values, file);
+    } catch (err) {
+      fail((err as Error).message);
+    }
   });
 }
 
@@ -157,12 +164,18 @@ function skillRefs(agent: AgentFile): SkillRef[] {
 }
 
 /** Minimal frontmatter parser: single-line `key: value` pairs between the leading `---` fences. */
-function readLocalSkill(root: string, name: string): LocalSkill {
+function readLocalSkill(root: string, name: string, values: Record<string, string>): LocalSkill {
   const dir = `skills/${name}`;
   const path = join(root, dir, "SKILL.md");
   if (!existsSync(path)) fail(`${dir}/SKILL.md not found (referenced by an agent)`);
   const text = readFileSync(path, "utf8");
-  const match = /^---\n([\s\S]*?)\n---\n?/.exec(text);
+  let rendered: string;
+  try {
+    rendered = renderText(text, values, `${dir}/SKILL.md`);
+  } catch (err) {
+    fail((err as Error).message);
+  }
+  const match = /^---\n([\s\S]*?)\n---\n?/.exec(rendered);
   if (match === null) fail(`${dir}/SKILL.md has no YAML frontmatter`);
   const meta = new Map<string, string>();
   for (const line of (match[1] ?? "").split("\n")) {
@@ -175,8 +188,15 @@ function readLocalSkill(root: string, name: string): LocalSkill {
   const extras = readdirSync(join(root, dir))
     .filter((f) => f.endsWith(".md") && f !== "SKILL.md")
     .sort()
-    .map((f) => ({ file: f, content: readFileSync(join(root, dir, f), "utf8").trim() }));
-  return { name, dir, description, body: text.slice(match[0].length).trim(), extras };
+    .map((f) => {
+      const raw = readFileSync(join(root, dir, f), "utf8").trim();
+      try {
+        return { file: f, content: renderText(raw, values, `${dir}/${f}`) };
+      } catch (err) {
+        fail((err as Error).message);
+      }
+    });
+  return { name, dir, description, body: rendered.slice(match[0].length).trim(), extras };
 }
 
 class TrueForge {
@@ -333,16 +353,26 @@ async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
   const root = repoRoot();
   loadDotEnv(root);
-  const base = (process.env.TRUEFORGE_URL ?? "http://localhost:8790").replace(/\/+$/, "");
+  let values: Record<string, string>;
+  let configUrl: string;
+  try {
+    const cfg = loadConfig();
+    values = templateValues(cfg);
+    configUrl = cfg.trueforgeUrl;
+  } catch (err) {
+    if (err instanceof ConfigError || err instanceof RenderError) fail(err.message);
+    throw err;
+  }
+  const base = (process.env.TRUEFORGE_URL ?? configUrl).replace(/\/+$/, "");
   const tf = new TrueForge(base);
-  const agents = readAgents(root);
+  const agents = readAgents(root, values);
 
   console.log(`TrueForge ${base} · skill mode: ${opts.mode}`);
 
   const skillNames = [...new Set(agents.flatMap((a) => skillRefs(a).map((r) => r.name)))];
   const skills = new Map<string, LocalSkill>();
   if (opts.mode !== "none") {
-    for (const name of skillNames) skills.set(name, readLocalSkill(root, name));
+    for (const name of skillNames) skills.set(name, readLocalSkill(root, name, values));
   }
 
   if (opts.mode === "git") {
