@@ -1,0 +1,156 @@
+"""Triage MCP server (spec §4): fetch -> ask -> decide -> audit; never raises; read-only tool."""
+
+from __future__ import annotations
+
+import asyncio
+import json
+from pathlib import Path
+
+import httpx
+import policy
+import server
+
+ENV = {"TYPESAFE_API_KEY": "test-key-not-real", "GITHUB_PAT": "test-pat-not-real"}
+ISSUE = {
+    "number": 1,
+    "title": "ordinal(12) returns 12nd",
+    "body": "Expected 12th, got 12nd.",
+    "state": "open",
+}
+
+
+def probs(**p: float) -> dict[str, float]:
+    return dict.fromkeys(policy.ROUTE_CRITERIA, 0.0) | p
+
+
+def jev_reply(route_probs: dict[str, float], in_scope: float = 0.93, ai: float = 0.02) -> dict:
+    return {
+        "answers": {
+            "route": {"type": "choice", "choice": "x", "probabilities": route_probs, "confidence": 0.9},
+            "in_scope": {"type": "noul", "noul": in_scope},
+            "ai_instructions": {"type": "noul", "noul": ai},
+        },
+        "model": "jev-1.13.0",
+        "usage": {"input_tokens": 1500},
+    }
+
+
+class World:
+    """GitHub + TypeSafe behind one httpx.MockTransport; records every request."""
+
+    def __init__(
+        self, issue=None, reply=None, jev_status: int = 200, gh_status: int = 200, boom: bool = False
+    ):
+        self.issue = issue if issue is not None else ISSUE
+        self.reply = reply if reply is not None else jev_reply(probs(defect=0.96, works_as_documented=0.04))
+        self.jev_status, self.gh_status, self.boom = jev_status, gh_status, boom
+        self.requests: list[httpx.Request] = []
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        if self.boom:
+            raise RuntimeError("unexpected")
+        if request.url.host == "api.github.com":
+            return httpx.Response(self.gh_status, json=self.issue)
+        return httpx.Response(self.jev_status, json=self.reply)
+
+    def client(self) -> httpx.Client:
+        return httpx.Client(transport=httpx.MockTransport(self.handler))
+
+    def hosts(self) -> list[str]:
+        return [r.url.host for r in self.requests]
+
+
+def run(w: World, tmp_path: Path, n: int = 1, env: dict | None = None) -> dict:
+    return server.triage(
+        n, client=w.client(), env=ENV if env is None else env, audit_log=tmp_path / "t.jsonl"
+    )
+
+
+def test_happy_path_returns_verdict_and_one_clean_audit_line(tmp_path: Path) -> None:
+    v = run(World(), tmp_path)
+    assert v["route"] == "defect" and v["patch_allowed"] is True and v["model"] == "jev-1.13.0"
+    lines = (tmp_path / "t.jsonl").read_text().splitlines()
+    assert len(lines) == 1
+    entry = json.loads(lines[0])
+    assert set(entry) == {"ts", *server.AUDIT_KEYS, "latency_ms"}
+    assert entry["route"] == "defect" and entry["policy"] == "triage-v1"
+    for secret_or_text in (*ENV.values(), ISSUE["title"], ISSUE["body"]):
+        assert secret_or_text not in lines[0]
+
+
+def test_typesafe_error_gives_error_verdict_without_the_key(tmp_path: Path) -> None:
+    v = run(World(jev_status=401), tmp_path)
+    assert v["route"] == "error" and v["patch_allowed"] is False and v["error"] == "TypeSafe HTTP 401"
+    assert v["card_line"] == "error (TypeSafe HTTP 401) · patch held"
+    blob = json.dumps(v) + (tmp_path / "t.jsonl").read_text()
+    assert all(secret not in blob for secret in ENV.values())
+
+
+def test_missing_key_never_calls_typesafe(tmp_path: Path) -> None:
+    w = World()
+    v = run(w, tmp_path, env={"GITHUB_PAT": "test-pat-not-real"})
+    assert v["error"] == "TYPESAFE_API_KEY not set" and v["patch_allowed"] is False
+    assert w.hosts() == ["api.github.com"]
+
+
+def test_malformed_answers_fail_closed(tmp_path: Path) -> None:
+    bad = jev_reply({"defect": 1.0})  # six classes missing
+    v = run(World(reply=bad), tmp_path)
+    assert v["route"] == "error" and v["patch_allowed"] is False and "route classes" in v["error"]
+
+
+def test_github_404_fails_closed(tmp_path: Path) -> None:
+    v = run(World(gh_status=404), tmp_path)
+    assert v["route"] == "error" and v["error"] == "issue #1 not found"
+
+
+def test_non_positive_issue_makes_no_request(tmp_path: Path) -> None:
+    w = World()
+    v = run(w, tmp_path, n=0)
+    assert v["route"] == "error" and v["error"] == "issue_number must be >= 1" and w.requests == []
+
+
+def test_unexpected_exception_fails_closed(tmp_path: Path) -> None:
+    v = run(World(boom=True), tmp_path)
+    assert v["route"] == "error" and v["error"] == "internal error (RuntimeError)"
+
+
+def test_unwritable_audit_log_still_returns_the_verdict(tmp_path: Path) -> None:
+    v = server.triage(1, client=World().client(), env=ENV, audit_log=tmp_path)  # a directory: open() fails
+    assert v["route"] == "defect"
+
+
+def test_tool_is_read_only_and_takes_one_integer(tmp_path: Path) -> None:
+    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl")
+    [tool] = asyncio.run(app.list_tools())
+    assert tool.name == "triage_ticket"
+    a = tool.annotations
+    assert (a.readOnlyHint, a.destructiveHint, a.idempotentHint, a.openWorldHint) == (True, False, True, True)
+    assert tool.inputSchema["required"] == ["issue_number"]
+    assert tool.inputSchema["properties"]["issue_number"]["type"] == "integer"
+
+
+def test_tool_call_returns_structured_verdict_and_json_text(tmp_path: Path) -> None:
+    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl")
+    content, structured = asyncio.run(app.call_tool("triage_ticket", {"issue_number": 1}))
+    assert structured["route"] == "defect" and structured["policy"] == "triage-v1"
+    assert json.loads(content[0].text) == structured
+
+
+def test_app_binds_loopback_8803_at_mcp() -> None:
+    app = server.build_app(client=World().client(), env=ENV)
+    assert (app.settings.host, app.settings.port, app.settings.streamable_http_path) == (
+        "127.0.0.1",
+        8803,
+        "/mcp",
+    )
+
+
+def test_env_file_parsing_and_precedence(tmp_path: Path) -> None:
+    dotenv = tmp_path / ".env"
+    dotenv.write_text('# comment\nTYPESAFE_API_KEY="from-file"\nGITHUB_PAT=abc\n\nNOT A LINE\nEMPTY=\n')
+    assert server.read_dotenv(dotenv) == {"TYPESAFE_API_KEY": "from-file", "GITHUB_PAT": "abc", "EMPTY": ""}
+    env = server.load_env(dotenv, {"GITHUB_PAT": "from-env"})
+    assert env["GITHUB_PAT"] == "from-env" and env["TYPESAFE_API_KEY"] == "from-file"
+    assert server.read_dotenv(tmp_path / "missing.env") == {}

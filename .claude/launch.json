@@ -4,8 +4,22 @@
     {
       "name": "trueforge",
       "runtimeExecutable": "env",
-      "runtimeArgs": ["SERVER_EXECUTION_TIMEOUT_SECONDS=1200", "npx", "--yes", "@truefoundry/trueforge@0.2.1"],
+      "runtimeArgs": [
+        "SERVER_EXECUTION_TIMEOUT_SECONDS=1200",
+        "npx",
+        "--yes",
+        "@truefoundry/trueforge@0.2.1"
+      ],
       "port": 8790
+    },
+    {
+      "name": "triage",
+      "runtimeExecutable": "uv",
+      "runtimeArgs": [
+        "run",
+        "mcp/triage/server.py"
+      ],
+      "port": 8803
     }
   ]
 }
