@@ -4,6 +4,26 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 08:30 — Vishnu + Claude — finish-P0 plan closed; final review fixes in
+
+**Done**
+- Final whole-branch review (fresh reviewer): no Critical. Fixed: S4 substring false pass (`2d8fef4`), 60-min demo
+  timeout for ui/terminal (`73e3392`), nudge + `check.json` documented (`6324288`), skill 6b (`8a4ceef`).
+- Skill 6b NOT verified: the TR-03 check run patched documented behaviour again; the gate held. TR-03 is a
+  judgement call this model gets right ~1 in 5.
+- Decision: accept the push_files weakness; demo in `--approve ui`, re-run if a push derails.
+
+**Deferred minors** (review): stale timeout docs (SPEC §4.7 'Cap: 10 minutes', contracts example), SKILL git-checkout
+recovery vs strict scorer, nudge/final-verdict use two sources, corrupt check.json aborts --all, 'against' wording for
+cannot_reproduce, redundant `seen` set, loose TR-03 steps regex, #3-specific example in hard rule 11.
+
+**Next**
+1. Filmed `--approve ui` run on #1 (REVISE once); Daytona key → one run there.
+2. Fresh-laptop README test; decide on the uncommitted fixture edits (`tests/fixtures/humanize/issues/{1,2,4,6}.md`).
+3. After P0: Jev Triage; Runbook Executor on kind. Before submitting: make the repo public.
+
+---
+
 ## 2026-09-26 07:15 — Vishnu + Claude — P0 scenarios: each must-pass green once; full pass 5/8
 
 **Done** (plan `docs/superpowers/plans/2026-09-26-finish-p0.md`, ledger in `.superpowers/sdd/`)
