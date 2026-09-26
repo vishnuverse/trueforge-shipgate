@@ -42,6 +42,16 @@ for var in GH_REPO SHIPGATE_REPO; do
 done
 unset GH_REPO
 
+# Demo-only: this script closes PRs, deletes branches and rewrites labels, so it never runs against a user's repo.
+CFG_REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && uv run --quiet python scripts/shipgate_config.py target.repo)" || {
+  echo "reset.sh: cannot read shipgate.yaml; refusing" >&2
+  exit 2
+}
+if [ "$(printf '%s' "$CFG_REPO" | tr 'A-Z' 'a-z')" != "$REPO" ]; then
+  echo "reset.sh: refusing: shipgate.yaml targets $CFG_REPO; this script only resets the demo fork $REPO" >&2
+  exit 2
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 if [ -z "$GITHUB_PAT" ] && [ -f "$ROOT/.env" ]; then
   GITHUB_PAT="$(sed -n -E 's/^[[:space:]]*(export[[:space:]]+)?GITHUB_PAT[[:space:]]*=[[:space:]]*//p' "$ROOT/.env" |
