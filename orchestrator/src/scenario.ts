@@ -1,7 +1,10 @@
-// Scenario files (contracts §4). The orchestrator reads only id, issue, timeout_min and approvals.
+// Scenario files (contracts §4). The orchestrator reads only id, issue or ticket, timeout_min and approvals.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse as parseYaml } from "yaml";
+
+/** Any Jira key shape (the CLI checks it against shipgate.yaml jira.project). */
+const JIRA_KEY_RE = /^[A-Z][A-Z0-9]+-[1-9][0-9]*$/;
 
 export interface ScriptedApproval {
   tool: string;
@@ -11,7 +14,10 @@ export interface ScriptedApproval {
 
 export interface Scenario {
   id: string;
+  /** GitHub issue number; exactly one of issue / ticket is set. */
   issue: number | null;
+  /** Jira key (e.g. KAN-4) of a Jira scenario. */
+  ticket: string | null;
   timeoutMin: number | null;
   approvals: ScriptedApproval[];
   path: string;
@@ -40,9 +46,19 @@ export function parseScenario(text: string, path: string, expectedId?: string): 
     if (e.reason !== undefined && e.reason !== null) out.reason = String(e.reason);
     return out;
   });
-  const issue = doc.issue === undefined || doc.issue === null ? null : Number(doc.issue);
+  const hasIssue = doc.issue !== undefined && doc.issue !== null;
+  const hasTicket = doc.ticket !== undefined && doc.ticket !== null;
+  if (hasIssue === hasTicket) throw new Error(`${path}: needs exactly one of issue: <n> (GitHub) or ticket: <KEY> (Jira)`);
+  const issue = hasIssue ? Number(doc.issue) : null;
+  let ticket: string | null = null;
+  if (hasTicket) {
+    if (typeof doc.ticket !== "string" || !JIRA_KEY_RE.test(doc.ticket)) {
+      throw new Error(`${path}: ticket must be a Jira key such as KAN-4`);
+    }
+    ticket = doc.ticket;
+  }
   const timeoutMin = doc.timeout_min === undefined || doc.timeout_min === null ? null : Number(doc.timeout_min);
-  return { id, issue, timeoutMin, approvals, path };
+  return { id, issue, ticket, timeoutMin, approvals, path };
 }
 
 export function loadScenario(scenariosDir: string, id: string): Scenario {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  gateWarnings,
   renderGate,
   sanitize,
   ScriptDecider,
@@ -185,4 +186,84 @@ test("gate shows the evidence card from the PR body in full, even past the input
 test("gate without a card in the body adds no card section", () => {
   const shown = renderGate(ctx({ evidence: "hi" }));
   assert.doesNotMatch(shown, /evidence card \(from the PR body\)/);
+});
+
+// ---------- Jira comment gate ----------
+
+const CLOUD = "ce61dd8b-2e04-4815-9b7b-60a570df782b";
+/** 110 words, well past the 600-char input truncation. */
+const REPLY =
+  "Thanks for the report. " +
+  Array.from({ length: 102 }, (_, k) => `word${k}`).join(" ") +
+  "\nFix proposed in https://github.com/vishnuverse/humanize/pull/9.";
+
+function jiraCtx(input: Record<string, unknown>, over: Partial<GateContext> = {}): GateContext {
+  const base = ctx();
+  return ctx({
+    gate: { ...base.gate, mcpServer: "atlassian", tool: "addOrEditJiraIssueComment", input },
+    jira: { key: "KAN-4", cloudId: CLOUD },
+    ...over,
+  });
+}
+
+const goodInput = { cloudId: CLOUD, issueIdOrKey: "KAN-4", commentBody: REPLY, contentFormat: "markdown" };
+
+test("jira comment gate: a reply of <= 120 words is shown whole, no warnings when it targets this run's ticket", () => {
+  assert.ok(REPLY.length > 600 && REPLY.split(/\s+/).length === 110);
+  const shown = renderGate(jiraCtx(goodInput));
+  assert.match(shown, /--- Jira reply \(commentBody, 110 words, markdown\) ---/);
+  assert.ok(shown.includes(REPLY), shown);
+  assert.match(shown, /"commentBody": "\(shown above\)"/);
+  assert.match(shown, /"issueIdOrKey": "KAN-4"/);
+  assert.doesNotMatch(shown, /WARNING/);
+  assert.deepEqual(gateWarnings(jiraCtx(goodInput)), []);
+});
+
+test("jira comment gate: a reply over 120 words is cut after 120 words", () => {
+  const long = Array.from({ length: 130 }, (_, k) => `w${k}`).join(" ");
+  const shown = renderGate(jiraCtx({ ...goodInput, commentBody: long }));
+  assert.match(shown, /commentBody, 130 words/);
+  assert.match(shown, /w119 … \(\+10 words, \[v\] shows all\)/);
+  assert.doesNotMatch(shown, /w120/);
+});
+
+test("jira comment gate: WARNING lines for an edit, another ticket or another site (display only)", () => {
+  const warnings = gateWarnings(
+    jiraCtx({ ...goodInput, commentId: "10042", issueIdOrKey: "KAN-5", cloudId: "00000000-0000-0000-0000-000000000000" }),
+  );
+  assert.deepEqual(warnings, [
+    'WARNING: commentId "10042" is set: this EDITS an existing comment instead of adding a reply',
+    `WARNING: issueIdOrKey "KAN-5" is not this run's ticket KAN-4`,
+    `WARNING: cloudId "00000000-0000-0000-0000-000000000000" is not the configured cloudId ${CLOUD}`,
+  ]);
+  const shown = renderGate(jiraCtx({ ...goodInput, issueIdOrKey: "KAN-5" }));
+  const lines = shown.split("\n");
+  // right under the gate header, before the evidence
+  assert.equal(lines[4], `WARNING: issueIdOrKey "KAN-5" is not this run's ticket KAN-4`);
+  // a missing key is a mismatch too; a GitHub run has no ticket to compare with
+  assert.match(gateWarnings(jiraCtx({ commentBody: "hi" })).join("\n"), /issueIdOrKey \(missing\)/);
+  assert.deepEqual(gateWarnings(jiraCtx(goodInput, { jira: null })), ["WARNING: this run has no Jira ticket"]);
+  // unknown configured cloudId: only the key is compared
+  assert.deepEqual(gateWarnings(jiraCtx({ ...goodInput, cloudId: "x" }, { jira: { key: "KAN-4", cloudId: null } })), []);
+});
+
+test("jira comment gate: agent-supplied values in warnings are sanitised", () => {
+  const w = gateWarnings(jiraCtx({ ...goodInput, issueIdOrKey: "KAN-5‮​" }));
+  assert.equal(w.length, 1);
+  assert.doesNotMatch(w[0] ?? "", /[‮​]/);
+});
+
+test("other gates get no Jira warnings or reply section", () => {
+  const shown = renderGate(ctx({ jira: { key: "KAN-4", cloudId: CLOUD } }));
+  assert.doesNotMatch(shown, /WARNING|Jira reply/);
+});
+
+test("script mode prints the Jira warnings under its one-line answer", async () => {
+  const out: string[] = [];
+  const d = new ScriptDecider([{ tool: "addOrEditJiraIssueComment", decision: "allow" }], { print: (t) => out.push(t) });
+  assert.equal((await d.decide(jiraCtx({ ...goodInput, commentId: "1" }))).decision, "allow");
+  assert.deepEqual(out, [
+    "gate 1 atlassian/addOrEditJiraIssueComment: script -> allow",
+    '  WARNING: commentId "1" is set: this EDITS an existing comment instead of adding a reply',
+  ]);
 });
