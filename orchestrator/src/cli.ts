@@ -8,8 +8,9 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { ScriptDecider, StdioLineReader, TerminalDecider, UiDecider, type Decider, type Mode } from "./decide.ts";
+import { ConfigError } from "./config.ts";
 import { loadDotenv, repoRoot } from "./env.ts";
-import { GitHubLabels, TARGET_REPO } from "./labels.ts";
+import { GitHubLabels, targetRepo } from "./labels.ts";
 import { runOnce, type RunOptions } from "./runner.ts";
 import { loadScenario, type Scenario } from "./scenario.ts";
 import { TrueForgeClient, type AgentRef } from "./trueforge.ts";
@@ -90,16 +91,17 @@ export function resolveTimeoutMin(flag: number | null, scenario: number | null |
   return mode === "script" ? 15 : 60;
 }
 
-export function defaultPrompt(issue: number, mode: Mode, today: string = localDate()): string {
+export function defaultPrompt(issue: number, mode: Mode, today: string = localDate(), repo: string = targetRepo()): string {
   // The skill records this mode in each handoff approval entry. The date lives here, not in the agent's
   // instructions, so the system prompt stays byte-identical across days (prompt-cache hits).
-  return `Resolve GitHub issue #${issue} in ${TARGET_REPO}. Approval mode: ${mode}. Today is ${today}.`;
+  return `Resolve GitHub issue #${issue} in ${repo}. Approval mode: ${mode}. Today is ${today}.`;
 }
 
 async function main(argv: string[]): Promise<number> {
   const root = repoRoot();
   loadDotenv(root);
   const args = parseCli(argv);
+  const repo = targetRepo();
 
   const scenariosDir = process.env.SHIPGATE_SCENARIOS_DIR
     ? resolve(process.env.SHIPGATE_SCENARIOS_DIR)
@@ -125,7 +127,7 @@ async function main(argv: string[]): Promise<number> {
 
   const trueforgeUrl = (process.env.TRUEFORGE_URL || "http://localhost:8790").replace(/\/+$/, "");
   const tf = new TrueForgeClient(trueforgeUrl);
-  const labels = args.labels ? new GitHubLabels(TARGET_REPO, process.env.GITHUB_PAT ?? "") : null;
+  const labels = args.labels ? new GitHubLabels(repo, process.env.GITHUB_PAT ?? "") : null;
 
   const print = (text: string) => process.stdout.write(`${text}\n`);
   let decider: Decider;
@@ -148,13 +150,14 @@ async function main(argv: string[]): Promise<number> {
     scenarioId: scenario?.id ?? null,
     agent,
     agentLabel,
-    prompt: args.prompt ?? defaultPrompt(issue, args.mode),
+    prompt: args.prompt ?? defaultPrompt(issue, args.mode, localDate(), repo),
     timeoutMin,
     repoRoot: root,
     trueforgeUrl,
+    repo,
   };
   print(
-    `shipgate: ${opts.scenarioId ?? `issue-${issue}`} · ${TARGET_REPO}#${issue} · agent ${agentLabel} · ` +
+    `shipgate: ${opts.scenarioId ?? `issue-${issue}`} · ${repo}#${issue} · agent ${agentLabel} · ` +
       `approve=${args.mode} · timeout ${timeoutMin} min · labels ${labels ? "on" : "off"}`,
   );
   try {
@@ -174,6 +177,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   main(process.argv.slice(2)).then(
     (code) => process.exit(code),
     (e: unknown) => {
+      if (e instanceof ConfigError) {
+        process.stderr.write(`shipgate: ${e.message}\n`);
+        process.exit(2);
+      }
       if (e instanceof UsageError) process.stderr.write(`${e.message}\n`);
       else process.stderr.write(`error: ${process.env.SHIPGATE_DEBUG ? (e as Error)?.stack : (e as Error)?.message ?? String(e)}\n`);
       process.exit(1);

@@ -15,8 +15,6 @@ import type { LabelOps } from "./labels.ts";
 import { extractHandoff, parsePrefix, type Prefix } from "./protocol.ts";
 import { sleep, type AgentRef, type TrueForgeApi, type TurnInfo, type TurnInput } from "./trueforge.ts";
 
-export const REPO = "vishnuverse/humanize";
-
 export type RunStatus = "completed" | "timeout" | "error" | "unexpected_gate" | "no_handoff";
 
 export const EXIT: Record<RunStatus, number> = {
@@ -38,6 +36,7 @@ export interface RunOptions {
   timeoutMin: number;
   repoRoot: string;
   trueforgeUrl: string;
+  repo: string;
 }
 
 export interface RunDeps {
@@ -240,7 +239,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
     sessionId = await tf.createSession(opts.agent, {
       shipgate_run_id: runId,
       issue: String(opts.issue),
-      repo: REPO,
+      repo: opts.repo,
       approve_mode: opts.mode,
     });
     log(`session ${sessionId}  (${uiSessionUrl(opts.trueforgeUrl, sessionId)})`);
@@ -379,7 +378,7 @@ export async function runOnce(opts: RunOptions, deps: RunDeps): Promise<RunResul
     run_id: runId,
     scenario: opts.scenarioId,
     issue: opts.issue,
-    repo: REPO,
+    repo: opts.repo,
     agent: opts.agentLabel,
     session_id: sessionId,
     mode: opts.mode,

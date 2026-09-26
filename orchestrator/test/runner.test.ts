@@ -88,6 +88,7 @@ function options(root: string, over: Partial<RunOptions> = {}): RunOptions {
     timeoutMin: 1,
     repoRoot: root,
     trueforgeUrl: "http://localhost:8790",
+    repo: "vishnuverse/humanize",
     ...over,
   };
 }

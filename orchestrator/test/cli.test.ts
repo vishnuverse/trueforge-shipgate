@@ -80,3 +80,10 @@ test("timeout: explicit flag wins, then the scenario, then a human-friendly defa
   assert.equal(resolveTimeoutMin(null, null, "ui"), 60);
   assert.equal(resolveTimeoutMin(null, null, "terminal"), 60);
 });
+
+test("the kickoff prompt names the configured repo", () => {
+  assert.equal(
+    defaultPrompt(7, "script", "2026-09-26", "acme/widgets"),
+    "Resolve GitHub issue #7 in acme/widgets. Approval mode: script. Today is 2026-09-26.",
+  );
+});

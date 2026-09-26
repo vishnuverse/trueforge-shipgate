@@ -1,6 +1,11 @@
-// Issue labels (SPEC T1/T15, contracts §7) via GitHub REST. Only vishnuverse/humanize, only five labels.
+// Issue labels (SPEC T1/T15, contracts §7) via GitHub REST. Only the shipgate.yaml target, only five labels.
+import { loadConfig } from "./config.ts";
 
-export const TARGET_REPO = "vishnuverse/humanize";
+/** The one repo whose labels may change: shipgate.yaml target.repo. */
+export function targetRepo(): string {
+  return loadConfig().repo;
+}
+
 export const MANAGED_LABELS = ["bug", "triaged", "fix-proposed", "cannot-reproduce", "needs-human"] as const;
 export type ManagedLabel = (typeof MANAGED_LABELS)[number];
 /** Labels that describe where a ticket is; the end state keeps exactly one of them. */
@@ -42,7 +47,7 @@ export class GitHubLabels implements LabelOps {
     private readonly fetchFn: FetchLike = fetch,
     private readonly apiBase = "https://api.github.com",
   ) {
-    if (repo !== TARGET_REPO) throw new Error(`refusing to change labels on ${repo}; only ${TARGET_REPO}`);
+    if (repo.toLowerCase() !== targetRepo().toLowerCase()) throw new Error(`refusing to change labels on ${repo}; only ${targetRepo()}`);
     if (!token) throw new Error("GITHUB_PAT is not set (use --no-labels to skip label changes)");
     [this.owner, this.repo] = repo.split("/") as [string, string];
   }

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { GitHubLabels, labelForOutcome, type FetchLike } from "../src/labels.ts";
+import { fileURLToPath } from "node:url";
+import { GitHubLabels, labelForOutcome, targetRepo, type FetchLike } from "../src/labels.ts";
 
 test("outcome -> label mapping (SPEC T15)", () => {
   assert.equal(labelForOutcome("fixed"), "fix-proposed");
@@ -106,4 +107,18 @@ test("refuses other repos, unmanaged labels, a missing token and bad issue numbe
 test("API errors surface with status", async () => {
   const l = new GitHubLabels("vishnuverse/humanize", "tkn", async () => new Response("nope", { status: 403 }));
   await assert.rejects(l.onStart(1), /403/);
+});
+
+test("labels are pinned to the configured repo", () => {
+  assert.equal(targetRepo(), "vishnuverse/humanize");
+  const before = process.env.SHIPGATE_CONFIG;
+  process.env.SHIPGATE_CONFIG = fileURLToPath(new URL("../../tests/fixtures/config/valid-dotted-repo.yaml", import.meta.url));
+  try {
+    assert.equal(targetRepo(), "acme/my.pkg_x");
+    assert.throws(() => new GitHubLabels("vishnuverse/humanize", "tkn"), /refusing/);
+    assert.doesNotThrow(() => new GitHubLabels("acme/my.pkg_x", "tkn"));
+  } finally {
+    if (before === undefined) delete process.env.SHIPGATE_CONFIG;
+    else process.env.SHIPGATE_CONFIG = before;
+  }
 });
