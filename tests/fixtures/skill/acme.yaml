@@ -5,7 +5,7 @@ target:
 python:
   install: .venv/bin/pip install -q -e .[dev]
   test: .venv/bin/python -m pytest -q
-  source_dir: src/widgets/
+  source_dir: widgets/
   tests_dir: test
 trueforge:
   url: http://localhost:8790

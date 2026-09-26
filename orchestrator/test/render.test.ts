@@ -49,8 +49,9 @@ test("another repo leaves no demo names outside the labelled examples", () => {
     assert.ok(!skill.includes(bad), bad);
   }
   assert.ok(!/\bmain\b/.test(skill), "default branch 'main' left in the skill");
-  assert.ok(skill.includes("acme/widgets") && skill.includes("src/widgets/<file>") && skill.includes("test/test_issue_<n>.py"));
+  assert.ok(skill.includes("acme/widgets") && skill.includes("widgets/<file>") && skill.includes("test/test_issue_<n>.py"));
   assert.ok(skill.includes("fix/issue-<n> → trunk"));
+  assert.ok(!/(^|[\s`"'(])src\//m.test(skill), "bare src/ left in the skill");
   const agent = JSON.stringify(renderDeep(AGENT, acme, "agent"));
   assert.ok(!agent.includes("vishnuverse") && agent.includes("openrouter/glm-5-3-flash"));
 });

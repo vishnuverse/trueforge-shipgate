@@ -1,6 +1,6 @@
 ---
 name: ticket-resolver
-description: Procedure for resolving one bug ticket on vishnuverse/humanize - reproduce it with a failing test in the sandbox, make the smallest src/ fix, prove it with a 5-point evidence check, push fix/issue-<n>, then open the PR and reply only through human-approved gates (REVISE/EDIT/STOP). Read it in full before any other action.
+description: Procedure for resolving one bug ticket on vishnuverse/humanize - reproduce it with a failing test in the sandbox, make the smallest src/humanize/ fix, prove it with a 5-point evidence check, push fix/issue-<n>, then open the PR and reply only through human-approved gates (REVISE/EDIT/STOP). Read it in full before any other action.
 ---
 
 # Ticket Resolver
@@ -46,7 +46,7 @@ push-back comment was answered at its gate and the handoff JSON is written.
 11. Never change documented behaviour, e.g. how inputs are interpreted (a naive datetime means local time; aware
     datetimes are converted). Fix only outputs that are wrong for input used as the docstring describes.
 12. The triage verdict binds you. If triage_ticket returned patch_allowed false, returned route "error", or never
-    answered, you are in <investigate_only> mode: never edit src/, never call create_branch, push_files or
+    answered, you are in <investigate_only> mode: never edit src/humanize/, never call create_branch, push_files or
     create_pull_request. Your only possible write is one gated add_issue_comment.
 </hard_rules>
 
@@ -119,7 +119,7 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
    see <investigate_only>); otherwise step 7.
 7. Fix. If TRIAGE patch_allowed is false: never fix; go to policy_blocked (<investigate_only>). Otherwise max 2
    attempts. An attempt = the smallest root-cause change in src/humanize/**, in the code's own style, followed by
-   the evidence check. Red: `P git checkout -- src/` (keep the test), write one line on why attempt 1 failed, try a
+   the evidence check. Red: `P git checkout -- src/humanize/` (keep the test), write one line on why attempt 1 failed, try a
    different change. Two red attempts: could_not_fix push-back.
 8. Evidence check, all 5 must pass:
    1) before the patch the test failed 3/3 on an assertion (or k/10 recorded);
@@ -155,7 +155,7 @@ Steps run in order; a push-back (<pushback>) ends the procedure early.
 <investigate_only>
 Applies when triage_ticket returned patch_allowed false, returned route "error", or never answered.
 - Allowed: steps 4, 5, 6 and 6b (sandbox only; it holds no credentials).
-- Forbidden: step 7 onward. Never edit src/; never call create_branch, push_files or create_pull_request.
+- Forbidden: step 7 onward. Never edit src/humanize/; never call create_branch, push_files or create_pull_request.
 - 6b ends 0/3 failing with documented usage: cannot_reproduce (its <pushback> row).
 - The issue test fails with documented usage (your first test or the rewrite; 3/3, or k/10 with k >= 1): outcome
   policy_blocked. One gated add_issue_comment with the policy_blocked row of <pushback>, a pushback entry {against:
@@ -165,7 +165,7 @@ Applies when triage_ticket returned patch_allowed false, returned route "error",
 
 <shell_rules>
 1. One command per exec (&& chains allowed). No shell state carries over: start every command with P.
-2. Fixed order: read ticket, locate code, write the test, see it fail, patch src/, rerun the test, full suite.
+2. Fixed order: read ticket, locate code, write the test, see it fail, patch src/humanize/, rerun the test, full suite.
 3. Search before reading: `P grep -rn "def <name>" src/humanize`, then `P nl -ba <file> | sed -n 'A,Bp'` (40-100
    lines). Never cat a whole source file except to build push_files content (step 9).
 4. Edit only with a Python script that asserts the old text occurs exactly once:
@@ -184,7 +184,7 @@ Applies when triage_ticket returned patch_allowed false, returned route "error",
 10. Keep output short: pipe through S, `| tail -40` or `| head -40`.
 11. Self-review before any GitHub write: `git status --porcelain` and `git diff` show only intended files; rerun the
     issue test and the full suite (step 8).
-12. Between attempts: `P git checkout -- src/`; keep tests/test_issue_<n>.py.
+12. Between attempts: `P git checkout -- src/humanize/`; keep tests/test_issue_<n>.py.
 </shell_rules>
 
 <evidence_card>
