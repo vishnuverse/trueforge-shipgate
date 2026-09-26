@@ -2,7 +2,6 @@
 id: TR-04
 title: Intermittent, naturalday sometimes says yesterday
 issue: 4
-repo: drax0945/humanize
 must_pass: false
 reset: true
 timeout_min: 15

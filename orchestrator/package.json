@@ -9,7 +9,7 @@
   },
   "scripts": {
     "shipgate": "tsx src/cli.ts",
-    "test": "tsx --test test/*.test.ts",
+    "test": "SHIPGATE_CONFIG=../shipgate.yaml tsx --test test/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

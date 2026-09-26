@@ -2,7 +2,6 @@
 id: TR-07
 title: Scope limit, bug is in Django not humanize
 issue: 7
-repo: drax0945/humanize
 must_pass: false
 reset: true
 timeout_min: 15

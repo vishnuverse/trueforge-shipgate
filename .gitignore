@@ -225,3 +225,7 @@ node_modules/
 
 # JetBrains IDE
 .idea/
+
+# Per-runner files: each person's own target repo, and local Claude Code / IDE settings (never committed)
+shipgate.local.yaml
+.claude/

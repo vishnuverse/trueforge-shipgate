@@ -903,7 +903,7 @@ def test_unknown_triage_key_is_rejected(tmp_path: Path) -> None:
 
     p = tmp_path / "TR-99.yaml"
     p.write_text(
-        "id: TR-99\ntitle: t\nissue: 1\nrepo: drax0945/humanize\nreset: true\ntimeout_min: 15\n"
+        "id: TR-99\ntitle: t\nissue: 1\nreset: true\ntimeout_min: 15\n"
         "must_pass: false\napprovals: []\n"
         "expect:\n  triage: {bogus: 1}\n"
     )
@@ -919,32 +919,37 @@ def test_tr03_passes_as_policy_blocked(runs_dir: Path, check) -> None:
     assert code == 0, out
 
 
-def _scenario_yaml(sid: str, repo: str) -> str:
+def _scenario_yaml(sid: str) -> str:
     return (
-        f"id: {sid}\ntitle: t\nissue: 1\nrepo: {repo}\nreset: true\ntimeout_min: 15\nmust_pass: false\n"
+        f"id: {sid}\ntitle: t\nissue: 1\nreset: true\ntimeout_min: 15\nmust_pass: false\n"
         "approvals: []\nexpect: {}\n"
     )
 
 
-def test_every_scenario_names_the_demo_repo() -> None:
-    assert {s.repo for s in load_all(SCENARIOS)} == {"drax0945/humanize"}
+def test_demo_forks_list_both_team_forks() -> None:
+    lines = (SCENARIOS / "demo-forks.txt").read_text().splitlines()
+    forks = {ln.strip() for ln in lines if ln.strip() and not ln.startswith("#")}
+    assert forks == {"vishnuverse/humanize", "drax0945/humanize"}
+    assert all("repo" not in s.raw for s in load_all(SCENARIOS))
 
 
-def test_scenario_for_another_repo_is_refused(tmp_path: Path) -> None:
+def test_scenarios_are_refused_when_the_target_is_not_a_demo_fork(tmp_path: Path) -> None:
     from shipgate_check.scenario import ScenarioError, load_scenario
 
+    (tmp_path / "demo-forks.txt").write_text("# fixture forks\nacme/widgets\n")
     p = tmp_path / "TR-98.yaml"
-    p.write_text(_scenario_yaml("TR-98", "acme/widgets"))
-    with pytest.raises(ScenarioError, match="configured target"):
+    p.write_text(_scenario_yaml("TR-98"))
+    with pytest.raises(ScenarioError, match="not a demo fork"):
         load_scenario(p)
 
 
-def test_check_exits_2_for_a_scenario_of_another_repo(tmp_path: Path) -> None:
+def test_check_exits_2_when_the_target_is_not_a_demo_fork(tmp_path: Path) -> None:
     import io
 
     from shipgate_check.cli import main
 
-    (tmp_path / "TR-98.yaml").write_text(_scenario_yaml("TR-98", "acme/widgets"))
+    (tmp_path / "demo-forks.txt").write_text("acme/widgets\n")
+    (tmp_path / "TR-98.yaml").write_text(_scenario_yaml("TR-98"))
     argv = ["TR-98", "--scenarios-dir", str(tmp_path), "--runs-dir", str(tmp_path / "runs"), "--offline"]
     assert main(argv, out=io.StringIO(), root=tmp_path) == 2
 

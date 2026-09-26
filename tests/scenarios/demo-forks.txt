@@ -1,0 +1,4 @@
+# Forks of humanize that carry the planted fixtures (#1-#7). Scored scenarios (check.py, score.sh) and
+# scripts/reset.sh run only when shipgate.yaml / shipgate.local.yaml targets one of these.
+vishnuverse/humanize
+drax0945/humanize

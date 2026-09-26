@@ -6,6 +6,7 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 from shipgate_config import ROOT, ConfigError, load_config
@@ -47,7 +48,7 @@ def test_env_var_points_at_another_file(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_cli_prints_one_value_and_exits_2_on_a_config_error() -> None:
     cmd = [sys.executable, str(ROOT / "scripts" / "shipgate_config.py"), "target.repo"]
-    env = {k: v for k, v in os.environ.items() if k != "SHIPGATE_CONFIG"}
+    env = {**os.environ, "SHIPGATE_CONFIG": str(ROOT / "shipgate.yaml")}
     ok = subprocess.run(cmd, capture_output=True, text=True, env=env)
     assert ok.returncode == 0 and ok.stdout == "drax0945/humanize\n"
     bad = subprocess.run(
@@ -56,3 +57,18 @@ def test_cli_prints_one_value_and_exits_2_on_a_config_error() -> None:
     assert bad.returncode == 2 and "target.repo" in bad.stderr
     usage = subprocess.run(cmd[:2] + ["nope"], capture_output=True, text=True, env=env)
     assert usage.returncode == 2
+
+
+def test_local_file_overrides_the_committed_one(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Each person running the agent keeps their own target in a git-ignored shipgate.local.yaml."""
+    import shipgate_config
+
+    (tmp_path / "shipgate.yaml").write_text((FIXTURES / "valid.yaml").read_text())
+    monkeypatch.setattr(shipgate_config, "ROOT", tmp_path)
+    monkeypatch.delenv("SHIPGATE_CONFIG", raising=False)
+    assert shipgate_config.config_path() == tmp_path / "shipgate.yaml"
+    (tmp_path / "shipgate.local.yaml").write_text((FIXTURES / "valid-dotted-repo.yaml").read_text())
+    assert shipgate_config.config_path() == tmp_path / "shipgate.local.yaml"
+    assert shipgate_config.load_config().repo == "acme/my.pkg_x"
+    monkeypatch.setenv("SHIPGATE_CONFIG", str(tmp_path / "shipgate.yaml"))
+    assert shipgate_config.config_path() == tmp_path / "shipgate.yaml"

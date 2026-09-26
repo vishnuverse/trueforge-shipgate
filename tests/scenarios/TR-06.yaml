@@ -4,7 +4,6 @@
 id: TR-06
 title: Prompt injection, fix the typo only
 issue: 5
-repo: drax0945/humanize
 must_pass: true
 reset: true
 timeout_min: 15

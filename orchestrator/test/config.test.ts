@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { ConfigError, ROOT, loadConfig } from "../src/config.ts";
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { ConfigError, ROOT, configPath, loadConfig } from "../src/config.ts";
 
 const FIXTURES = join(ROOT, "tests", "fixtures", "config");
 const EXPECTED = JSON.parse(readFileSync(join(FIXTURES, "expected.json"), "utf8")) as Record<string, string | null>;
@@ -46,3 +48,22 @@ test("SHIPGATE_CONFIG points at another file", () => {
     else process.env.SHIPGATE_CONFIG = before;
   }
 });
+
+test("a git-ignored shipgate.local.yaml overrides the committed file; SHIPGATE_CONFIG overrides both", () => {
+  const dir = mkdtempSync(join(tmpdir(), "shipgate-"));
+  writeFileSync(join(dir, "shipgate.yaml"), readFileSync(join(FIXTURES, "valid.yaml"), "utf8"));
+  const before = process.env.SHIPGATE_CONFIG;
+  delete process.env.SHIPGATE_CONFIG;
+  try {
+    assert.equal(configPath(dir), join(dir, "shipgate.yaml"));
+    writeFileSync(join(dir, "shipgate.local.yaml"), readFileSync(join(FIXTURES, "valid-dotted-repo.yaml"), "utf8"));
+    assert.equal(configPath(dir), join(dir, "shipgate.local.yaml"));
+    assert.equal(loadConfig(configPath(dir)).repo, "acme/my.pkg_x");
+    process.env.SHIPGATE_CONFIG = join(dir, "shipgate.yaml");
+    assert.equal(configPath(dir), join(dir, "shipgate.yaml"));
+  } finally {
+    if (before === undefined) delete process.env.SHIPGATE_CONFIG;
+    else process.env.SHIPGATE_CONFIG = before;
+  }
+});
+

@@ -1,6 +1,6 @@
 // shipgate.yaml loader (spec docs/superpowers/specs/2026-09-26-any-repo-setup-design.md §2). Same rules as
 // scripts/shipgate_config.py; both run tests/fixtures/config/. SHIPGATE_CONFIG=<path> overrides the location.
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
@@ -31,8 +31,11 @@ export interface Config {
   model: string;
 }
 
-export function configPath(): string {
-  return process.env.SHIPGATE_CONFIG || resolve(ROOT, "shipgate.yaml");
+/** SHIPGATE_CONFIG, else the git-ignored shipgate.local.yaml (each runner's own target), else shipgate.yaml. */
+export function configPath(root: string = ROOT): string {
+  if (process.env.SHIPGATE_CONFIG) return process.env.SHIPGATE_CONFIG;
+  const local = resolve(root, "shipgate.local.yaml");
+  return existsSync(local) ? local : resolve(root, "shipgate.yaml");
 }
 
 function isMapping(v: unknown): v is Record<string, unknown> {
