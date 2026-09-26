@@ -11,6 +11,7 @@ approvals:
   - {tool: add_issue_comment, decision: deny, reason: "EDIT: Thanks for the report. ordinal(12) returned 12nd because the 11-13 special case was missing. The fix and a regression test are in the linked pull request, which a maintainer will review."}
   - {tool: add_issue_comment, decision: allow}
 expect:
+  triage: {route: defect, patch_allowed: true}
   status: ok
   outcome: fixed
   label: fix-proposed

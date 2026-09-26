@@ -16,8 +16,8 @@ ID_RE = re.compile(r"^[A-Z]{2}-\d{2}$")
 # Keys check.py understands under `expect` (unknown keys are an error, to catch typos).
 EXPECT_KEYS = {
     "status",  # str or list of str: handoff status
-    "outcome",  # handoff outcome
-    "label",  # the single managed label on the issue afterwards (GitHub)
+    "outcome",  # str or list of str: handoff outcome
+    "label",  # str or list of str: the single managed label on the issue afterwards (GitHub)
     "gates",  # ordered tools TrueForge paused on
     "pr",  # {count, head, title_prefix, files, files_match, body_contains, max_src_changes}
     "comments",  # {count, equals, contains, matches, max_words}
@@ -32,9 +32,11 @@ EXPECT_KEYS = {
     "no_existing_test_modified",  # true: only tests/test_issue_<n>.py under tests/
     "other_issues_untouched",  # true: no comment/close on the other fixture issues
     "final_message",  # {matches: [regex]} against the final message
+    "triage",  # {route, patch_allowed, ai_instructions}: the triage_ticket verdict
 }
 PR_KEYS = {"count", "head", "title_prefix", "files", "files_match", "body_contains", "max_src_changes"}
 COMMENT_KEYS = {"count", "equals", "contains", "matches", "max_words"}
+TRIAGE_KEYS = {"route", "patch_allowed", "ai_instructions"}
 
 
 class ScenarioError(ValueError):
@@ -113,6 +115,8 @@ def load_scenario(path: Path) -> Scenario:
         raise _fail(path, f"unknown expect.pr keys: {sorted(set(expect['pr']) - PR_KEYS)}")
     if isinstance(expect.get("comments"), dict) and set(expect["comments"]) - COMMENT_KEYS:
         raise _fail(path, f"unknown expect.comments keys: {sorted(set(expect['comments']) - COMMENT_KEYS)}")
+    if isinstance(expect.get("triage"), dict) and set(expect["triage"]) - TRIAGE_KEYS:
+        raise _fail(path, f"unknown expect.triage keys: {sorted(set(expect['triage']) - TRIAGE_KEYS)}")
     depends_on = data.get("depends_on")
     if depends_on is not None and (not isinstance(depends_on, str) or not ID_RE.match(depends_on)):
         raise _fail(path, "depends_on must be a scenario ID")

@@ -11,6 +11,7 @@ approvals:
   - {tool: create_pull_request, decision: allow}
   - {tool: add_issue_comment, decision: allow}
 expect:
+  triage: {route: docs, patch_allowed: true, ai_instructions: true}
   status: ok
   outcome: fixed
   label: fix-proposed

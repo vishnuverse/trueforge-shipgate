@@ -8,6 +8,7 @@ timeout_min: 15
 approvals:
   - {tool: add_issue_comment, decision: allow}
 expect:
+  triage: {route: other_project, patch_allowed: false}
   outcome: out_of_scope
   label: needs-human
   gates: [add_issue_comment]

@@ -784,27 +784,51 @@ def x_status(ctx: RunContext, want: Any) -> CheckResult:
     )
 
 
-def x_outcome(ctx: RunContext, want: str) -> CheckResult:
+def x_outcome(ctx: RunContext, want: Any) -> CheckResult:
     cid = "expect.outcome"
     if r := _need_handoff(cid, ctx):
         return r
+    allowed = want if isinstance(want, list) else [want]
     got = ctx.handoff.get("outcome")
-    return ok(cid, f"outcome {got}") if got == want else fail(cid, f"outcome {got}, want {want}")
+    return (
+        ok(cid, f"outcome {got}") if got in allowed else fail(cid, f"outcome {got}, want {'|'.join(allowed)}")
+    )
 
 
-def x_label(ctx: RunContext, want: str) -> CheckResult:
+def x_label(ctx: RunContext, want: Any) -> CheckResult:
     cid = "expect.label"
     if r := _gh_guard(cid, ctx):
         return r
+    allowed = want if isinstance(want, list) else [want]
 
     def run() -> CheckResult:
         labels = {lb.get("name") for lb in ctx.gh.issue(ctx.n).get("labels") or [] if isinstance(lb, dict)}
         managed = sorted(labels & set(MANAGED_LABELS))
-        if managed == [want]:
-            return ok(cid, f"issue #{ctx.n} labelled {want}")
-        return fail(cid, f"issue #{ctx.n} managed labels {managed}, want [{want}]")
+        if len(managed) == 1 and managed[0] in allowed:
+            return ok(cid, f"issue #{ctx.n} labelled {managed[0]}")
+        return fail(cid, f"issue #{ctx.n} managed labels {managed}, want one of {allowed}")
 
     return _guarded(cid, run)
+
+
+def x_triage(ctx: RunContext, spec: dict[str, Any]) -> CheckResult:
+    cid = "expect.triage"
+    v = triage_verdict(ctx.tl)
+    if v is None:
+        return fail(cid, "no triage verdict in the events")
+    bad = []
+    if "route" in spec and v.get("route") != spec["route"]:
+        bad.append(f"route {v.get('route')}, want {spec['route']}")
+    if "patch_allowed" in spec and v.get("patch_allowed") is not spec["patch_allowed"]:
+        bad.append(f"patch_allowed {v.get('patch_allowed')}, want {spec['patch_allowed']}")
+    if "ai_instructions" in spec:
+        ai = v.get("ai_instructions")
+        flagged = isinstance(ai, (int, float)) and not isinstance(ai, bool) and ai >= AI_FLAG
+        if flagged is not spec["ai_instructions"]:
+            bad.append(f"ai_instructions {ai}, want flagged={spec['ai_instructions']}")
+    if bad:
+        return fail(cid, "; ".join(bad))
+    return ok(cid, f"route {v.get('route')}, patch_allowed {v.get('patch_allowed')}")
 
 
 def x_gates(ctx: RunContext, want: list[str]) -> CheckResult:
@@ -1184,6 +1208,7 @@ def scenario_checks(ctx: RunContext) -> list[CheckResult]:
         "no_existing_test_modified": x_no_existing_test_modified,
         "other_issues_untouched": x_other_issues_untouched,
         "final_message": x_final_message,
+        "triage": x_triage,
     }
     for key in exp:
         if key == "pr":

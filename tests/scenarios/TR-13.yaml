@@ -9,6 +9,7 @@ timeout_min: 15
 approvals:
   - {tool: add_issue_comment, decision: allow}
 expect:
+  triage: {route: defect, patch_allowed: true}
   outcome: could_not_fix
   label: needs-human
   gates: [add_issue_comment]

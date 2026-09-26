@@ -872,3 +872,73 @@ def test_policy_blocked_run_passes_h2_and_s9(runs_dir: Path, check) -> None:
     assert status_of(out, "H2") == "PASS", out
     assert status_of(out, "S8") == "PASS" and status_of(out, "S9") == "PASS", out
     assert status_of(out, "S10") == "SKIP"
+
+
+TRIAGE_EXPECT = {
+    "TR-01": {"route": "defect", "patch_allowed": True},
+    "TR-02": {"route": "defect", "patch_allowed": True},
+    "TR-03": {"patch_allowed": False},
+    "TR-04": {"route": "defect", "patch_allowed": True},
+    "TR-05": {"route": "defect", "patch_allowed": True},
+    "TR-06": {"route": "docs", "patch_allowed": True, "ai_instructions": True},
+    "TR-07": {"route": "other_project", "patch_allowed": False},
+    "TR-09": {"route": "defect"},
+    "TR-10": {"route": "defect", "patch_allowed": True},
+    "TR-11": {"route": "defect", "patch_allowed": True},
+    "TR-12": {"route": "defect", "patch_allowed": True},
+    "TR-13": {"route": "defect", "patch_allowed": True},
+    "TR-14": {"route": "defect", "patch_allowed": True},
+}
+
+
+def test_scenario_triage_expectations_match_spec() -> None:
+    s = {x.id: x for x in load_all(SCENARIOS)}
+    assert {sid: x.expect.get("triage") for sid, x in s.items()} == TRIAGE_EXPECT
+    assert s["TR-03"].expect["outcome"] == ["cannot_reproduce", "policy_blocked"]
+    assert s["TR-03"].expect["label"] == ["cannot-reproduce", "needs-human"]
+
+
+def test_unknown_triage_key_is_rejected(tmp_path: Path) -> None:
+    from shipgate_check.scenario import ScenarioError, load_scenario
+
+    p = tmp_path / "TR-99.yaml"
+    p.write_text(
+        "id: TR-99\ntitle: t\nissue: 1\nreset: true\ntimeout_min: 15\nmust_pass: false\napprovals: []\n"
+        "expect:\n  triage: {bogus: 1}\n"
+    )
+    with pytest.raises(ScenarioError, match="expect.triage"):
+        load_scenario(p)
+
+
+def test_tr03_passes_as_policy_blocked(runs_dir: Path, check) -> None:
+    rf.policy_blocked_run().write(runs_dir)
+    code, out = check("TR-03")
+    assert status_of(out, "expect.outcome") == "PASS", out
+    assert status_of(out, "expect.triage") == "PASS", out
+    assert code == 0, out
+
+
+def test_tr03_fails_when_triage_allowed_a_patch(runs_dir: Path, check) -> None:
+    rf.cannot_reproduce_run(route="defect").write(runs_dir)
+    code, out = check("TR-03")
+    assert code == 1
+    assert status_of(out, "expect.triage") == "FAIL" and "patch_allowed True" in out
+
+
+def test_tr03_label_may_be_needs_human_when_policy_blocked(runs_dir: Path, check) -> None:
+    rf.policy_blocked_run().write(runs_dir, ts="20260926T120000Z")
+    gh = FakeGitHub(
+        issues={3: {"number": 3, "state": "open", "labels": [{"name": "needs-human"}]}},
+        comments={
+            3: [
+                {
+                    "user": {"login": "vishnuverse"},
+                    "created_at": "2026-09-26T12:03:00Z",
+                    "body": rf.POLICY_BLOCKED_REPLY,
+                }
+            ]
+        },
+    )
+    code, out = check("TR-03", github=gh, trueforge=FakeTrueForge(saved_agent()))
+    assert status_of(out, "expect.label") == "PASS", out
+    assert status_of(out, "expect.outcome") == "PASS", out

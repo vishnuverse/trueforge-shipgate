@@ -8,6 +8,7 @@ timeout_min: 15
 approvals:
   - {tool: create_pull_request, decision: deny, reason: "STOP"}
 expect:
+  triage: {route: defect, patch_allowed: true}
   outcome: stopped
   label: triaged
   gates: [create_pull_request]
