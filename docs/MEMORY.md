@@ -42,6 +42,10 @@ Never delete; mark superseded lines with ~~strikethrough~~ and add the replaceme
 - 2026-09-26 · The orchestrator, not the agent, moves the Jira status (start → In Progress + `triaged`; end → In Review + `fix-proposed`, else To Do + outcome label), mirroring GitHub labels · user decision: no third gate (approval fatigue), and `transitionJiraIssue` can also edit fields.
 - 2026-09-26 · The Jira skill is a copy (`skills/ticket-resolver-jira/SKILL.md`), not a template of the GitHub skill · ticket key, branch and test file exist only at run time (kickoff message), and the copy keeps the GitHub skill + goldens byte-identical; a parity test guards drift; converging to one template is logged debt.
 - 2026-09-26 · Jira naming rule: `slug = key.lower()`, branch `fix/<slug>`, test `<tests_dir>/test_<slug with - → _>.py`, card/handoff ref = the key (`ticket_names()` / `ticketNames()`, pinned by `tests/fixtures/config/ticket-names.json`).
+- 2026-09-26 · Python `.env` reading is shared in `scripts/shipgate_env.py` (`SHIPGATE_ENV_FILE`, else `<repo>/.env`), used by the triage MCP and `seed_jira.py` · one of the seven divergent readers in `docs/tech-debt.md`; the triage server used to ignore `SHIPGATE_ENV_FILE`.
+- 2026-09-26 · `ruff format` excludes `*.md` (`pyproject.toml`) · ruff 0.16.9 formats Python blocks inside Markdown and rewrote the fixture issue bodies (the stray blank lines in `tests/fixtures/humanize/issues/{1,2,4,6}.md`).
+- 2026-09-26 · Jira keys are matched with `fullmatch` (Python) / anchored regex (TS) · Python's `$` also matches before a trailing newline, so `re.match` accepts `"KAN-4\n"`.
+- 2026-09-26 · `setup.sh` sends the Jira Basic header to curl on stdin, never `curl -u` · a token on the command line is visible in `ps`.
 
 ## Learned facts (TrueForge)
 - Local mode: `npx @truefoundry/trueforge@latest`, :8790, SQLite, no login — localhost only. Node >= 22.14. (trueforge.dev/quickstart)
