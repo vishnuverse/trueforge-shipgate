@@ -90,9 +90,15 @@ def test_only_the_configured_providers_key_is_required(tmp_path: Path) -> None:
     """trueforge.model picks the provider: openai/... needs OPENAI_API_KEY, openrouter/... its own key."""
     base = ["GITHUB_PAT=x", "TYPESAFE_API_KEY=z", "JIRA_EMAIL=e", "JIRA_API_KEY=j"]
     openai_only = env_file(tmp_path, [*base, "OPENAI_API_KEY=y"])
-    assert run(
-        "scripts/setup.sh", "--dry-run", env_file=openai_only, extra={"SHIPGATE_CONFIG": str(OPENAI_CONFIG)}
-    ).returncode == 0
+    assert (
+        run(
+            "scripts/setup.sh",
+            "--dry-run",
+            env_file=openai_only,
+            extra={"SHIPGATE_CONFIG": str(OPENAI_CONFIG)},
+        ).returncode
+        == 0
+    )
     r = run(
         "scripts/setup.sh", "--dry-run",
         env_file=openai_only, extra={"SHIPGATE_CONFIG": str(OPENROUTER_CONFIG)},
