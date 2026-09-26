@@ -174,7 +174,9 @@ day, about 45 runs including the bake-offs, cost **$0.91**. Details: [`docs/mode
 | `docs/` | Design, contracts, work log, decisions, research ([index](docs/README.md)) |
 
 ## AI assistance
-Built with **Claude Code** (Anthropic; model Claude Opus 5.5). It helped plan and research (TrueForge source, SWE-agent,
+Built with **Claude Code** (Anthropic; models Claude Opus 5.5, Claude Sonnet 5, Claude Haiku 4.5 and Claude Fable 5.1:
+Opus for planning, design and the main session; Sonnet, Haiku and Fable as implementer and reviewer subagents; one
+teammate also used Claude Code with Claude Sonnet 5). It helped plan and research (TrueForge source, SWE-agent,
 model prompting guides), wrote the spec, and wrote the code: the skill, the orchestrator and the scorer were built by
 parallel Claude Code subagents against a shared contract, then reviewed and merged. It also planted the disclosed
 fixture bugs. The agent itself runs on `deepseek/deepseek-v4-flash` through OpenRouter. The humans chose the scope,
