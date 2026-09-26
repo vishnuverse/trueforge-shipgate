@@ -17,13 +17,13 @@ class JevError(RuntimeError):
 
 
 def ask(
-    title: str, body: str, *, api_key: str | None, client: httpx.Client
+    title: str, body: str, *, context: str, api_key: str | None, client: httpx.Client
 ) -> tuple[dict[str, Any], str | None]:
     """Returns (answers, model). Retries once on a timeout, a transport error or a 5xx."""
     if not api_key:
         raise JevError("TYPESAFE_API_KEY not set")
     payload = {
-        "state": {"repository": policy.CONTEXT, "ticket": {"title": title, "body": body[:MAX_BODY]}},
+        "state": {"repository": context, "ticket": {"title": title, "body": body[:MAX_BODY]}},
         "model": policy.MODEL,
         "questions": policy.QUESTIONS,
     }

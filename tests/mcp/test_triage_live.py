@@ -12,6 +12,7 @@ from pathlib import Path
 import httpx
 import pytest
 import server
+from shipgate_config import load_config
 
 pytestmark = pytest.mark.live
 ENV = server.load_env(server.ROOT / ".env", os.environ)
@@ -20,7 +21,7 @@ needs_key = pytest.mark.skipif(not ENV.get("TYPESAFE_API_KEY"), reason="TYPESAFE
 
 def _triage(n: int, tmp_path: Path) -> dict:
     with httpx.Client() as c:
-        return server.triage(n, client=c, env=ENV, audit_log=tmp_path / "triage.jsonl")
+        return server.triage(n, client=c, env=ENV, audit_log=tmp_path / "triage.jsonl", config=load_config())
 
 
 @needs_key

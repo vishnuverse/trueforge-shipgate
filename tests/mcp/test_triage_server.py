@@ -9,8 +9,14 @@ from pathlib import Path
 import httpx
 import policy
 import server
+from shipgate_config import Config
 
 ENV = {"TYPESAFE_API_KEY": "test-key-not-real", "GITHUB_PAT": "test-pat-not-real"}
+CFG = Config(
+    repo="vishnuverse/humanize", default_branch="main", description="humanize is a Python library.",
+    install="x", test="y", source_dir="src/humanize", tests_dir="tests",
+    trueforge_url="http://localhost:8790", model="m",
+)  # fmt: skip
 ISSUE = {
     "number": 1,
     "title": "ordinal(12) returns 12nd",
@@ -63,7 +69,7 @@ class World:
 
 def run(w: World, tmp_path: Path, n: int = 1, env: dict | None = None) -> dict:
     return server.triage(
-        n, client=w.client(), env=ENV if env is None else env, audit_log=tmp_path / "t.jsonl"
+        n, client=w.client(), env=ENV if env is None else env, audit_log=tmp_path / "t.jsonl", config=CFG
     )
 
 
@@ -117,12 +123,13 @@ def test_unexpected_exception_fails_closed(tmp_path: Path) -> None:
 
 
 def test_unwritable_audit_log_still_returns_the_verdict(tmp_path: Path) -> None:
-    v = server.triage(1, client=World().client(), env=ENV, audit_log=tmp_path)  # a directory: open() fails
+    # tmp_path is a directory: open() fails
+    v = server.triage(1, client=World().client(), env=ENV, audit_log=tmp_path, config=CFG)
     assert v["route"] == "defect"
 
 
 def test_tool_is_read_only_and_takes_one_integer(tmp_path: Path) -> None:
-    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl")
+    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl", config=CFG)
     [tool] = asyncio.run(app.list_tools())
     assert tool.name == "triage_ticket"
     a = tool.annotations
@@ -132,14 +139,14 @@ def test_tool_is_read_only_and_takes_one_integer(tmp_path: Path) -> None:
 
 
 def test_tool_call_returns_structured_verdict_and_json_text(tmp_path: Path) -> None:
-    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl")
+    app = server.build_app(client=World().client(), env=ENV, audit_log=tmp_path / "t.jsonl", config=CFG)
     content, structured = asyncio.run(app.call_tool("triage_ticket", {"issue_number": 1}))
     assert structured["route"] == "defect" and structured["policy"] == "triage-v1"
     assert json.loads(content[0].text) == structured
 
 
 def test_app_binds_loopback_8803_at_mcp() -> None:
-    app = server.build_app(client=World().client(), env=ENV)
+    app = server.build_app(client=World().client(), env=ENV, config=CFG)
     assert (app.settings.host, app.settings.port, app.settings.streamable_http_path) == (
         "127.0.0.1",
         8803,
@@ -154,3 +161,24 @@ def test_env_file_parsing_and_precedence(tmp_path: Path) -> None:
     env = server.load_env(dotenv, {"GITHUB_PAT": "from-env"})
     assert env["GITHUB_PAT"] == "from-env" and env["TYPESAFE_API_KEY"] == "from-file"
     assert server.read_dotenv(tmp_path / "missing.env") == {}
+
+
+def test_verdict_and_audit_carry_the_context_sha(tmp_path: Path) -> None:
+    v = run(World(), tmp_path)
+    assert v["context_sha"] == server.context_sha(CFG.description) and len(v["context_sha"]) == 12
+    entry = json.loads((tmp_path / "t.jsonl").read_text())
+    assert entry["context_sha"] == v["context_sha"]
+    assert run(World(jev_status=401), tmp_path)["context_sha"] == v["context_sha"]  # error verdicts too
+
+
+def test_issue_and_context_come_from_the_config(tmp_path: Path) -> None:
+    w = World()
+    cfg = Config(**{**CFG.__dict__, "repo": "acme/widgets", "description": "widgets is a Python package."})
+    server.triage(1, client=w.client(), env=ENV, audit_log=tmp_path / "t.jsonl", config=cfg)
+    gh, ts = w.requests
+    assert gh.url.path == "/repos/acme/widgets/issues/1"
+    assert json.loads(ts.content)["state"]["repository"] == "widgets is a Python package."
+
+
+def test_app_logs_at_warning_level() -> None:
+    assert server.build_app(client=World().client(), env=ENV, config=CFG).settings.log_level == "WARNING"

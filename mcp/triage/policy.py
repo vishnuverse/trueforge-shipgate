@@ -1,7 +1,8 @@
 """Triage policy triage-v1 (docs/superpowers/specs/2026-09-26-jev-triage-design.md §5).
 
 TypeSafe Jev answers -> verdict. Pure: no I/O. Any change to a question, a criterion or a threshold is a new
-policy version and needs a new probe.
+policy version and needs a new probe. The repository context comes from shipgate.yaml target.description
+(recorded as context_sha).
 """
 
 from __future__ import annotations
@@ -16,10 +17,6 @@ IN_SCOPE_MIN = 0.5
 AI_FLAG = 0.5
 PATCH_ROUTES = ("defect", "docs")
 
-CONTEXT = (
-    "humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword, "
-    "naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize."
-)
 # Order matters: it breaks ties between equal probabilities.
 ROUTE_CRITERIA: dict[str, str | None] = {
     "defect": "humanize returns wrong output or crashes when called the way its documentation describes",
