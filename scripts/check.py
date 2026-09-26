@@ -4,7 +4,7 @@
     uv run python scripts/check.py TR-01            # grade the latest runs/TR-01/<UTC_TS>/
     uv run python scripts/check.py --all            # every scenario with a run + scorecard
     uv run python scripts/check.py --all --offline  # no GitHub / TrueForge reads (those checks SKIP)
-    uv run python scripts/check.py --plan           # 'ID issue reset timeout_min' in run order (score.sh)
+    uv run python scripts/check.py --plan           # 'ID issue-or-KEY reset timeout_min' (for score.sh)
 
 Prints one line per check, `PASS|FAIL|SKIP <check-id> <reason>`; exits 0 iff no FAIL (2 = usage error).
 Logic lives in scripts/shipgate_check/.

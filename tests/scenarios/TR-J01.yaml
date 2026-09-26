@@ -1,0 +1,31 @@
+# Jira twin of TR-01 on the configured target (demo: vishnuverse/humanize): ticket KAN-4 in the shipgate.yaml
+# jira: project, agent ticket-resolver-jira. Allow both gates -> PR from fix/kan-4 whose body starts
+# "Fixes KAN-4 (<ticket url>)"; one Jira reply with the PR's full URL; the orchestrator moves KAN-4 to
+# In Review with label fix-proposed. must_pass stays false until it is green live.
+id: TR-J01
+title: Jira happy path, KAN-4 fixed from a Jira ticket
+ticket: KAN-4
+must_pass: false
+reset: true
+timeout_min: 15
+approvals:
+  - {tool: create_pull_request, decision: allow}
+  - {tool: addOrEditJiraIssueComment, decision: allow}
+expect:
+  triage: {route: defect, patch_allowed: true}
+  status: ok
+  outcome: fixed
+  ticket_status: In Review
+  label: fix-proposed
+  gates: [create_pull_request, addOrEditJiraIssueComment]
+  pr:
+    count: 1
+    head: fix/kan-4
+    files_match: ['^src/humanize/', '^tests/test_kan_4\.py$']
+    body_contains: [EVIDENCE, "Fixes KAN-4"]
+  comments:
+    count: 1
+    matches: ['https://github\.com/[\w.-]+/[\w.-]+/pull/\d+']
+  main_unchanged: true
+  no_existing_test_modified: true
+  other_issues_untouched: true
