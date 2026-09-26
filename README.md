@@ -10,7 +10,7 @@ makes the smallest fix, proves it (test 3/3 green, full suite green), pushes a `
 replies to the reporter. If it can't reproduce the bug, it says so with evidence instead of guessing.
 
 > **Status (26 Sep, 17:00 IST):** on `openrouter/deepseek-v4-flash`, `scripts/score.sh TR-01` **PASS 34/34** (15:40
-> IST, live), and each must-pass scenario passed a live scored run at least once earlier in the day. `TR-J01 (Jira): <RESULT>`.
+> IST, live), and each must-pass scenario passed a live scored run at least once earlier in the day. `scripts/score.sh TR-J01` (Jira ticket KAN-4) **PASS 36/36** (16:55 IST, live, deepseek-v4-flash: PR vishnuverse/humanize#30, gated Jira reply, KAN-4 moved to In Review).
 > We tried `openai/gpt-6-luna` and switched back: it reworded docstrings while re-typing a 16.7 KB file into
 > `push_files`, so the SHA check failed in 2 of 3 Jira runs (the agent stopped safely each time). See [Status](#status).
 
@@ -195,7 +195,7 @@ Video: <link>
 | As of | 26 Sep, 17:00 IST |
 | Done | Skill, agent spec, orchestrator (3 approval modes), scorer + 14 scenarios; fixtures #1–#7 on the fork; ruleset; model chosen; Jira as a second ticket source (`--ticket`) |
 | Verified live | Sandbox runs code; GitHub MCP reads; a gated tool pauses and a deny resumes; the chosen model reproduced, fixed and proved issue #1 (read-only run) |
-| Scenario results | On `openrouter/deepseek-v4-flash`: `scripts/score.sh TR-01` **PASS 34/34** (15:40 IST, live). Each must-pass scenario (TR-01, 03, 05, 06, 10, 11, 12, 13) passed a live scored run at least once earlier in the day, on the same model. `TR-J01 (Jira): <RESULT>`. One full pass on the final skill (`scripts/score.sh --all`, 05:43–07:07 IST): must-pass **5/8** (TR-01, 05, 06, 12, 13), nice-to-have TR-07; self-assessed automated score **42/75** (`check.py --all`). Gates held in every run, forbidden tools were never attempted, every GitHub call named our fork |
+| Scenario results | On `openrouter/deepseek-v4-flash`: `scripts/score.sh TR-01` **PASS 34/34** (15:40 IST, live). Each must-pass scenario (TR-01, 03, 05, 06, 10, 11, 12, 13) passed a live scored run at least once earlier in the day, on the same model. `scripts/score.sh TR-J01` (Jira ticket KAN-4) **PASS 36/36** (16:55 IST, live, deepseek-v4-flash: PR vishnuverse/humanize#30, gated Jira reply, KAN-4 moved to In Review). One full pass on the final skill (`scripts/score.sh --all`, 05:43–07:07 IST): must-pass **5/8** (TR-01, 05, 06, 12, 13), nice-to-have TR-07; self-assessed automated score **42/75** (`check.py --all`). Gates held in every run, forbidden tools were never attempted, every GitHub call named our fork |
 | Known weakness | GitHub's MCP needs whole files in `push_files`; retyping 16–22 KB files sometimes fails, and the agent then reaches for forbidden workarounds (sandbox `mcp_client`, `gh`, `api.github.com`). TrueForge refuses the writes and `check.py` H4 flags every attempt, but the run is lost. Accepted for the event: the demo runs with a human approving in the UI, and a derailed run is re-run |
 | Model | `openrouter/deepseek-v4-flash`. `openai/gpt-6-luna` was tried and reverted on 26 Sep: re-typing a 16.7 KB file into `push_files`, it reworded docstrings, so the blob-SHA check failed in 2 of 3 Jira runs; the agent stopped safely each time ([`docs/tech-debt.md`](docs/tech-debt.md) F9) |
 | Demo | UI dry run passed on #1 (human `REVISE` at the PR gate → revised title → PR vishnuverse/humanize#24 → reply). Filmed on TrueForge's built-in local sandbox on the host (Daytona was not used) |

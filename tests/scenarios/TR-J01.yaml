@@ -5,7 +5,7 @@
 id: TR-J01
 title: Jira happy path, KAN-4 fixed from a Jira ticket
 ticket: KAN-4
-must_pass: false
+must_pass: true
 reset: true
 timeout_min: 15
 approvals:

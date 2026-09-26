@@ -13,7 +13,7 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
   is the default key; Jira OAuth note.
 
 **Blocked / Next**
-- Fill `TR-J01 (Jira): <RESULT>` (README banner + Status) and `Video: <link>` (README Demo).
+- TR-J01 **PASS 36/36** live at 16:55 on deepseek-v4-flash (PR #30, Jira reply, KAN-4 In Review); `must_pass: true`. Still to fill: `Video: <link>` (README Demo).
 - `drax0945/humanize` is still in `tests/scenarios/demo-forks.txt`: `tests/check/test_check.py:937` asserts both forks,
   so drop the line and the test together. That exact-set assert also fails once a stranger appends their fork.
 
