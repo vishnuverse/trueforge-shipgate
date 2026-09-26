@@ -4,6 +4,21 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 
 ---
 
+## 2026-09-26 17:00 — Claude — submission docs pass (branch `feat/jira`)
+
+**Done**
+- README: stranger-proof quick start (own humanize fork, OpenRouter + TypeSafe keys, demo-forks.txt), optional Jira
+  setup (own site/cloud_id, OAuth fallback), `## Demo (5 min)`, status dated 17:00 on deepseek-v4-flash (TR-01 PASS
+  34/34 at 15:40), gpt-6-luna tried and reverted (F9); Daytona claims removed (README, SPEC). `.env.example`: OpenRouter
+  is the default key; Jira OAuth note.
+
+**Blocked / Next**
+- Fill `TR-J01 (Jira): <RESULT>` (README banner + Status) and `Video: <link>` (README Demo).
+- `drax0945/humanize` is still in `tests/scenarios/demo-forks.txt`: `tests/check/test_check.py:937` asserts both forks,
+  so drop the line and the test together. That exact-set assert also fails once a stranger appends their fork.
+
+---
+
 ## 2026-09-26 16:35 — Claude — Jira as a second ticket source, built and merged (branch `feat/jira`)
 
 **Done**
@@ -23,7 +38,7 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
 **Blocked**
 - Atlassian MCP refuses API-token calls on this org ("You don't have permission to connect via API token"), so the
   `jira` connector was switched to OAuth (`auth: {type: "dcr"}`); it needs one consent click as
-  developer.tunnel@gmail.com (`GET /api/v1/mcp-servers/jira/authorize` gives the URL). `setup.sh` keeps it.
+  the dedicated hackathon Atlassian account (`GET /api/v1/mcp-servers/jira/authorize` gives the URL). `setup.sh` keeps it.
 
 **Next**
 1. After OAuth: `npm --prefix orchestrator run shipgate -- run --ticket KAN-4 --approve terminal` (film it), then
@@ -77,7 +92,7 @@ Relay baton between sessions (human or Claude). Update at the end of every work 
   connector must be able to write there.
 - Re-register the agent (`scripts/setup.sh --no-start` or `setup_agents.ts --inline-skill`) and restart the triage
   MCP so both pick up the new target and the summary parameter.
-- `.claude/launch.json` now carries Ansh's machine-specific `PATH=/Users/anshmahapatra/...` entry for the
+- `.claude/launch.json` now carries Ansh's machine-specific `PATH=<home>/...` entry for the
   `trueforge` config (merged without conflict); drop it if it breaks the preview on other machines.
 
 ---

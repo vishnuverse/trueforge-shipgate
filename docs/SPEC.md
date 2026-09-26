@@ -17,8 +17,8 @@ steps other people see or that can't be undone.
 | Optional | Release Captain | Read commits since the last tag, run tests in a sandbox, write release notes, tag and publish. Only if P0 and P1 are done. |
 
 Ticket Resolver alone must satisfy every hard rule: GitHub as the real system, repro + patch run in the TrueForge
-sandbox (built-in local sandbox while building, Daytona for the demo), and a hold before the PR and the reply. Nothing
-after P0 ever blocks P0.
+sandbox (TrueForge's built-in local sandbox on the host; Daytona was planned, not used), and a hold before the PR and
+the reply. Nothing after P0 ever blocks P0.
 
 Out of scope: custom chat UI (use TrueForge UI / Generative UI), multi-repo, real cloud accounts, hosted mode.
 
@@ -27,14 +27,15 @@ Out of scope: custom chat UI (use TrueForge UI / Generative UI), multi-repo, rea
   no runtime deps) with fixture issues #1–#7 (§4.6), planted on the day and disclosed in the README. Via GitHub remote MCP.
   `main` is protected by a ruleset (PR required, no direct or force push, **no bypass**), so the agent can't reach `main`.
 - **Jira (second ticket source)**: the same bugs as tickets in project KAN on `developertunnel.atlassian.net`, via
-  Atlassian's remote MCP (`https://mcp.atlassian.com/v2/mcp`, API-token Basic header auth) as agent
+  Atlassian's remote MCP (`https://mcp.atlassian.com/v2/mcp`, API-token Basic header auth, or OAuth when the org blocks API-token MCP) as agent
   `ticket-resolver-jira` (`shipgate run --ticket KAN-4`). Code and PRs stay on GitHub; the reply is a gated Jira
   comment; the orchestrator moves the Jira status. Contract: `docs/contracts.md` §10.
 - **kind cluster** `shipgate` (P1): deployments `api`, `worker`, ConfigMap `flags`. Via our `k8s` MCP on the host.
 - **TestPyPI** (optional, Release Captain only): package `shipgate-humanize` via our `registry` MCP.
 - **TypeSafe**: Jev decision model (`POST https://api.typesafe.ai/v1/systemone`, pinned `jev-1.13.0`) behind our read-only
   `triage` MCP (`mcp/triage/`, 127.0.0.1:8803). Not a chat model; can't be a TrueForge model provider.
-- **Sandbox**: TrueForge's sandbox: the built-in local sandbox while building, Daytona for scenario runs and the demo.
+- **Sandbox**: TrueForge's built-in local sandbox on the host, for building, scenario runs and the demo (Daytona was
+  planned, not used).
   No credentials inside. It clones public code and runs tests.
 
 ## 4. Ticket Resolver (P0)
