@@ -1,7 +1,7 @@
 # AGENTS.md — architecture map
 
 Navigation map for humans and coding agents. What lives where, who may call what, and what depends on what.
-Built: Ticket Resolver (skill, agent spec, orchestrator, scorer). Planned: Runbook Executor, Triage, Release Captain.
+Built: Ticket Resolver (skill, agent spec, orchestrator, scorer) with the Jev triage pre-check (`mcp/triage/`). Planned: Runbook Executor, Release Captain.
 
 Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain (optional). See `docs/SPEC.md` §2.
 
@@ -27,6 +27,7 @@ Priority: **Ticket Resolver (P0)** → Runbook Executor (P1) → Release Captain
 | `skills/runbook-executor/` *(planned)* | SKILL.md: classify → plan → execute → verify → undo | Markdown | k8s MCP | Trust runbook wording for step class |
 | `skills/release-captain/` *(planned)* | *Optional.* SKILL.md: C1–C14 procedure, notes template, risk rules | Markdown | GitHub MCP, registry MCP, sandbox | Contain secrets or shell mutations |
 | `agents/*.json` | Agent specs: model, instructions, MCP servers, `enable_tools`, `require_approval_for_tools`, skills, sandbox | JSON | skills, MCP names | Use `@destructive` without explicit names |
+| `mcp/triage/` | `triage_ticket` (read-only): GitHub issue → TypeSafe Jev → policy `triage-v1` verdict; audit `runs/triage.jsonl` | Python, `mcp` SDK FastMCP | `TYPESAFE_API_KEY` (+ read-only `GITHUB_PAT`) on the host | Write anything, run inside the sandbox, change policy wording without a new version |
 | `mcp/k8s/` *(planned)* | `get_status`, `get_metrics`, `set_flag`, `scale` (reversible), `deploy`, `rollback`, `restart` (destructive), `lock/unlock` | Python, FastMCP | kubeconfig for kind | Expose `delete_namespace` or raw `kubectl` |
 | `mcp/registry/` *(planned)* | *Optional.* `check_version_exists`, `build_info`, `publish_package` (destructive) | Python, FastMCP | TestPyPI token in `.env` | Run inside the sandbox |
 | `orchestrator/` | `shipgate run`: session start, approval relay in `ui` / `terminal` / `script` mode, run dirs, `approvals.log`, handoff JSON parsing, label flips | TypeScript | `@truefoundry/trueforge-sdk` 0.2.0, `docs/contracts.md` | Make fix/deploy/release decisions |
@@ -46,7 +47,7 @@ force push. Always pass `owner=vishnuverse, repo=humanize`; PRs on a fork can ot
 ## Agents
 | Agent | MCP servers (enable_tools) | Gated by name | Not enabled | Sandbox | Handoff label |
 | --- | --- | --- | --- | --- | --- |
-| **ticket-resolver** (P0) | github: `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment` (Jira optional: `getJiraIssue`, `addCommentToJiraIssue`) | `create_pull_request`, `add_issue_comment` (Jira: `addCommentToJiraIssue`, `transitionJiraIssue`) | `merge_pull_request`, `issue_write`, any delete/close | on | `bug → triaged → fix-proposed / cannot-reproduce` |
+| **ticket-resolver** (P0) | github: `issue_read`, `list_issues`, `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request`, `add_issue_comment`; triage: `triage_ticket` (ungated, read-only) (Jira optional: `getJiraIssue`, `addCommentToJiraIssue`) | `create_pull_request`, `add_issue_comment` (Jira: `addCommentToJiraIssue`, `transitionJiraIssue`) | `merge_pull_request`, `issue_write`, any delete/close | on | `bug → triaged → fix-proposed / cannot-reproduce` |
 | runbook-executor (P1) | k8s (all), github (read + comment) | `deploy`, `rollback`, `restart`, `add_issue_comment` | raw `kubectl`, `delete_*` | on (for skills) | manual trigger |
 | release-captain (optional) | github (repos, pull_requests, git, issues-comment), registry | `create_tag`/release tool, `publish_package`, `merge_pull_request` | — | on | `needs-release → ready-to-deploy` |
 

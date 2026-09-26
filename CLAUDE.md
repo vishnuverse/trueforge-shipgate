@@ -46,18 +46,19 @@ Decisions and learned facts live in `docs/MEMORY.md`. Doc index: `docs/README.md
 skills/ticket-resolver/  SKILL.md: the agent's procedure (delivered inline; repo is private)
 agents/                  agent specs (JSON), registered by scripts/setup_agents.ts
 orchestrator/            TypeScript on @truefoundry/trueforge-sdk: sessions, approvals (ui/terminal/script), run dirs, labels
+mcp/triage/              triage MCP: TypeSafe Jev pre-check, policy triage-v1 (read-only, 127.0.0.1:8803)
 scripts/                 setup_agents.ts, check.py + shipgate_check/ (oracle, scorecard), reset.sh, score.sh, bakeoff.py
 tests/                   scenarios/TR-*.yaml, check/ (scorer unit tests), fixtures/ (TrueForge events, humanize issues)
 docs/                    SPEC, contracts, HANDOVER, MEMORY, plan, reference notes (index: docs/README.md)
 ```
-Planned, not built yet: `mcp/k8s/` + `runbooks/` + `demo-app/` (Runbook Executor, P1), Triage MCP on TypeSafe, `mcp/registry/`.
+Planned, not built yet: `mcp/k8s/` + `runbooks/` + `demo-app/` (Runbook Executor, P1), `mcp/registry/`.
 
 ## Setup (once)
 ```bash
 node -v                      # need >= 22.14
 python3 -V; uv --version     # 3.12 via uv
 cp .env.example .env         # fill keys; never commit .env
-SERVER_EXECUTION_TIMEOUT_SECONDS=1200 npx --yes @truefoundry/trueforge@0.2.1   # UI + API on :8790; turn limit 20 min
+SERVER_EXECUTION_TIMEOUT_SECONDS=1200 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@0.2.1   # :8790; 20 min turns; may reach the triage MCP
 uv sync                                       # python deps for scripts/
 npm --prefix orchestrator ci
 ```
@@ -69,6 +70,7 @@ Configure in TrueForge UI (Settings), keys pasted by a human:
 
 ## Run
 ```bash
+uv run mcp/triage/server.py                                              # triage MCP :8803 (Jev pre-check); register once via PUT /settings/mcp-servers (README)
 npx --yes tsx scripts/setup_agents.ts --inline-skill                     # upsert agents/*.json with SKILL.md inlined
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui (approve in the TrueForge UI)
 ```

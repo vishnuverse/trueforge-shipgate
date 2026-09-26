@@ -108,7 +108,7 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 | --- | --- | --- |
 | `TRUEFORGE_URL` | orchestrator, `check.py`, `setup_agents.ts` | default `http://localhost:8790` |
 | `GITHUB_PAT` | orchestrator (labels), `check.py` (reads), `reset.sh` | fine-grained, `vishnuverse/humanize` only |
-| `TYPESAFE_API_KEY` | Triage (after P0) | not used by P0 |
+| `TYPESAFE_API_KEY` | triage MCP (`mcp/triage/server.py`) | read on the host only; never in the sandbox |
 
 Target repo is the constant `vishnuverse/humanize`; code refuses any other.
 
@@ -118,3 +118,50 @@ The handoff block is the **last** fenced ```` ```json ```` block in the final `m
 (schema: `docs/SPEC.md` §7). Labels (SPEC T15): at start add `triaged` and remove `bug`; at the end, from `outcome`:
 `fixed`, `duplicate` → `fix-proposed`; `cannot_reproduce` → `cannot-reproduce`; `stopped` → keep `triaged`;
 anything else → `needs-human`. The orchestrator only changes these five labels.
+
+## 8. Triage MCP (`triage_ticket`)
+
+Server `triage` at `http://127.0.0.1:8803/mcp` (`uv run mcp/triage/server.py`), policy `triage-v1`. Contract (from
+`docs/superpowers/specs/2026-09-26-jev-triage-design.md` §4, verbatim):
+
+- Annotations: `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: true`.
+  Not gated; it is listed in `enable_tools` only.
+- Input: `{"issue_number": int}`, which must be ≥ 1. The repo is fixed and can't be passed in.
+- Output is always a JSON object; the tool never raises to the agent:
+
+```json
+{
+  "policy": "triage-v1",
+  "issue": 3,
+  "route": "uncertain",
+  "patch_allowed": false,
+  "top": {"class": "defect", "p": 0.52},
+  "runner_up": {"class": "works_as_documented", "p": 0.44},
+  "margin": 0.08,
+  "probabilities": {"defect": 0.52, "works_as_documented": 0.44, "other_project": 0.02, "docs": 0.0,
+                    "security": 0.0, "needs_info": 0.01, "other": 0.01},
+  "in_scope": 0.37,
+  "ai_instructions": 0.02,
+  "reasons": ["margin 0.08 < 0.20"],
+  "card_line": "uncertain: defect 0.52 vs works_as_documented 0.44 · in_scope 0.37 · patch held",
+  "model": "jev-1.13.0",
+  "error": null
+}
+```
+
+- `route` is one of: `defect`, `docs`, `works_as_documented`, `other_project`, `security`, `needs_info`, `other`,
+  `uncertain`, `error`.
+- On error (TypeSafe HTTP, timeout, bad shape, missing key; GitHub 404, a pull request, a transport error) the tool
+  returns `route: "error"`, `patch_allowed: false`, `error: "<short reason, no secrets>"`, null numbers, and a
+  `card_line` of the form `error (<reason>) · patch held`.
+- Timeouts: GitHub 15 s; TypeSafe 45 s with one retry on a timeout or 5xx.
+- The ticket body is cut to 20,000 characters before it is sent.
+- The key is read from `TYPESAFE_API_KEY` in the host environment (loaded from `.env`) and never appears in output or
+  logs.
+- **Audit:** one JSON line per call in `runs/triage.jsonl` with `ts`, `issue`, `policy`, `model`, `probabilities`,
+  `in_scope`, `ai_instructions`, `route`, `patch_allowed`, `reasons`, `error` and `latency_ms`. It never holds ticket
+  text or keys. The session events are the primary record; this log survives resets.
+
+Registered with: `PUT /settings/mcp-servers` `{"manifest": {"type": "remote", "name": "triage", "url":
+"http://127.0.0.1:8803/mcp", "description": "Jev triage pre-check (triage-v1), read-only"}}`. TrueForge must run with
+`OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (its SSRF guard blocks loopback by default).

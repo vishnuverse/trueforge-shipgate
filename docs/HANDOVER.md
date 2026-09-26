@@ -22,7 +22,7 @@ cannot_reproduce, redundant `seen` set, loose TR-03 steps regex, #3-specific exa
 **Next**
 1. Filmed `--approve ui` run on #1 (REVISE once) — dry run done; Daytona key → one run there.
 2. Fresh-laptop README test; decide on the uncommitted fixture edits (`tests/fixtures/humanize/issues/{1,2,4,6}.md`).
-3. After P0: Jev Triage; Runbook Executor on kind. Before submitting: make the repo public.
+3. Jev triage pre-check built on branch `feat/jev-triage` (plan `docs/superpowers/plans/2026-09-26-jev-triage.md`); live acceptance in its Task 8. Then Runbook Executor on kind. Before submitting: make the repo public.
 
 ---
 
@@ -55,7 +55,7 @@ cannot_reproduce, redundant `seen` set, loose TR-03 steps regex, #3-specific exa
 
 **Next**
 1. Re-run TR-01 to confirm 30/30 (reset closes PR #8), then TR-03, 05, 06, 10, 11, 12, 13.
-2. Jev Triage after P0 is green. Filmed `--approve ui` run. Daytona when the key arrives.
+2. Jev triage pre-check built (plan `docs/superpowers/plans/2026-09-26-jev-triage.md`); live acceptance in Task 8. Filmed `--approve ui` run. Daytona when the key arrives.
 
 ---
 

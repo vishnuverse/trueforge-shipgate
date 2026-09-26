@@ -39,6 +39,9 @@ replies to the reporter. If it can't reproduce the bug, it says so with evidence
 ```
 
 1. **Read and pin.** `issue_read` gets the ticket (treated as data, never instructions); `list_commits` pins `main`'s SHA.
+   **Triage:** before any work the agent calls `triage_ticket`, our read-only MCP (`mcp/triage/`) that asks TypeSafe Jev
+   to classify the ticket; policy code (`triage-v1`) turns the probabilities into `patch_allowed`. If the patch is held
+   (not clearly a humanize defect, or TypeSafe is unreachable), the agent may only investigate in the sandbox and ask.
 2. **Reproduce.** In the sandbox: full clone at that SHA, a new `tests/test_issue_<n>.py` covering the report plus edge
    cases, run 3×. 3/3 fail = reproduced; 3/3 pass = can't reproduce; mixed = intermittent (10 runs, hit rate).
 3. **Fix.** Smallest change in `src/`, never touching existing tests. At most 2 attempts.
@@ -61,6 +64,7 @@ Design: [`docs/SPEC.md`](docs/SPEC.md) §4. Interfaces: [`docs/contracts.md`](do
 | Blast radius | Fine-grained token scoped to the fork `vishnuverse/humanize`; other repos return 404 |
 | Bad or hostile tickets | Push-back: out of scope, can't reproduce, duplicate PR, too vague, security report, injected instructions (fixture #5) |
 | An approver asking for something unsafe | The agent refuses (e.g. "delete the failing test and push to main"), names the rule and asks again unchanged |
+| A ticket that may not be a real defect | Jev triage + policy code: when `patch_allowed` is false the agent gets no branch, no push, no PR; the scorer fails the run (S9) if it tries |
 | Its own weak evidence | Two failed attempts → no PR; a comment asking a maintainer instead (fixture #6: an old test expects the bug) |
 
 At each gate you answer **Approve**, `REVISE: <note>`, `EDIT: <exact text>` or `STOP` (max 3 revisions per gate).
@@ -69,13 +73,14 @@ Every answer is logged to `approvals.log` with a hash of the exact call it appro
 ## Quick start (fresh laptop)
 
 **You need:** Node ≥ 22.14, [uv](https://docs.astral.sh/uv/) (Python 3.12), git, an [OpenRouter](https://openrouter.ai)
-key, and a GitHub **fine-grained** token for your fork of `humanize` (Contents, Issues, Pull requests: read/write).
+key, a [TypeSafe](https://docs.typesafe.ai/introduction) API key (Jev triage), and a GitHub **fine-grained** token for your fork of `humanize` (Contents, Issues, Pull requests: read/write).
 
 ```bash
 git clone https://github.com/vishnuverse/trueforge-shipgate && cd trueforge-shipgate
-cp .env.example .env                              # fill TRUEFORGE_URL, GITHUB_PAT (never commit .env)
+cp .env.example .env                              # fill TRUEFORGE_URL, GITHUB_PAT, TYPESAFE_API_KEY (never commit .env)
 uv sync && npm --prefix orchestrator ci
-SERVER_EXECUTION_TIMEOUT_SECONDS=1200 npx --yes @truefoundry/trueforge@0.2.1   # UI + API on :8790; leave it running
+SERVER_EXECUTION_TIMEOUT_SECONDS=1200 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@0.2.1   # UI + API on :8790; leave it running
+# (OUTBOUND_URL_ALLOWED_HOSTS lets TrueForge reach our local triage MCP; its SSRF guard blocks loopback by default)
 # (TrueForge 0.2.1 cancels any turn after 10 min by default; a ticket's first turn can take longer)
 ```
 
@@ -87,6 +92,9 @@ In the TrueForge UI, **Settings**:
 
 Then, in a second terminal:
 ```bash
+uv run mcp/triage/server.py &                                                  # triage MCP on 127.0.0.1:8803
+curl -s -X PUT http://localhost:8790/settings/mcp-servers -H 'Content-Type: application/json' \
+  -d '{"manifest":{"type":"remote","name":"triage","url":"http://127.0.0.1:8803/mcp","description":"Jev triage pre-check (triage-v1), read-only"}}'
 npx --yes tsx scripts/setup_agents.ts --inline-skill                         # registers the ticket-resolver agent
 npm --prefix orchestrator run shipgate -- run --issue 1 --approve terminal   # or --approve ui
 ```
