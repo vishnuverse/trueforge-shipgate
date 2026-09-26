@@ -26,8 +26,10 @@ Out of scope: custom chat UI (use TrueForge UI / Generative UI), multi-repo, rea
 - **GitHub**: public fork **`vishnuverse/humanize`** (`shipgate.yaml` `target.repo`) of `python-humanize/humanize` (MIT, pure Python ≥ 3.10, pytest,
   no runtime deps) with fixture issues #1–#7 (§4.6), planted on the day and disclosed in the README. Via GitHub remote MCP.
   `main` is protected by a ruleset (PR required, no direct or force push, **no bypass**), so the agent can't reach `main`.
-- **Jira (optional)**: the same bugs as tickets in a free Jira Cloud site, via Atlassian's remote MCP
-  (`https://mcp.atlassian.com/v2/mcp`, API-token header auth). Code and PRs stay on GitHub.
+- **Jira (second ticket source)**: the same bugs as tickets in project KAN on `developertunnel.atlassian.net`, via
+  Atlassian's remote MCP (`https://mcp.atlassian.com/v2/mcp`, API-token Basic header auth) as agent
+  `ticket-resolver-jira` (`shipgate run --ticket KAN-4`). Code and PRs stay on GitHub; the reply is a gated Jira
+  comment; the orchestrator moves the Jira status. Contract: `docs/contracts.md` §10.
 - **kind cluster** `shipgate` (P1): deployments `api`, `worker`, ConfigMap `flags`. Via our `k8s` MCP on the host.
 - **TestPyPI** (optional, Release Captain only): package `shipgate-humanize` via our `registry` MCP.
 - **TypeSafe**: Jev decision model (`POST https://api.typesafe.ai/v1/systemone`, pinned `jev-1.13.0`) behind our read-only

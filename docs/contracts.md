@@ -20,7 +20,10 @@ Change a contract here first, then in code.
 ```bash
 npm --prefix orchestrator run shipgate -- run --issue <n> [--approve ui|terminal|script] [--scenario <ID>] \
     [--agent ticket-resolver] [--timeout-min N]
+npm --prefix orchestrator run shipgate -- run --ticket <KEY> [...]    # Jira ticket (§10), e.g. --ticket KAN-4
 ```
+- Exactly one of `--issue` / `--ticket`. `--agent` defaults to `ticket-resolver` for `--issue` and
+  `ticket-resolver-jira` for `--ticket`; `--ticket` needs a `jira:` section in `shipgate.yaml`.
 - `--approve` defaults to `terminal`. `script` requires `--scenario`.
 - `--timeout-min` defaults to the scenario's `timeout_min`, else 60 in `ui` / `terminal` (the deadline keeps running
   while a person reads an approval card).
@@ -111,6 +114,7 @@ orchestrator answers `deny` with reason `STOP`, marks the record `unexpected: tr
 | `GITHUB_PAT` | `setup.sh` / `setup_trueforge.ts` (registers the `github` connector), orchestrator (labels), `check.py` (reads), `reset.sh` | fine-grained, scoped to `shipgate.yaml`'s `target.repo` only |
 | `OPENROUTER_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `openrouter` model provider) | never sent to the sandbox |
 | `TYPESAFE_API_KEY` | triage MCP (`mcp/triage/server.py`) | read on the host only; never in the sandbox |
+| `JIRA_EMAIL`, `JIRA_API_KEY` | `setup.sh` / `setup_trueforge.ts` (registers the `jira` connector, Basic auth), triage MCP (reads tickets), orchestrator (moves status and labels), `check.py` (reads), `seed_jira.py` | Atlassian account email + API token; only needed when `shipgate.yaml` has `jira:`; host only, never in the sandbox |
 | `SHIPGATE_CONFIG` | both config loaders (`shipgate_config.py`, `orchestrator/src/config.ts`) | overrides the `shipgate.yaml` path; not a secret |
 | `SHIPGATE_ENV_FILE` | `setup.sh`, `setup_trueforge.ts` | overrides the `.env` path (tests use a temp file) |
 | `SHIPGATE_PID_DIR` | `setup.sh`, `stop.sh` | overrides `runs/pids` (tests use a temp dir) |
@@ -204,5 +208,34 @@ trueforge:
 - `description` is 1–500 characters
 - `default_branch` is non-empty
 - `trueforge.url` is http(s)
+- `jira:` is optional; when present every key is required: `site` matches `<name>.atlassian.net`, `cloud_id` is a
+  UUID, `project` matches `^[A-Z][A-Z0-9]+$`, and `status_start` / `status_review` / `status_open` are status names
 
-Each error names the file and the key.
+```yaml
+jira:                                 # optional: Jira as a second ticket source (§10)
+  site: developertunnel.atlassian.net
+  cloud_id: ce61dd8b-2e04-4815-9b7b-60a570df782b
+  project: KAN                        # the only project any component may touch
+  status_start: In Progress
+  status_review: In Review
+  status_open: To Do
+```
+
+Each error names the file and the key. A git-ignored `shipgate.local.yaml` next to it, if present, is loaded
+instead (each runner's own target); `SHIPGATE_CONFIG` overrides both.
+
+## 10. Jira ticket source
+
+Code, branch and PR always live on `target.repo`; only the ticket comes from Jira.
+
+| Piece | Contract |
+| --- | --- |
+| Run | `shipgate run --ticket KAN-4` → agent `ticket-resolver-jira` (`agents/ticket-resolver-jira.json`, top-level `"requires": "jira"`: `setup_agents.ts` skips it when `shipgate.yaml` has no `jira:`) with skill `skills/ticket-resolver-jira/SKILL.md` |
+| Kickoff | `Resolve Jira ticket KAN-4 (https://<site>/browse/KAN-4) for the GitHub repo <repo>. cloudId: <cloud_id>. Branch: fix/kan-4. Test file: tests/test_kan_4.py. Approval mode: <mode>. Today is <YYYY-MM-DD>.` |
+| Names | `ticket_names()` / `ticketNames()`: slug = key lower-cased; branch `fix/<slug>`; test `<tests_dir>/test_<slug with - → _>.py`; card and handoff ref = the key (`EVIDENCE · KAN-4 · <repo> @ <sha7>`, `"ticket": "KAN-4"`); PR body starts `Fixes KAN-4 (<ticket URL>)` |
+| Connector | `jira` = Atlassian remote MCP `https://mcp.atlassian.com/v2/mcp`, header `Authorization: Basic base64(JIRA_EMAIL:JIRA_API_KEY)` (`/v1/mcp` exposes no Jira tools with an API token). Registered by `setup.sh` only when missing or on `--rotate-keys`, so an OAuth-connected entry is kept |
+| Agent tools | github: `get_file_contents`, `list_pull_requests`, `list_commits`, `create_branch`, `push_files`, `create_pull_request` (gated) — no issue tools. jira: `getJiraIssue` (read), `addOrEditJiraIssueComment` (gated by name; never with `commentId`, which edits an existing comment). triage: `triage_jira_ticket`. Never enabled: `transitionJiraIssue`, `editJiraIssue`, `createJiraIssue`, the generic `execute*` runners and every Confluence/graph write |
+| Triage | `triage_jira_ticket {ticket_key, summary}`, registered only when `jira:` is set; the key must match `^<project>-\d+$` else `route: "error"`; the ticket is read from Jira REST on the host (`GET /rest/api/2/issue/{key}`); the verdict is the same shape as §8 with `issue` = the key |
+| Status | The orchestrator (never the agent) moves it via Jira REST: start → `status_start` + label `triaged` (remove `bug`); end → one label from §7's mapping, and `status_review` when it is `fix-proposed`, else `status_open` |
+| Scenario | `ticket: KAN-4` instead of `issue:` (exactly one); approvals name `addOrEditJiraIssueComment`; `expect.ticket_status` checks the Jira status; `check.py --plan` prints the key in field 2 and `score.sh` passes `--ticket` |
+| Seed/reset | `scripts/seed_jira.py [--yes]` find-or-creates Task tickets labelled `bug`, `shipgate-gh-<n>` from the GitHub fixtures; `seed_jira.py reset <KEY> [--yes]` restores labels and `status_open` (dry run by default; comments are kept) |

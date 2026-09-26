@@ -51,13 +51,20 @@ replies to the reporter. If it can't reproduce the bug, it says so with evidence
 6. **Gate 1:** evidence card → `create_pull_request` waits for you. **Gate 2:** reply draft → `add_issue_comment` waits.
 7. **Hand off** a JSON block; the orchestrator sets the issue label from it.
 
+**Same job from Jira.** `run --ticket KAN-4` reads the ticket from Jira (Atlassian's remote MCP) instead of a GitHub
+issue. Triage, sandbox, branch and PR are unchanged; Gate 2 becomes a Jira comment (`addOrEditJiraIssueComment`,
+gated by name); the orchestrator moves the ticket To Do → In Progress → In Review. Setup: add a `jira:` block to
+`shipgate.yaml` and `JIRA_EMAIL` / `JIRA_API_KEY` to `.env`, then `scripts/setup.sh`
+([`docs/contracts.md`](docs/contracts.md) §10).
+
 Design: [`docs/SPEC.md`](docs/SPEC.md) §4. Interfaces: [`docs/contracts.md`](docs/contracts.md).
 
 ## Where it stops
 
 | Line | How it's enforced |
 | --- | --- |
-| Opening a PR, replying on a ticket | Gated **by name** (`require_approval_for_tools`); the GitHub MCP marks neither as destructive, so `@destructive` alone would miss them |
+| Opening a PR, replying on a ticket | Gated **by name** (`require_approval_for_tools`); neither the GitHub MCP nor Atlassian's marks them destructive, so `@destructive` alone would miss them |
+| Jira reach | Atlassian's MCP is site-wide, so the Jira agent gets two named tools only (`getJiraIssue`, gated `addOrEditJiraIssueComment`); never transitions, edits, creates or the generic `execute*` runners; the orchestrator moves status; a dedicated hackathon account and site |
 | Merging, closing or editing issues, deleting files | Tools not enabled at all (`merge_pull_request`, `issue_write`, `delete_file`, …) |
 | Pushing to `main` | Repo ruleset with an **empty bypass list**; verified: even the owner's direct push is rejected |
 | Secrets in the sandbox | None. It only clones public code; every GitHub write goes through the MCP, whose token stays in TrueForge |
