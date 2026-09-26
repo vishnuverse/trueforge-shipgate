@@ -1,0 +1,19 @@
+{
+ "absolute-source-dir.yaml": "python.source_dir",
+ "backtick-test.yaml": "python.test",
+ "bad-repo.yaml": "target.repo",
+ "bad-url.yaml": "trueforge.url",
+ "dotdot-tests-dir.yaml": "python.tests_dir",
+ "empty-install.yaml": "python.install",
+ "invalid-yaml.yaml": "(file)",
+ "long-description.yaml": "target.description",
+ "missing-description.yaml": "target.description",
+ "missing-section.yaml": "python",
+ "non-string-branch.yaml": "target.default_branch",
+ "not-a-mapping.yaml": "(root)",
+ "unknown-nested-key.yaml": "python.extra",
+ "unknown-top-key.yaml": "targt",
+ "valid-dotted-repo.yaml": null,
+ "valid-trailing-slash.yaml": null,
+ "valid.yaml": null
+}

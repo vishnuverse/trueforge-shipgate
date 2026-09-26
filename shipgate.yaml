@@ -1,0 +1,16 @@
+# Ticket Resolver target (docs/superpowers/specs/2026-09-26-any-repo-setup-design.md §2). Edit for your repo;
+# no secrets here (keys live in .env). Demo values: the planted-bug fork of humanize.
+target:
+  repo: vishnuverse/humanize          # owner/name; the only repo any component may touch
+  default_branch: main
+  description: >-
+    humanize is a Python library (vishnuverse/humanize) with functions such as ordinal, intcomma, intword,
+    naturalsize, naturaltime, naturalday and naturaldate. It is not Django's django.contrib.humanize.
+python:
+  install: '.venv/bin/pip install -q --disable-pip-version-check -e ".[tests]"'   # runs after python3 -m venv .venv
+  test: ".venv/bin/python -m pytest -q -p no:cacheprovider --benchmark-disable --color=no"
+  source_dir: src/humanize            # fixes may change only files under this directory
+  tests_dir: tests                    # the regression test is <tests_dir>/test_issue_<n>.py
+trueforge:
+  url: http://localhost:8790
+  model: openrouter/deepseek-v4-flash
