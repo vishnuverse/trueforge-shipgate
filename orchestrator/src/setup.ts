@@ -1,12 +1,17 @@
 // Register what Ticket Resolver needs in TrueForge 0.2.1, and check it (spec any-repo §4 steps 4 and 6).
 // REST bodies are snake_case; PUT on settings/* creates or replaces one entry by name. Keys are sent only to a
 // loopback TrueForge (unless allowRemote), only when an entry is missing or rotateKeys is set, and never logged.
+// With a jira: section in shipgate.yaml, the same holds for the `jira` connector and the ticket-resolver-jira agent.
+import type { JiraConfig } from "./config.ts";
+
 export type FetchLike = (url: string, init: RequestInit) => Promise<Response>;
 export class SetupError extends Error {}
 export interface Secrets {
   openrouterKey?: string;
   openaiKey?: string;
   githubPat?: string;
+  jiraEmail?: string; // JIRA_EMAIL: Atlassian account email
+  jiraToken?: string; // JIRA_API_KEY: API token of that account
 }
 export interface SetupOptions {
   rotateKeys: boolean;
@@ -47,7 +52,16 @@ export const OPENAI_MODELS = [
 export const DEFAULT_MODEL = "openrouter/deepseek-v4-flash";
 export const GITHUB_MCP_URL = "https://api.githubcopilot.com/mcp/";
 export const TRIAGE_MCP_URL = "http://127.0.0.1:8803/mcp";
+// Atlassian remote MCP; /v1 exposes no Jira tools with API-token auth, /v2 does (verified live).
+export const JIRA_MCP_URL = "https://mcp.atlassian.com/v2/mcp";
+export const JIRA_AGENT = "ticket-resolver-jira";
 const GATES = ["add_issue_comment", "create_pull_request"];
+// ticket-resolver-jira: every write is gated by name (addOrEditJiraIssueComment carries no destructive hint).
+const JIRA_AGENT_GITHUB_GATES = ["create_pull_request"];
+const JIRA_AGENT_JIRA_GATES = ["addOrEditJiraIssueComment"];
+const JIRA_AGENT_JIRA_TOOLS = new Set(["getJiraIssue", "addOrEditJiraIssueComment"]);
+const JIRA_AGENT_NO_GITHUB_TOOLS = ["issue_read", "list_issues", "add_issue_comment"];
+const JIRA_AGENT_TRIAGE_TOOLS = ["triage_jira_ticket"];
 
 type Json = Record<string, unknown>;
 const isObj = (v: unknown): v is Json => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -130,6 +144,7 @@ export async function registerAll(
   fetchFn: FetchLike = fetch,
   log: (s: string) => void = console.log,
   model: string = DEFAULT_MODEL,
+  jira: JiraConfig | null = null,
 ): Promise<Step[]> {
   const plan = providerFor(model, secrets);
   if (!isLoopback(base) && !opts.allowRemote) {
@@ -174,11 +189,52 @@ export async function registerAll(
     });
     steps.push({ item: "connector triage", action: "created" });
   }
+  if (jira !== null) {
+    // Written only when missing or on rotateKeys, so a connector someone connected another way is kept.
+    const existing = servers.find((s) => nameOf(s) === "jira");
+    if (existing === undefined || opts.rotateKeys) {
+      if (!secrets.jiraEmail || !secrets.jiraToken) {
+        throw new SetupError("JIRA_EMAIL and JIRA_API_KEY must both be set in .env (shipgate.yaml has a jira: section)");
+      }
+      const basic = Buffer.from(`${secrets.jiraEmail}:${secrets.jiraToken}`, "utf8").toString("base64");
+      await api.call("PUT", "/settings/mcp-servers", {
+        manifest: {
+          type: "remote",
+          name: "jira",
+          url: JIRA_MCP_URL,
+          description: "Atlassian remote MCP (Jira tickets: read, comment)",
+          auth: { type: "header", headers: { Authorization: `Basic ${basic}` } },
+        },
+      });
+      steps.push({ item: "connector jira", action: existing ? "rotated" : "created" });
+    } else {
+      steps.push({ item: "connector jira", action: "kept" });
+    }
+  }
   for (const s of steps) log(`✓ ${s.item}: ${s.action}`);
   return steps;
 }
 
-export async function doctor(base: string, fetchFn: FetchLike = fetch, model: string = DEFAULT_MODEL): Promise<Check[]> {
+/** The saved manifest of the agent with exactly this name, or {} when it is not registered. */
+async function savedManifest(api: Api, name: string): Promise<Json> {
+  const agents = await api.list(`/agents?agent_name=${encodeURIComponent(name)}&limit=100`);
+  const id = agents.find((a) => a.name === name)?.id;
+  const agent = typeof id === "string" ? (await api.call("GET", `/agents/${encodeURIComponent(id)}`)).data : undefined;
+  return isObj(agent) && isObj(agent.manifest) ? agent.manifest : {};
+}
+
+/** A tool list from a saved manifest; null when absent (TrueForge then enables every tool of the server). */
+const toolList = (v: unknown): string[] | null => (Array.isArray(v) ? v.map(String).sort() : null);
+const sameSet = (a: string[] | null, want: string[]): boolean =>
+  a !== null && JSON.stringify(a) === JSON.stringify([...want].sort());
+const show = (a: string[] | null): string => (a === null ? "absent" : `[${a.join(", ")}]`);
+
+export async function doctor(
+  base: string,
+  fetchFn: FetchLike = fetch,
+  model: string = DEFAULT_MODEL,
+  jira: JiraConfig | null = null,
+): Promise<Check[]> {
   const providerName = providerFor(model, {}).name;
   const api = new Api(base.replace(/\/+$/, ""), fetchFn);
   const checks: Check[] = [];
@@ -187,15 +243,12 @@ export async function doctor(base: string, fetchFn: FetchLike = fetch, model: st
   const providers = await api.list("/settings/model-providers");
   add(`provider ${providerName}`, providers.some((p) => nameOf(p) === providerName), `model provider for ${model} registered`);
   const servers = await api.list("/settings/mcp-servers");
-  for (const want of ["github", "triage"]) {
+  for (const want of jira === null ? ["github", "triage"] : ["github", "triage", "jira"]) {
     const row = servers.find((s) => nameOf(s) === want);
     const status = row && isObj(row.auth_status) ? String(row.auth_status.status) : "missing";
     add(`connector ${want}`, status === "authenticated" || status === "not_required", `auth ${status}`);
   }
-  const agents = await api.list("/agents?agent_name=ticket-resolver&limit=100");
-  const id = agents.find((a) => a.name === "ticket-resolver")?.id;
-  const agent = typeof id === "string" ? (await api.call("GET", `/agents/${encodeURIComponent(id)}`)).data : undefined;
-  const manifest = isObj(agent) && isObj(agent.manifest) ? agent.manifest : {};
+  const manifest = await savedManifest(api, "ticket-resolver");
   const mcp = Array.isArray(manifest.mcp_servers) ? manifest.mcp_servers.filter(isObj) : [];
   const gates = mcp.find((s) => s.name === "github")?.require_approval_for_tools;
   const sorted = Array.isArray(gates) ? gates.map(String).sort() : [];
@@ -204,5 +257,38 @@ export async function doctor(base: string, fetchFn: FetchLike = fetch, model: st
   const config = isObj(manifest.config) ? manifest.config : {};
   const web = isObj(config.web_search) ? config.web_search.enabled : undefined;
   add("agent web_search", web === false, `web_search.enabled = ${String(web)}`);
+  if (jira !== null) checks.push(...(await doctorJiraAgent(api)));
+  return checks;
+}
+
+/** ticket-resolver-jira: writes gated by name, only the two Jira tools, no GitHub issue tools, Jira triage only. */
+async function doctorJiraAgent(api: Api): Promise<Check[]> {
+  const checks: Check[] = [];
+  const add = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
+  const manifest = await savedManifest(api, JIRA_AGENT);
+  const mcp = Array.isArray(manifest.mcp_servers) ? manifest.mcp_servers.filter(isObj) : [];
+  const server = (name: string) => mcp.find((s) => s.name === name);
+  const ghGates = toolList(server("github")?.require_approval_for_tools);
+  const jiraGates = toolList(server("jira")?.require_approval_for_tools);
+  add(
+    "jira agent gates",
+    sameSet(ghGates, JIRA_AGENT_GITHUB_GATES) && sameSet(jiraGates, JIRA_AGENT_JIRA_GATES),
+    `github gates ${show(ghGates)} · jira gates ${show(jiraGates)}`,
+  );
+  const jiraTools = toolList(server("jira")?.enable_tools);
+  const ghTools = toolList(server("github")?.enable_tools);
+  const jiraOk = jiraTools !== null && jiraTools.length > 0 && jiraTools.every((t) => JIRA_AGENT_JIRA_TOOLS.has(t));
+  const ghIssueTools = ghTools === null ? null : ghTools.filter((t) => JIRA_AGENT_NO_GITHUB_TOOLS.includes(t));
+  const ghOk = ghTools !== null && ghTools.length > 0 && ghIssueTools !== null && ghIssueTools.length === 0;
+  add(
+    "jira agent tools",
+    jiraOk && ghOk,
+    `jira tools ${show(jiraTools)} · github issue tools ${ghTools === null ? "all (enable_tools absent)" : show(ghIssueTools)}`,
+  );
+  const triageTools = toolList(server("triage")?.enable_tools);
+  add("jira agent triage", sameSet(triageTools, JIRA_AGENT_TRIAGE_TOOLS), `triage tools ${show(triageTools)}`);
+  const config = isObj(manifest.config) ? manifest.config : {};
+  const web = isObj(config.web_search) ? config.web_search.enabled : undefined;
+  add("jira agent web_search", web === false, `web_search.enabled = ${String(web)}`);
   return checks;
 }

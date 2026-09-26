@@ -11,51 +11,46 @@
  *   --no-skill      register the agents without skills; no skill is registered.
  *   --skip-skill-check  register a git skill even if raw.githubusercontent.com cannot serve its SKILL.md.
  *
- * TRUEFORGE_URL (env or .env) defaults to http://localhost:8790. Uses orchestrator/src/config.ts and render.ts
- * (run `npm --prefix orchestrator ci` first).
+ * An agent file with a top-level "requires": "jira" is registered only when shipgate.yaml has a jira: section;
+ * otherwise it is skipped before its skills are read. "requires" is never sent to TrueForge.
+ * Git mode refuses a skill whose SKILL.md is a template ({{...}} filled from shipgate.yaml): the sandbox would read
+ * the raw file with literal placeholders. Use --inline-skill (what scripts/setup.sh does).
+ * A skill directory's extra *.md files go only to the agents that reference that skill.
+ *
+ * TRUEFORGE_URL (env or .env) defaults to http://localhost:8790. Uses orchestrator/src/config.ts, render.ts and
+ * agents.ts (reading and building agents; unit-tested there) (run `npm --prefix orchestrator ci` first).
  * Notes (TrueForge 0.2.1, verified): git skills cannot be preloaded (the server answers 422). The server stores a git
  * skill without checking it; the sandbox downloads it at its first exec, and if the repo is private, the ref is not
  * pushed or the path is missing, the downloader exits 1 and sandbox init fails, so every exec in that session fails.
  * That is why git mode refuses an unreachable skill unless --skip-skill-check is given.
  */
 import { execFileSync } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { ConfigError, loadConfig } from "../orchestrator/src/config.ts";
-import { RenderError, renderDeep, renderText, templateValues } from "../orchestrator/src/render.ts";
+import {
+  type Available,
+  type LocalSkill,
+  type SkillMode,
+  buildManifest,
+  readAgents,
+  readLocalSkill,
+  refuseTemplatedGitSkills,
+  skillRefs,
+} from "../orchestrator/src/agents.ts";
+import { RenderError, templateValues } from "../orchestrator/src/render.ts";
 
 const SKILL_REPO_URL = "https://github.com/vishnuverse/trueforge-shipgate";
 const RAW_BASE = "https://raw.githubusercontent.com/vishnuverse/trueforge-shipgate";
 const GIT_REF_RE = /^[A-Za-z0-9._\-/]+$/;
 const FULL_SHA_RE = /^[0-9a-f]{40}$/;
 
-type SkillMode = "git" | "inline" | "none";
 type Json = Record<string, unknown>;
 
 interface Options {
   mode: SkillMode;
   skillRef: string | undefined;
   skipSkillCheck: boolean;
-}
-
-interface SkillRef {
-  name: string;
-  preload?: boolean;
-}
-
-interface AgentFile {
-  file: string;
-  name: string;
-  description: string;
-  manifest: Json;
-}
-
-interface LocalSkill {
-  name: string;
-  dir: string; // repo-relative, e.g. skills/ticket-resolver
-  description: string;
-  body: string; // SKILL.md without frontmatter
-  extras: { file: string; content: string }[]; // other *.md files in the skill dir
 }
 
 const USAGE =
@@ -123,80 +118,6 @@ function loadDotEnv(root: string): void {
 
 function isObject(value: unknown): value is Json {
   return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function readAgents(root: string, values: Record<string, string>): AgentFile[] {
-  const dir = join(root, "agents");
-  if (!existsSync(dir)) fail("agents/ directory not found");
-  const files = readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .sort();
-  if (files.length === 0) fail("no agents/*.json files found");
-  return files.map((f) => {
-    const file = `agents/${f}`;
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(readFileSync(join(root, file), "utf8"));
-    } catch (err) {
-      fail(`${file}: invalid JSON (${(err as Error).message})`);
-    }
-    if (!isObject(parsed)) fail(`${file}: expected a JSON object`);
-    const { name, description, manifest } = parsed;
-    if (typeof name !== "string" || typeof description !== "string" || !isObject(manifest)) {
-      fail(`${file}: needs string "name", string "description" and object "manifest"`);
-    }
-    try {
-      return renderDeep({ file, name, description, manifest }, values, file);
-    } catch (err) {
-      fail((err as Error).message);
-    }
-  });
-}
-
-function skillRefs(agent: AgentFile): SkillRef[] {
-  const skills = agent.manifest.skills;
-  if (skills === undefined) return [];
-  if (!Array.isArray(skills)) fail(`${agent.file}: manifest.skills must be an array`);
-  return skills.map((s) => {
-    if (!isObject(s) || typeof s.name !== "string") fail(`${agent.file}: each skill needs a "name"`);
-    return { name: s.name, preload: s.preload === true ? true : undefined };
-  });
-}
-
-/** Minimal frontmatter parser: single-line `key: value` pairs between the leading `---` fences. */
-function readLocalSkill(root: string, name: string, values: Record<string, string>): LocalSkill {
-  const dir = `skills/${name}`;
-  const path = join(root, dir, "SKILL.md");
-  if (!existsSync(path)) fail(`${dir}/SKILL.md not found (referenced by an agent)`);
-  const text = readFileSync(path, "utf8");
-  let rendered: string;
-  try {
-    rendered = renderText(text, values, `${dir}/SKILL.md`);
-  } catch (err) {
-    fail((err as Error).message);
-  }
-  const match = /^---\n([\s\S]*?)\n---\n?/.exec(rendered);
-  if (match === null) fail(`${dir}/SKILL.md has no YAML frontmatter`);
-  const meta = new Map<string, string>();
-  for (const line of (match[1] ?? "").split("\n")) {
-    const kv = /^([A-Za-z_][\w-]*):\s*(.*)$/.exec(line);
-    if (kv?.[1] !== undefined && kv[2] !== undefined) meta.set(kv[1], kv[2].replace(/^["']|["']$/g, "").trim());
-  }
-  if (meta.get("name") !== name) fail(`${dir}/SKILL.md frontmatter name must be "${name}"`);
-  const description = meta.get("description");
-  if (description === undefined || description === "") fail(`${dir}/SKILL.md frontmatter needs a description`);
-  const extras = readdirSync(join(root, dir))
-    .filter((f) => f.endsWith(".md") && f !== "SKILL.md")
-    .sort()
-    .map((f) => {
-      const raw = readFileSync(join(root, dir, f), "utf8").trim();
-      try {
-        return { file: f, content: renderText(raw, values, `${dir}/${f}`) };
-      } catch (err) {
-        fail((err as Error).message);
-      }
-    });
-  return { name, dir, description, body: rendered.slice(match[0].length).trim(), extras };
 }
 
 class TrueForge {
@@ -291,45 +212,6 @@ async function checkSkillReachable(root: string, skill: LocalSkill, ref: string)
   }
 }
 
-function inlineSkillText(skill: LocalSkill): string {
-  const parts = [
-    `<skill name="${skill.name}" source="${skill.dir}/SKILL.md" inlined="true">`,
-    "The SKILL.md content below is inlined into this prompt: do not look for it in the sandbox.",
-    "",
-    skill.body,
-  ];
-  for (const extra of skill.extras) {
-    parts.push("", `<skill_file name="${extra.file}">`, extra.content, "</skill_file>");
-  }
-  parts.push("</skill>");
-  return parts.join("\n");
-}
-
-function buildManifest(agent: AgentFile, mode: SkillMode, skills: Map<string, LocalSkill>): Json {
-  const manifest: Json = structuredClone(agent.manifest);
-  const refs = skillRefs(agent);
-  if (mode === "git") {
-    manifest.skills = refs.map((r) => {
-      if (r.preload === true) {
-        console.warn(`  ! ${agent.file}: skill "${r.name}" preload=true; TrueForge 0.2.1 rejects preload for git skills, sending false`);
-      }
-      return { name: r.name, preload: false };
-    });
-    return manifest;
-  }
-  delete manifest.skills;
-  if (mode === "inline" && refs.length > 0) {
-    const base = typeof manifest.instructions === "string" ? manifest.instructions : "";
-    const inlined = refs.map((r) => {
-      const skill = skills.get(r.name);
-      if (skill === undefined) fail(`internal: skill ${r.name} not loaded`);
-      return inlineSkillText(skill);
-    });
-    manifest.instructions = [base, ...inlined].filter((s) => s !== "").join("\n\n");
-  }
-  return manifest;
-}
-
 function describeAgent(saved: Json): string {
   const manifest = isObject(saved.manifest) ? saved.manifest : {};
   const model = isObject(manifest.model) ? String(manifest.model.name) : "?";
@@ -355,19 +237,22 @@ async function main(): Promise<void> {
   loadDotEnv(root);
   let values: Record<string, string>;
   let configUrl: string;
+  let available: Available;
   try {
     const cfg = loadConfig();
     values = templateValues(cfg);
     configUrl = cfg.trueforgeUrl;
+    available = { jira: cfg.jira !== null };
   } catch (err) {
     if (err instanceof ConfigError || err instanceof RenderError) fail(err.message);
     throw err;
   }
   const base = (process.env.TRUEFORGE_URL ?? configUrl).replace(/\/+$/, "");
   const tf = new TrueForge(base);
-  const agents = readAgents(root, values);
 
   console.log(`TrueForge ${base} · skill mode: ${opts.mode}`);
+  // Agents whose "requires" is missing are skipped here, before skill names are collected: their skills are never read.
+  const agents = readAgents(root, values, available);
 
   const skillNames = [...new Set(agents.flatMap((a) => skillRefs(a).map((r) => r.name)))];
   const skills = new Map<string, LocalSkill>();
@@ -376,6 +261,7 @@ async function main(): Promise<void> {
   }
 
   if (opts.mode === "git") {
+    refuseTemplatedGitSkills(skills.values()); // before any skill check or server call
     const ref = opts.skillRef ?? git(["rev-parse", "HEAD"], root);
     if (!GIT_REF_RE.test(ref)) fail(`invalid git ref: ${ref}`);
     for (const skill of skills.values()) {
@@ -415,6 +301,7 @@ async function main(): Promise<void> {
   for (const agent of agents) {
     const manifest = buildManifest(agent, opts.mode, skills);
     try {
+      // The body carries only name, description and manifest: never "requires" or the file path.
       const id = await tf.findAgentId(agent.name);
       const res =
         id === undefined
