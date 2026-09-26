@@ -61,6 +61,8 @@ def read_dotenv(path: Path) -> dict[str, str]:
             continue
         key, value = line.split("=", 1)
         key = key.strip()
+        if key.startswith("export") and key[6:7].isspace():  # `export KEY=value` (shell-sourceable .env)
+            key = key[6:].strip()
         if not key.isidentifier():
             continue
         value = value.strip()

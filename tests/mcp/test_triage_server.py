@@ -156,8 +156,16 @@ def test_app_binds_loopback_8803_at_mcp() -> None:
 
 def test_env_file_parsing_and_precedence(tmp_path: Path) -> None:
     dotenv = tmp_path / ".env"
-    dotenv.write_text('# comment\nTYPESAFE_API_KEY="from-file"\nGITHUB_PAT=abc\n\nNOT A LINE\nEMPTY=\n')
-    assert server.read_dotenv(dotenv) == {"TYPESAFE_API_KEY": "from-file", "GITHUB_PAT": "abc", "EMPTY": ""}
+    dotenv.write_text(
+        '# comment\nTYPESAFE_API_KEY="from-file"\nGITHUB_PAT=abc\n\nNOT A LINE\nEMPTY=\n'
+        'export EXPORTED_KEY="exp-value"\n'
+    )
+    assert server.read_dotenv(dotenv) == {
+        "TYPESAFE_API_KEY": "from-file",
+        "GITHUB_PAT": "abc",
+        "EMPTY": "",
+        "EXPORTED_KEY": "exp-value",
+    }
     env = server.load_env(dotenv, {"GITHUB_PAT": "from-env"})
     assert env["GITHUB_PAT"] == "from-env" and env["TYPESAFE_API_KEY"] == "from-file"
     assert server.read_dotenv(tmp_path / "missing.env") == {}
